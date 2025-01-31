@@ -1,0 +1,51 @@
+{
+  "current_quest": {
+    "completed": false,
+    "description": "Collect 10 Iron Bar",
+    "objective_amount": 10,
+    "objective_resource": "Iron Bar",
+    "reward": {
+      "Engine Parts": 3
+    }
+  },
+  "faster_crafting_multiplier": 1.0,
+  "last_quest_date": "2025-01-12",
+  "planets": [
+    {
+      "name": "Terra",
+      "unlocked": true
+    },
+    {
+      "name": "Mars",
+      "unlocked": false
+    },
+    {
+      "name": "Zalthor",
+      "unlocked": false
+    }
+  ],
+  "researches": [
+    {
+      "completed": false,
+      "name": "Unlock Mars"
+    },
+    {
+      "completed": false,
+      "name": "Unlock Zalthor"
+    },
+    {
+      "completed": false,
+      "name": "Faster Crafting"
+    }
+  ],
+  "resources": {
+    "Coal": 0,
+    "Copper": 0,
+    "Copper Bar": 0,
+    "Engine Parts": 0,
+    "Iron": 14,
+    "Iron Bar": 0,
+    "Mithril": 0,
+    "Mithril Bar": 0
+  }
+}

@@ -1,0 +1,9 @@
+3
+Earth 0.5 0.2 0 0 0 0 
+Mars 0.4 0.1 0 0 0 0 
+Jupiter 0.6 0.2 0.1 0 0 0 
+0 0 0 
+2
+Advanced Mining 100 50 0 0
+Mithril Extraction 200 100 50 0
+1736113186
