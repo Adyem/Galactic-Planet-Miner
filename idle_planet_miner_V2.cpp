@@ -1,37 +1,44 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <map>
+#include <chrono>
 #include <cmath>
 #include <ctime>
-#include <cstdlib>
 #include <fstream>
-#include <algorithm>
+#include <iostream>
+#include <map>
 #include <memory>
-#include <sstream>
-#include <utility>
-#include <chrono>
-#include <thread>
 #include <nlohmann/json.hpp>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
 
 using json = nlohmann::json;
 using namespace std;
 
 static const vector<string> resourceLore = {
-    "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future.'",
-    "Professor Lumen: 'Mining is the backbone of our civilization. Without its bounty, progress would stall.'",
-    "Farmer Daisy: 'Though I tend my fields, I know that without the mines, our tables would be empty.'"
+    "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our "
+    "future.'",
+    "Professor Lumen: 'Mining is the backbone of our civilization. Without its bounty, progress "
+    "would stall.'",
+    "Farmer Daisy: 'Though I tend my fields, I know that without the mines, our tables would be "
+    "empty.'"
 };
 
 static const vector<string> raiderLore = {
-    "Captain Blackthorne: 'These raiders aren’t mere bandits—they’re desperate souls preying on our lifelines.'",
-    "Navigator Zara: 'Our convoys are the arteries of our colonies. Raiders strike to choke that flow.'",
-    "Old Scout Finn: 'I’ve seen raider ships lurking in the void. Their attacks leave nothing but wreckage and sorrow.'"
+    "Captain Blackthorne: 'These raiders aren’t mere bandits—they’re desperate souls preying on "
+    "our lifelines.'",
+    "Navigator Zara: 'Our convoys are the arteries of our colonies. Raiders strike to choke that "
+    "flow.'",
+    "Old Scout Finn: 'I’ve seen raider ships lurking in the void. Their attacks leave nothing "
+    "but wreckage and sorrow.'"
 };
 
 static const vector<string> genericLore = {
     "Town Crier: 'The times are hard, but unity and perseverance will see us through.'",
-    "Scribe Alric: 'Every day brings new challenges—and new opportunities—for those brave enough to seize them.'"
+    "Scribe Alric: 'Every day brings new challenges—and new opportunities—for those brave "
+    "enough to seize them.'"
 };
 
 const string SAVE_FILE = "savegame.json";
@@ -42,27 +49,11 @@ struct ResourceDef {
 };
 
 static vector<ResourceDef> RESOURCE_DATA = {
-    {"Iron", 0},
-    {"Copper", 0},
-    {"Mithril", 0},
-    {"Coal", 0},
-    {"Tin", 0},
-    {"Silver", 0},
-    {"Gold", 0},
-    {"Iron Bar", 0},
-    {"Copper Bar", 0},
-    {"Mithril Bar", 0},
-    {"Engine Parts", 0},
-    {"Titanium", 0},
-    {"Titanium Bar", 0},
-    {"Generator", 0},
-    {"Accumulator", 0},
-    {"Obsidian", 0},
-    {"Crystal", 0},
-    {"Nanomaterial", 0},
-    {"Advanced Engine Parts", 0},
-    {"Fusion Reactor", 0},
-    {"Tritium", 0}
+    {"Iron", 0}, {"Copper", 0}, {"Mithril", 0}, {"Coal", 0}, {"Tin", 0},
+    {"Silver", 0}, {"Gold", 0}, {"Iron Bar", 0}, {"Copper Bar", 0}, {"Mithril Bar", 0},
+    {"Engine Parts", 0}, {"Titanium", 0}, {"Titanium Bar", 0}, {"Generator", 0},
+    {"Accumulator", 0}, {"Obsidian", 0}, {"Crystal", 0}, {"Nanomaterial", 0},
+    {"Advanced Engine Parts", 0}, {"Fusion Reactor", 0}, {"Tritium", 0}
 };
 
 struct PlanetDef {
@@ -72,61 +63,109 @@ struct PlanetDef {
 };
 
 static vector<PlanetDef> PLANET_DATA = {
-    { "Terra", {{"Iron", 0.5}, {"Copper", 0.5}, {"Coal", 0.2}}, true },
-    { "Mars", {{"Iron", 0.1}, {"Copper", 0.1}, {"Mithril", 0.05}, {"Coal", 0.1}}, false },
-    { "Zalthor", {{"Mithril", 0.1}, {"Coal", 0.2}, {"Gold", 0.02}}, false },
-    { "Vulcan", {{"Tin", 0.1}, {"Silver", 0.03}, {"Titanium", 0.01}}, false },
-    { "Luna", {{"Obsidian", 0.1}, {"Crystal", 0.05}, {"Nanomaterial", 0.02}}, false }
+    {"Terra", {{"Iron", 0.5}, {"Copper", 0.5}, {"Coal", 0.2}}, true},
+    {"Mars", {{"Iron", 0.1}, {"Copper", 0.1}, {"Mithril", 0.05}, {"Coal", 0.1}}, false},
+    {"Zalthor", {{"Mithril", 0.1}, {"Coal", 0.2}, {"Gold", 0.02}}, false},
+    {"Vulcan", {{"Tin", 0.1}, {"Silver", 0.03}, {"Titanium", 0.01}}, false},
+    {"Luna", {{"Obsidian", 0.1}, {"Crystal", 0.05}, {"Nanomaterial", 0.02}}, false}
 };
 
 struct ResearchDef {
     string name;
-    map<string,int> cost;
+    map<string, int> cost;
     string description;
     string effectName;
 };
 
 static vector<ResearchDef> RESEARCH_DATA = {
-    { "Unlock Mars", {{"Iron",100}, {"Copper",50}}, "Unlock the planet Mars for mining.", "unlock_mars" },
-    { "Unlock Zalthor", {{"Iron",200}, {"Mithril",50}}, "Unlock planet Zalthor for advanced mining.", "unlock_zalthor" },
-    { "Faster Crafting", {{"Iron",50}, {"Coal",30}}, "Reduce smelting time by half.", "faster_crafting" },
-    { "Unlock Vulcan", {{"Gold",100}, {"Mithril",100}}, "Unlock planet Vulcan for high‑value resources.", "unlock_vulcan" },
-    { "Unlock Luna", {{"Gold",150}, {"Mithril",100}}, "Unlock planet Luna to harvest exotic materials.", "unlock_luna" },
-    { "Crafting Mastery", {{"Engine Parts",5}, {"Titanium Bar",3}}, "Reduces crafting energy cost by 20%.", "crafting_mastery" },
-    { "Precision Tools", {{"Iron Bar",10}, {"Mithril Bar",5}}, "Gives a 10% chance to double crafted output.", "precision_tools" },
-    { "Shield Technology", {{"Mithril Bar",10}, {"Titanium Bar",5}}, "Allows building Shield Ships to protect convoys.", "unlock_shield_ships" },
-    { "Emergency Energy Conservation", {{"Engine Parts",10}, {"Titanium Bar",5}}, "Allows a planet to halt production during an imminent raider attack, conserving energy for defense.", "energy_conservation" },
-    { "Repair Drone Technology", {{"Fusion Reactor",1}, {"Advanced Engine Parts",3}}, "Unlocks Repair Drones that can repair ships during combat.", "unlock_repair_drones" },
-    { "Solar Panels", {{"Iron",20}, {"Copper",30}}, "Unlock Solar Panels for energy production on planets.", "unlock_solar_panels" }
+    {"Unlock Mars", {{"Iron", 100}, {"Copper", 50}},
+     "Unlock the planet Mars for mining.", "unlock_mars"},
+    {"Unlock Zalthor", {{"Iron", 200}, {"Mithril", 50}},
+     "Unlock planet Zalthor for advanced mining.", "unlock_zalthor"},
+    {"Faster Crafting", {{"Iron", 50}, {"Coal", 30}},
+     "Reduce smelting time by half.", "faster_crafting"},
+    {"Unlock Vulcan", {{"Gold", 100}, {"Mithril", 100}},
+     "Unlock planet Vulcan for high‑value resources.", "unlock_vulcan"},
+    {"Unlock Luna", {{"Gold", 150}, {"Mithril", 100}},
+     "Unlock planet Luna to harvest exotic materials.", "unlock_luna"},
+    {"Crafting Mastery", {{"Engine Parts", 5}, {"Titanium Bar", 3}},
+     "Reduces crafting energy cost by 20%.", "crafting_mastery"},
+    {"Precision Tools", {{"Iron Bar", 10}, {"Mithril Bar", 5}},
+     "Gives a 10% chance to double crafted output.", "precision_tools"},
+    {"Shield Technology", {{"Mithril Bar", 10}, {"Titanium Bar", 5}},
+     "Allows building Shield Ships to protect convoys.", "unlock_shield_ships"},
+    {"Emergency Energy Conservation",
+     {{"Engine Parts", 10}, {"Titanium Bar", 5}},
+     "Allows a planet to halt production during an imminent raider attack, "
+     "conserving energy for defense.", "energy_conservation"},
+    {"Repair Drone Technology", {{"Fusion Reactor", 1}, {"Advanced Engine Parts", 3}},
+     "Unlocks Repair Drones that can repair ships during combat.",
+     "unlock_repair_drones"},
+    {"Solar Panels", {{"Iron", 20}, {"Copper", 30}},
+     "Unlock Solar Panels for energy production on planets.", "unlock_solar_panels"},
+    {"Tritium Extraction", {{"Mithril Bar", 5}, {"Advanced Engine Parts", 2}},
+     "Unlocks the ability to build Tritium Extractors to harvest tritium for "
+     "Fusion Reactors.", "unlock_tritium_extraction"},
+    {"Urban Planning", {{"Iron Bar", 15}, {"Engine Parts", 5}},
+     "Expands building capacity on early game planets, reducing the need for "
+     "manual upgrades.", "urban_planning"},
+    {"Quantum Communication", {{"Copper Bar", 20}, {"Engine Parts", 3}},
+     "Enhances interplanetary transfers by reducing raider threat during convoys.",
+     "quantum_communication"},
+    {"Capital Ship Initiative",
+     {{"Advanced Engine Parts", 5}, {"Fusion Reactor", 1}, {"Titanium Bar", 10}},
+     "Unlock the ability to construct a powerful capital ship. Only one such vessel "
+     "may be active at any time.", "unlock_capital_ships"},
+    {"Auxiliary Frigate Development",
+     {{"Engine Parts", 20}, {"Advanced Engine Parts", 5}, {"Mithril Bar", 10}},
+     "Unlock smaller versions of capital ships (frigates) that are less powerful but "
+     "can be built without limits.", "unlock_capital_frigates"}
 };
 
 struct CraftingRecipe {
-    map<string,int> inputs;
+    map<string, int> inputs;
     double timeRequired;
     double electricityCost;
     string requiredBuilding;
 };
 
 static map<string, CraftingRecipe> CRAFTING_RECIPES = {
-    {"Iron Bar", { {{"Iron",5}}, 1.0, 2.0, "Smelting Building" }},
-    {"Copper Bar", { {{"Copper",5}}, 1.0, 2.0, "Smelting Building" }},
-    {"Mithril Bar", { {{"Mithril",5}}, 2.0, 3.0, "Smelting Building" }},
-    {"Titanium Bar", { {{"Titanium",10}}, 5.0, 7.0, "Smelting Building" }},
-    {"Engine Parts", { {{"Iron Bar",2}}, 3.0, 5.0, "Crafting Building" }},
-    {"Advanced Engine Parts",{ {{"Engine Parts",2}, {"Nanomaterial",1}}, 4.0, 6.0, "Crafting Building" }},
-    {"Fusion Reactor", { {{"Titanium Bar",5}, {"Crystal",3}, {"Nanomaterial",2}, {"Tritium",1}}, 10.0, 15.0, "Crafting Building" }},
-    {"Generator", { {{"Copper",10}, {"Iron Bar",5}}, 2.0, 0.0, "Facility Workshop" }},
-    {"Accumulator", { {{"Tin",10}, {"Copper Bar",5}}, 3.0, 0.0, "Facility Workshop" }},
-    {"Transport Vessel", { {{"Iron Bar",5}, {"Engine Parts",1}}, 3.0, 10.0, "Shipyard" }},
-    {"Corvette", { {{"Titanium Bar",3}, {"Advanced Engine Parts",1}}, 5.0, 15.0, "Shipyard" }},
-    {"Shield Ship", { {{"Titanium Bar",4}, {"Advanced Engine Parts",1}}, 6.0, 25.0, "Shipyard" }},
-    {"Radar Ship", { {{"Mithril Bar",2}, {"Engine Parts",1}}, 4.0, 20.0, "Shipyard" }},
-    {"Salvage Ship", { {{"Iron Bar",3}, {"Engine Parts",2}}, 4.0, 15.0, "Shipyard" }},
-    {"Repair Drone", { {{"Fusion Reactor",1}, {"Advanced Engine Parts",2}}, 8.0, 30.0, "Shipyard" }}
+    {"Iron Bar", { {{"Iron", 5}}, 1.0, 2.0, "Smelting Building" }},
+    {"Interceptor", { {{"Engine Parts", 3}, {"Titanium Bar", 2}}, 4.0, 20.0, "Shipyard" }},
+    {"Celestial Juggernaut", { {{"Fusion Reactor", 1}, {"Titanium Bar", 10},
+                                 {"Advanced Engine Parts", 5}, {"Crystal", 5}},
+                                20.0, 40.0, "Shipyard" }},
+    {"Nova Carrier", { {{"Fusion Reactor", 1}, {"Titanium Bar", 8},
+                         {"Advanced Engine Parts", 4}, {"Mithril Bar", 10}},
+                        18.0, 35.0, "Shipyard" }},
+    {"Obsidian Sovereign", { {{"Fusion Reactor", 1}, {"Titanium Bar", 12},
+                               {"Advanced Engine Parts", 6}, {"Crystal", 7}},
+                              25.0, 45.0, "Shipyard" }},
+    {"Preemptor", { {{"Fusion Reactor", 1}, {"Titanium Bar", 9},
+                      {"Advanced Engine Parts", 5}, {"Mithril Bar", 8}},
+                    15.0, 50.0, "Shipyard" }},
+    {"Aurora Protector", { {{"Fusion Reactor", 1}, {"Titanium Bar", 10},
+                             {"Advanced Engine Parts", 5}, {"Crystal", 6}},
+                           20.0, 30.0, "Shipyard" }},
+    {"Juggernaut Frigate", { {{"Titanium Bar", 5}, {"Advanced Engine Parts", 2},
+                              {"Crystal", 2}},
+                            10.0, 15.0, "Shipyard" }},
+    {"Carrier Frigate", { {{"Titanium Bar", 4}, {"Advanced Engine Parts", 2},
+                           {"Mithril Bar", 5}},
+                         9.0, 12.0, "Shipyard" }},
+    {"Sovereign Frigate", { {{"Titanium Bar", 6}, {"Advanced Engine Parts", 3},
+                             {"Crystal", 3}},
+                           12.0, 18.0, "Shipyard" }},
+    {"Preemptor Frigate", { {{"Titanium Bar", 5}, {"Advanced Engine Parts", 2},
+                             {"Mithril Bar", 4}},
+                           8.0, 20.0, "Shipyard" }},
+    {"Protector Frigate", { {{"Titanium Bar", 5}, {"Advanced Engine Parts", 2},
+                             {"Crystal", 3}},
+                           10.0, 15.0, "Shipyard" }}
 };
 
 struct BuildingRecipe {
-    map<string,int> inputs;
+    map<string, int> inputs;
     double timeRequired;
     double electricityCost;
 };
@@ -136,17 +175,15 @@ static map<string, BuildingRecipe> BUILDING_RECIPES = {
     {"Smelting Building", { {{"Copper Bar", 5}, {"Coal", 10}}, 5.0, 10.0 }},
     {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0 }},
     {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0 }},
-    {"Proximity Alarm", { {{"Crystal",2}, {"Mithril Bar",1}}, 3.0, 5.0 }},
-    {"Proximity Radar", { {{"Crystal",2}, {"Mithril Bar",1}}, 3.0, 5.0 }},
-    {"Mobile Radar", { {{"Crystal",3}, {"Copper Bar",2}}, 3.0, 5.0 }},
-    {"Salvage Robot", { {{"Obsidian",2}, {"Engine Parts",1}}, 3.0, 5.0 }},
-    {"Shield Generator", { {{"Titanium Bar",2}, {"Copper Bar",2}}, 4.0, 5.0 }},
-    {"Solar Panel", { {}, 3.0, 0.0 }}
+    {"Proximity Alarm", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0 }},
+    {"Proximity Radar", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0 }},
+    {"Mobile Radar", { {{"Crystal", 3}, {"Copper Bar", 2}}, 3.0, 5.0 }},
+    {"Salvage Robot", { {{"Obsidian", 2}, {"Engine Parts", 1}}, 3.0, 5.0 }},
+    {"Shield Generator", { {{"Titanium Bar", 2}, {"Copper Bar", 2}}, 4.0, 5.0 }},
+    {"Solar Panel", { {}, 3.0, 0.0 }},
+    {"Tritium Extractor", { {{"Mithril Bar", 2}, {"Advanced Engine Parts", 1}},
+                            4.0, 8.0 }}
 };
-
-struct Ship;
-
-class PlanetManager;
 
 struct Ship {
     string type;
@@ -157,396 +194,539 @@ struct Ship {
     int repairAmount;
 };
 
+class PlanetManager;
+
 class Planet {
 public:
-    Planet(const string& n, const map<string,double>& prod, bool u)
-        : name(n), baseProduction(prod), unlocked(u),
-          generators(0), accumulators(0),
-          currentEnergy(0.0), maxEnergy(50.0),
-          maxBuildingPlots(3), currentBuildingCount(0),
-          hasUpgradedPlots(false), underThreat(false)
-    {
-        for(auto &res : RESOURCE_DATA)
-            storage[res.name] = 0;
+    Planet(const string &name, const map<string, double> &production,
+           bool unlocked)
+        : name_(name), baseProduction_(production), unlocked_(unlocked),
+          generators_(0), accumulators_(0), currentEnergy_(0.0), maxEnergy_(50.0),
+          maxBuildingPlots_(3), currentBuildingCount_(0), plotsUpgraded_(false),
+          underThreat_(false) {
+        for (const auto &res : RESOURCE_DATA)
+            storage_[res.name] = 0;
     }
     void produceResources(double elapsedSeconds, bool energyConservationEnabled) {
-        if(underThreat && energyConservationEnabled && hasBuilding("Shield Generator")){
-            cout << "Production on " << name << " halted due to Emergency Energy Conservation." << endl;
+        if (underThreat_ && energyConservationEnabled &&
+            hasBuilding("Shield Generator")) {
+            cout << "Production on " << name_
+                 << " halted due to Emergency Energy Conservation." << endl;
             return;
         }
-        if(!unlocked) return;
-        double actualTime = elapsedSeconds;
-        if(generators > 0) {
-            double possibleTime = double(getStored("Coal")) / (generators * COAL_CONSUMPTION);
-            actualTime = min(elapsedSeconds, possibleTime);
-            int coalToConsume = static_cast<int>(ceil(generators * COAL_CONSUMPTION * actualTime));
-            removeFromStorage("Coal", coalToConsume);
+        if (!unlocked_)
+            return;
+        double productionTime = elapsedSeconds;
+        if (generators_ > 0) {
+            double possibleTime = static_cast<double>(getStored("Coal")) /
+                                  (generators_ * COAL_CONSUMPTION);
+            productionTime = min(elapsedSeconds, possibleTime);
+            int coalNeeded = static_cast<int>(ceil(generators_ * COAL_CONSUMPTION *
+                                                   productionTime));
+            removeFromStorage("Coal", coalNeeded);
         }
-        double energyProduced = generators * GENERATOR_RATE * actualTime;
-        currentEnergy = min(maxEnergy, currentEnergy + energyProduced);
-        if(hasBuilding("Solar Panel")) {
+        double energyProduced = generators_ * GENERATOR_RATE * productionTime;
+        currentEnergy_ = min(maxEnergy_, currentEnergy_ + energyProduced);
+        if (hasBuilding("Solar Panel")) {
             int solarCount = getBuildings().at("Solar Panel");
             double solarEnergy = solarCount * SOLAR_RATE * elapsedSeconds;
-            currentEnergy = min(maxEnergy, currentEnergy + solarEnergy);
+            currentEnergy_ = min(maxEnergy_, currentEnergy_ + solarEnergy);
         }
-        double effectiveSeconds = min(actualTime, currentEnergy / ENERGY_COST_PER_SECOND);
+        double effectiveSeconds = min(productionTime,
+                                      currentEnergy_ / ENERGY_COST_PER_SECOND);
         double energyConsumed = effectiveSeconds * ENERGY_COST_PER_SECOND;
-        currentEnergy -= energyConsumed;
-        for(auto &kv : baseProduction){
-            int produced = static_cast<int>(floor(kv.second * actualTime));
-            storage[kv.first] += produced;
+        currentEnergy_ -= energyConsumed;
+        for (auto &entry : baseProduction_) {
+            int produced = static_cast<int>(floor(entry.second * productionTime));
+            storage_[entry.first] += produced;
+        }
+        if (hasBuilding("Tritium Extractor")) {
+            int extractorCount = getBuildings().at("Tritium Extractor");
+            int tritiumProduced = static_cast<int>(
+                floor(extractorCount * TRITIUM_EXTRACTION_RATE * productionTime));
+            storage_["Tritium"] += tritiumProduced;
+            if (tritiumProduced > 0)
+                cout << "Tritium Extractor on " << name_ << " produced "
+                     << tritiumProduced << " Tritium." << endl;
         }
     }
-    bool canBuildMore() const { return currentBuildingCount < maxBuildingPlots; }
-    bool upgradePlots(){
-        if(!hasUpgradedPlots){
-            hasUpgradedPlots = true;
-            maxBuildingPlots += 2;
+    bool canBuildMore() const {
+        return currentBuildingCount_ < maxBuildingPlots_;
+    }
+    bool upgradePlots() {
+        if (!plotsUpgraded_) {
+            plotsUpgraded_ = true;
+            maxBuildingPlots_ += 2;
             return true;
         }
         return false;
     }
-    bool addBuilding(const string& buildingName) {
-        if(!canBuildMore()){
-            cout << "No building plots available on " << name << ". Upgrade building capacity first." << endl;
+    void increaseMaxBuildingPlots(int amount) {
+        maxBuildingPlots_ += amount;
+    }
+    bool addBuilding(const string &buildingName) {
+        if (!canBuildMore()) {
+            cout << "No building plots available on " << name_
+                 << ". Upgrade building capacity first." << endl;
             return false;
         }
-        buildings[buildingName]++;
-        currentBuildingCount++;
+        buildings_[buildingName]++;
+        currentBuildingCount_++;
         return true;
     }
-    bool hasBuilding(const string& buildingName) const {
-        auto it = buildings.find(buildingName);
-        return (it != buildings.end() && it->second > 0);
+    bool hasBuilding(const string &buildingName) const {
+        auto it = buildings_.find(buildingName);
+        return (it != buildings_.end() && it->second > 0);
     }
-    const map<string,int>& getBuildings() const { return buildings; }
-    void addToStorage(const string& resourceName, int amount) { storage[resourceName] += amount; }
-    bool removeFromStorage(const string& resourceName, int amount) {
-        if(storage[resourceName] >= amount){ storage[resourceName] -= amount; return true; }
+    const map<string, int> &getBuildings() const {
+        return buildings_;
+    }
+    void addToStorage(const string &resourceName, int amount) {
+        storage_[resourceName] += amount;
+    }
+    bool removeFromStorage(const string &resourceName, int amount) {
+        if (storage_[resourceName] >= amount) {
+            storage_[resourceName] -= amount;
+            return true;
+        }
         return false;
     }
-    int getStored(const string& resourceName) const {
-        auto it = storage.find(resourceName);
-        return (it != storage.end()) ? it->second : 0;
+    int getStored(const string &resourceName) const {
+        auto it = storage_.find(resourceName);
+        return (it != storage_.end()) ? it->second : 0;
     }
-    const map<string,int>& getStorageMap() const { return storage; }
-    const string& getName() const { return name; }
-    bool isUnlocked() const { return unlocked; }
-    void setUnlocked(bool u) { unlocked = u; }
-    double getCurrentEnergy() const { return currentEnergy; }
-    double getMaxEnergy() const { return maxEnergy; }
-    int getGenerators() const { return generators; }
-    int getAccumulators() const { return accumulators; }
-    void setCurrentEnergy(double e) { currentEnergy = e; }
-    void setMaxEnergy(double e) { maxEnergy = e; }
-    void setGenerators(int g) { generators = g; }
-    void setAccumulators(int a) { accumulators = a; }
-    void installFacility(const string& facility) {
-        string fac = facility; transform(fac.begin(), fac.end(), fac.begin(), ::tolower);
-        if(fac == "generator") {
-            if(!canBuildMore()){
-                cout << "No building plots available on " << name << " for Generator." << endl;
+    const map<string, int> &getStorageMap() const {
+        return storage_;
+    }
+    const string &getName() const {
+        return name_;
+    }
+    bool isUnlocked() const {
+        return unlocked_;
+    }
+    void setUnlocked(bool unlocked) {
+        unlocked_ = unlocked;
+    }
+    double getCurrentEnergy() const {
+        return currentEnergy_;
+    }
+    double getMaxEnergy() const {
+        return maxEnergy_;
+    }
+    int getGenerators() const {
+        return generators_;
+    }
+    int getAccumulators() const {
+        return accumulators_;
+    }
+    void setCurrentEnergy(double energy) {
+        currentEnergy_ = energy;
+    }
+    void setMaxEnergy(double energy) {
+        maxEnergy_ = energy;
+    }
+    void setGenerators(int generators) {
+        generators_ = generators;
+    }
+    void setAccumulators(int accumulators) {
+        accumulators_ = accumulators;
+    }
+    void installFacility(const string &facility) {
+        string fac = facility;
+        transform(fac.begin(), fac.end(), fac.begin(), ::tolower);
+        if (fac == "generator") {
+            if (!canBuildMore()) {
+                cout << "No building plots available on " << name_
+                     << " for Generator." << endl;
                 return;
             }
             addBuilding("Generator");
-            generators++;
-            cout << "Installed a Generator on " << name << ". Total: " << generators << endl;
-        } else if(fac == "accumulator") {
-            accumulators++;
-            maxEnergy += 50.0;
-            cout << "Installed an Accumulator on " << name << ". Total: " << accumulators << ", new max energy: " << maxEnergy << endl;
+            generators_++;
+            cout << "Installed a Generator on " << name_
+                 << ". Total: " << generators_ << endl;
+        } else if (fac == "accumulator") {
+            accumulators_++;
+            maxEnergy_ += 50.0;
+            cout << "Installed an Accumulator on " << name_
+                 << ". Total: " << accumulators_
+                 << ", new max energy: " << maxEnergy_ << endl;
         } else {
             cout << "Unknown facility: " << facility << endl;
         }
     }
-    bool isUnderThreat() const { return underThreat; }
-    void setUnderThreat(bool flag) { underThreat = flag; }
-    int getMaxBuildingPlots() const { return maxBuildingPlots; }
+    bool isUnderThreat() const {
+        return underThreat_;
+    }
+    void setUnderThreat(bool flag) {
+        underThreat_ = flag;
+    }
+    int getMaxBuildingPlots() const {
+        return maxBuildingPlots_;
+    }
 private:
-    string name;
-    map<string,double> baseProduction;
-    bool unlocked;
-    int generators;
-    int accumulators;
-    double currentEnergy;
-    double maxEnergy;
-    map<string,int> storage;
-    map<string,int> buildings;
-    int maxBuildingPlots;
-    int currentBuildingCount;
-    bool hasUpgradedPlots;
-    bool underThreat;
+    string name_;
+    map<string, double> baseProduction_;
+    bool unlocked_;
+    int generators_;
+    int accumulators_;
+    double currentEnergy_;
+    double maxEnergy_;
+    map<string, int> storage_;
+    map<string, int> buildings_;
+    int maxBuildingPlots_;
+    int currentBuildingCount_;
+    bool plotsUpgraded_;
+    bool underThreat_;
     static constexpr double GENERATOR_RATE = 5.0;
     static constexpr double ENERGY_COST_PER_SECOND = 1.0;
     static constexpr double COAL_CONSUMPTION = 0.5;
     static constexpr double SOLAR_RATE = 2.0;
+    static constexpr double TRITIUM_EXTRACTION_RATE = 0.05;
 };
 
 class PlanetManager {
 public:
-    PlanetManager(const vector<PlanetDef>& data) {
-        for(auto& p : data)
-            planets.push_back(Planet(p.name, p.baseProduction, p.unlocked));
+    PlanetManager(const vector<PlanetDef> &data) {
+        for (const auto &planet : data)
+            planets_.push_back(Planet(planet.name, planet.baseProduction,
+                                      planet.unlocked));
     }
     void produceAll(double elapsedSeconds, bool energyConservationEnabled) {
-        for(auto& p : planets)
-            p.produceResources(elapsedSeconds, energyConservationEnabled);
+        for (auto &planet : planets_)
+            planet.produceResources(elapsedSeconds, energyConservationEnabled);
     }
-    void unlockPlanet(const string& planetName) {
-        for(auto& p : planets)
-            if(p.getName() == planetName)
-                p.setUnlocked(true);
+    void unlockPlanet(const string &planetName) {
+        for (auto &planet : planets_)
+            if (planet.getName() == planetName)
+                planet.setUnlocked(true);
     }
-    Planet* getPlanetByName(const string& planetName) {
-        for(auto& p : planets)
-            if(p.getName() == planetName)
-                return &p;
+    Planet *getPlanetByName(const string &planetName) {
+        for (auto &planet : planets_)
+            if (planet.getName() == planetName)
+                return &planet;
         return nullptr;
     }
-    const vector<Planet>& getPlanetsConst() const { return planets; }
-    vector<Planet>& getPlanets() { return planets; }
+    const vector<Planet> &getPlanetsConst() const {
+        return planets_;
+    }
+    vector<Planet> &getPlanets() {
+        return planets_;
+    }
 private:
-    vector<Planet> planets;
+    vector<Planet> planets_;
 };
 
 class Research {
 public:
-    Research(const string& n, const map<string,int>& c, const string& desc, const string& effName)
-      : name(n), cost(c), description(desc), effectName(effName), completed(false) {}
-    bool canResearch(Planet* central) const {
-        for(auto &kv : cost)
-            if(central->getStored(kv.first) < kv.second)
+    Research(const string &name, const map<string, int> &cost,
+             const string &description, const string &effectName)
+        : name_(name), cost_(cost), description_(description),
+          effectName_(effectName), completed_(false) {}
+    bool canResearch(Planet *central) const {
+        for (const auto &entry : cost_)
+            if (central->getStored(entry.first) < entry.second)
                 return false;
         return true;
     }
-    void doResearch(Planet* central) {
-        for(auto &kv : cost)
-            central->removeFromStorage(kv.first, kv.second);
-        completed = true;
+    void doResearch(Planet *central) {
+        for (const auto &entry : cost_)
+            central->removeFromStorage(entry.first, entry.second);
+        completed_ = true;
     }
-    const string& getName() const { return name; }
-    const string& getEffectName() const { return effectName; }
-    bool isCompleted() const { return completed; }
-    void setCompleted(bool val) { completed = val; }
-    const map<string,int>& getCost() const { return cost; }
-    const string& getDescription() const { return description; }
+    const string &getName() const {
+        return name_;
+    }
+    const string &getEffectName() const {
+        return effectName_;
+    }
+    bool isCompleted() const {
+        return completed_;
+    }
+    void setCompleted(bool val) {
+        completed_ = val;
+    }
+    const map<string, int> &getCost() const {
+        return cost_;
+    }
+    const string &getDescription() const {
+        return description_;
+    }
 private:
-    string name;
-    map<string,int> cost;
-    string description;
-    string effectName;
-    bool completed;
+    string name_;
+    map<string, int> cost_;
+    string description_;
+    string effectName_;
+    bool completed_;
 };
 
 class DailyQuest {
 public:
-    DailyQuest(const string& d, const string& objRes, int objAmt, const map<string,int>& rew)
-        : description(d), objectiveResource(objRes), objectiveAmount(objAmt),
-          reward(rew), completed(false), isRaiderAttack(false), targetPlanet(""), combatStartTime(0), turnsElapsed(0)
-    {}
-    void checkCompletion(Planet* central) {
-        if(completed || isRaiderAttack) return;
-        if(central->getStored(objectiveResource) >= objectiveAmount){
-            completed = true;
-            for(auto &kv : reward)
-                central->addToStorage(kv.first, kv.second);
+    DailyQuest(const string &desc, const string &objectiveRes, int objectiveAmt,
+               const map<string, int> &reward)
+        : description_(desc), objectiveResource_(objectiveRes),
+          objectiveAmount_(objectiveAmt), reward_(reward), completed_(false),
+          isRaiderAttack_(false), targetPlanet_(""), combatStartTime_(0),
+          turnsElapsed_(0) {}
+    void checkCompletion(Planet *central) {
+        if (completed_ || isRaiderAttack_)
+            return;
+        if (central->getStored(objectiveResource_) >= objectiveAmount_) {
+            completed_ = true;
+            for (const auto &entry : reward_)
+                central->addToStorage(entry.first, entry.second);
             cout << "Quest complete! Reward: ";
-            for(auto &kv : reward)
-                cout << kv.first << " +" << kv.second << " ";
+            for (const auto &entry : reward_)
+                cout << entry.first << " +" << entry.second << " ";
             cout << endl;
-            cout << "\nLore: " << resourceLore[rand() % resourceLore.size()] << endl;
+            cout << "\nLore: " << resourceLore[rand() % resourceLore.size()]
+                 << endl;
         }
     }
-    bool processRaiderAttack(PlanetManager& pm, vector<Ship>& fleet, bool realTime) {
-        if(completed || !isRaiderAttack) return false;
-        Planet* target = pm.getPlanetByName(targetPlanet);
-        if(!target){ cout << "Target planet " << targetPlanet << " not found." << endl; return false; }
-        if(combatStartTime == 0)
-            combatStartTime = time(nullptr);
+    bool processRaiderAttack(PlanetManager &pm, vector<Ship> &fleet,
+                             bool realTime) {
+        if (completed_ || !isRaiderAttack_)
+            return false;
+        Planet *target = pm.getPlanetByName(targetPlanet_);
+        if (!target) {
+            cout << "Target planet " << targetPlanet_ << " not found." << endl;
+            return false;
+        }
+        if (combatStartTime_ == 0)
+            combatStartTime_ = time(nullptr);
         int raiderShield = rand() % 101 + 100;
         int raiderHull = rand() % 201 + 300;
-        cout << "Commencing raider battle at " << targetPlanet << "!" << endl;
+        cout << "Commencing raider battle at " << targetPlanet_ << "!" << endl;
         const int maxTurns = 10;
         int turn = 0;
-        while(turn < maxTurns && !fleet.empty() && raiderHull > 0){
+        while (turn < maxTurns && !fleet.empty() && raiderHull > 0) {
             turn++;
             cout << "\n--- Turn " << turn << " ---" << endl;
-            if(realTime) {
+            if (realTime) {
                 cout << "Waiting 60 seconds for next combat turn..." << endl;
                 this_thread::sleep_for(chrono::seconds(60));
             }
             int totalDamage = 0;
-            for(auto &ship : fleet){
-                if(ship.type == "Corvette" || ship.type == "Shield Ship" || ship.type == "Radar Ship" || ship.type == "Salvage Ship")
+            for (const auto &ship : fleet) {
+                if (ship.type == "Corvette" || ship.type == "Shield Ship" ||
+                    ship.type == "Radar Ship" || ship.type == "Salvage Ship")
                     totalDamage += ship.weapons;
             }
-            cout << "Your defenders fire for a total of " << totalDamage << " damage." << endl;
+            cout << "Your defenders fire for a total of " << totalDamage
+                 << " damage." << endl;
             int shieldDamage = min(totalDamage, raiderShield);
             raiderShield -= shieldDamage;
             int remainingDamage = totalDamage - shieldDamage;
             raiderHull -= remainingDamage;
-            cout << "Raider shields take " << shieldDamage << " damage, remaining: " << raiderShield << endl;
-            if(remainingDamage > 0)
-                cout << "Raider hull takes " << remainingDamage << " damage, remaining: " << raiderHull << endl;
-            if(raiderHull <= 0){
+            cout << "Raider shields take " << shieldDamage
+                 << " damage, remaining: " << raiderShield << endl;
+            if (remainingDamage > 0)
+                cout << "Raider hull takes " << remainingDamage
+                     << " damage, remaining: " << raiderHull << endl;
+            if (raiderHull <= 0) {
                 cout << "Raiders defeated!" << endl;
-                Planet* terra = pm.getPlanetByName("Terra");
-                if(terra){ terra->addToStorage("Engine Parts", 2); cout << "You receive 2 Engine Parts as reward." << endl; }
-                completed = true;
-                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()] << endl;
+                Planet *terra = pm.getPlanetByName("Terra");
+                if (terra) {
+                    terra->addToStorage("Engine Parts", 2);
+                    cout << "You receive 2 Engine Parts as reward." << endl;
+                }
+                completed_ = true;
+                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()]
+                     << endl;
                 target->setUnderThreat(false);
                 break;
             }
             int raiderDamage = rand() % 51 + 50;
             cout << "Raiders fire for " << raiderDamage << " damage." << endl;
+            int shieldBonus = 0;
             int numShieldGen = 0;
             auto blds = target->getBuildings();
-            if(blds.find("Shield Generator") != blds.end())
+            if (blds.find("Shield Generator") != blds.end())
                 numShieldGen = blds.at("Shield Generator");
-            int shieldBonus = 0;
-            for(int i = 0; i < numShieldGen; i++){
-                if(target->getCurrentEnergy() >= 5){
+            for (int i = 0; i < numShieldGen; i++) {
+                if (target->getCurrentEnergy() >= 5) {
                     shieldBonus += 30;
                     target->setCurrentEnergy(target->getCurrentEnergy() - 5);
                 }
             }
-            cout << "Shield Generators provide " << shieldBonus << " shield bonus." << endl;
+            cout << "Shield Generators provide " << shieldBonus
+                 << " shield bonus." << endl;
             int effectiveDamage = max(0, raiderDamage - shieldBonus);
             vector<int> indices;
-            for(size_t i = 0; i < fleet.size(); i++){
-                if(fleet[i].type == "Corvette" || fleet[i].type == "Shield Ship" ||
-                   fleet[i].type == "Radar Ship" || fleet[i].type == "Salvage Ship")
+            for (size_t i = 0; i < fleet.size(); i++) {
+                if (fleet[i].type == "Corvette" || fleet[i].type == "Shield Ship" ||
+                    fleet[i].type == "Radar Ship" || fleet[i].type == "Salvage Ship")
                     indices.push_back(i);
             }
-            if(!indices.empty()){
+            if (!indices.empty()) {
                 int dmgPerShip = effectiveDamage / indices.size();
-                for(int idx : indices){
+                for (int idx : indices) {
                     Ship &s = fleet[idx];
-                    if(s.currentShield >= dmgPerShip){
+                    if (s.currentShield >= dmgPerShip) {
                         s.currentShield -= dmgPerShip;
-                        cout << s.type << " takes " << dmgPerShip << " damage to shield, remaining shield: " << s.currentShield << endl;
+                        cout << s.type << " takes " << dmgPerShip
+                             << " damage to shield, remaining shield: "
+                             << s.currentShield << endl;
                     } else {
                         int rem = dmgPerShip - s.currentShield;
                         s.currentShield = 0;
                         s.hull -= rem;
-                        cout << s.type << " shield depleted; takes " << rem << " hull damage, remaining hull: " << s.hull << endl;
+                        cout << s.type << " shield depleted; takes " << rem
+                             << " hull damage, remaining hull: " << s.hull << endl;
                     }
                 }
-                fleet.erase(remove_if(fleet.begin(), fleet.end(), [](const Ship &s){ return s.hull <= 0; }), fleet.end());
+                fleet.erase(remove_if(fleet.begin(), fleet.end(),
+                                      [](const Ship &s) { return s.hull <= 0; }),
+                            fleet.end());
             }
-            if(fleet.empty()){
+            if (fleet.empty()) {
                 cout << "All defending ships have been destroyed!" << endl;
-                completed = true;
-                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()] << endl;
+                completed_ = true;
+                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()]
+                     << endl;
                 target->setUnderThreat(false);
                 break;
             }
-            vector<Ship*> repairDrones;
-            for(auto &ship : fleet)
-                if(ship.type == "Repair Drone")
+            vector<Ship *> repairDrones;
+            for (auto &ship : fleet)
+                if (ship.type == "Repair Drone")
                     repairDrones.push_back(&ship);
-            if(!repairDrones.empty()){
-                vector<Ship*> candidates;
-                for(auto &ship : fleet){
-                    if(ship.type != "Repair Drone" && ship.hull < 100)
+            if (!repairDrones.empty()) {
+                vector<Ship *> candidates;
+                for (auto &ship : fleet) {
+                    if (ship.type != "Repair Drone" && ship.hull < 100)
                         candidates.push_back(&ship);
                 }
-                if(!candidates.empty()){
-                    Ship* targetShip = *min_element(candidates.begin(), candidates.end(),
-                        [](Ship* a, Ship* b){
-                            double ra = double(a->hull) / (a->type=="Shield Ship" ? 120 : 100);
-                            double rb = double(b->hull) / (b->type=="Shield Ship" ? 120 : 100);
-                            return ra < rb;
+                if (!candidates.empty()) {
+                    Ship *targetShip = *min_element(
+                        candidates.begin(), candidates.end(),
+                        [](Ship *a, Ship *b) {
+                            double ratioA = static_cast<double>(a->hull) /
+                                            (a->type == "Shield Ship" ? 120 : 100);
+                            double ratioB = static_cast<double>(b->hull) /
+                                            (b->type == "Shield Ship" ? 120 : 100);
+                            return ratioA < ratioB;
                         });
-                    cout << "Repair Drones repair " << targetShip->type << " for 10 HP." << endl;
-                    targetShip->hull = min(targetShip->hull + 10, (targetShip->type=="Shield Ship" ? 120 : 100));
+                    cout << "Repair Drones repair " << targetShip->type
+                         << " for 10 HP." << endl;
+                    targetShip->hull = min(targetShip->hull + 10,
+                                           (targetShip->type == "Shield Ship" ? 120 : 100));
                 }
             }
             cout << "End of turn " << turn << ".\n";
         }
-        if(turn >= 10){
+        if (turn >= maxTurns) {
             cout << "Combat ended after 10 turns." << endl;
-            completed = true;
+            completed_ = true;
             target->setUnderThreat(false);
         }
-        return completed;
+        return completed_;
     }
-    bool isCompleted() const { return completed; }
-    const string& getDescription() const { return description; }
-    const string& getObjectiveResource() const { return objectiveResource; }
-    int getObjectiveAmount() const { return objectiveAmount; }
-    const map<string,int>& getReward() const { return reward; }
-    bool isRaider() const { return isRaiderAttack; }
-    void setRaiderAttack(const string& target) { isRaiderAttack = true; targetPlanet = target; }
-    const string& getTargetPlanet() const { return targetPlanet; }
+    bool isCompleted() const {
+        return completed_;
+    }
+    const string &getDescription() const {
+        return description_;
+    }
+    const string &getObjectiveResource() const {
+        return objectiveResource_;
+    }
+    int getObjectiveAmount() const {
+        return objectiveAmount_;
+    }
+    const map<string, int> &getReward() const {
+        return reward_;
+    }
+    bool isRaider() const {
+        return isRaiderAttack_;
+    }
+    void setRaiderAttack(const string &target) {
+        isRaiderAttack_ = true;
+        targetPlanet_ = target;
+    }
+    const string &getTargetPlanet() const {
+        return targetPlanet_;
+    }
 private:
-    string description;
-    string objectiveResource;
-    int objectiveAmount;
-    map<string,int> reward;
-    bool completed;
-    bool isRaiderAttack;
-    string targetPlanet;
-    time_t combatStartTime;
-    int turnsElapsed;
+    string description_;
+    string objectiveResource_;
+    int objectiveAmount_;
+    map<string, int> reward_;
+    bool completed_;
+    bool isRaiderAttack_;
+    string targetPlanet_;
+    time_t combatStartTime_;
+    int turnsElapsed_;
 };
 
 class QuestManager {
 public:
-    QuestManager() : currentQuest(nullptr), lastQuestDate("") {}
-    void updateDailyQuest(Planet* central, PlanetManager& pm, vector<Ship>& fleet) {
+    QuestManager() : currentQuest_(nullptr), lastQuestDate_("") {}
+    void updateDailyQuest(Planet *central, PlanetManager &pm, vector<Ship> &fleet) {
         string todayStr = currentDateString();
-        if(lastQuestDate.empty() || lastQuestDate < todayStr){
+        if (lastQuestDate_.empty() || lastQuestDate_ < todayStr) {
             generateNewQuest(pm);
-            lastQuestDate = todayStr;
+            lastQuestDate_ = todayStr;
         }
-        if(currentQuest){
+        if (currentQuest_) {
             bool realTime = true;
-            currentQuest->processRaiderAttack(pm, fleet, realTime);
-            currentQuest->checkCompletion(central);
+            currentQuest_->processRaiderAttack(pm, fleet, realTime);
+            currentQuest_->checkCompletion(central);
         }
     }
-    DailyQuest* getCurrentQuest() { return currentQuest.get(); }
-    const DailyQuest* getCurrentQuestConst() const { return currentQuest.get(); }
-    const string& getLastQuestDate() const { return lastQuestDate; }
-    void setLastQuestDate(const string& s) { lastQuestDate = s; }
-    void setCurrentQuest(unique_ptr<DailyQuest> q) { currentQuest = std::move(q); }
+    DailyQuest *getCurrentQuest() {
+        return currentQuest_.get();
+    }
+    const DailyQuest *getCurrentQuestConst() const {
+        return currentQuest_.get();
+    }
+    const string &getLastQuestDate() const {
+        return lastQuestDate_;
+    }
+    void setLastQuestDate(const string &s) {
+        lastQuestDate_ = s;
+    }
+    void setCurrentQuest(unique_ptr<DailyQuest> q) {
+        currentQuest_ = std::move(q);
+    }
 private:
-    unique_ptr<DailyQuest> currentQuest;
-    string lastQuestDate;
-    void generateNewQuest(PlanetManager& pm) {
-        if((rand()%100) < 20) {
+    unique_ptr<DailyQuest> currentQuest_;
+    string lastQuestDate_;
+    void generateNewQuest(PlanetManager &pm) {
+        if ((rand() % 100) < 20) {
             vector<string> candidates;
-            for(auto &p : pm.getPlanets())
-                if(p.isUnlocked() && p.getName() != "Terra")
-                    candidates.push_back(p.getName());
-            if(candidates.empty())
+            for (auto &planet : pm.getPlanets())
+                if (planet.isUnlocked() && planet.getName() != "Terra")
+                    candidates.push_back(planet.getName());
+            if (candidates.empty())
                 candidates.push_back("Terra");
-            string target = candidates[rand()%candidates.size()];
+            string target = candidates[rand() % candidates.size()];
             string desc = "Raiders are approaching " + target + "! Prepare to defend!";
-            map<string,int> reward = { {"Engine Parts", 2} };
+            map<string, int> reward = {{"Engine Parts", 2}};
             auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
             quest->setRaiderAttack(target);
-            Planet* tgt = pm.getPlanetByName(target);
-            if(tgt && tgt->hasBuilding("Proximity Alarm")){
-                cout << "Proximity Alarm on " << target << " issues a 5-minute warning of an imminent raider attack!" << endl;
+            Planet *tgt = pm.getPlanetByName(target);
+            if (tgt && tgt->hasBuilding("Proximity Alarm")) {
+                cout << "Proximity Alarm on " << target
+                     << " issues a 5-minute warning of an imminent raider attack!"
+                     << endl;
                 this_thread::sleep_for(chrono::minutes(5));
                 tgt->setUnderThreat(true);
             }
-            currentQuest = std::move(quest);
+            currentQuest_ = std::move(quest);
         } else {
-            vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar", "Titanium Bar", "Advanced Engine Parts"};
-            int idx = rand()%resourceChoices.size();
+            vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar",
+                                                "Titanium Bar", "Advanced Engine Parts"};
+            int idx = rand() % resourceChoices.size();
             string chosen = resourceChoices[idx];
-            int amt = rand()%41 + 10;
-            map<string,int> reward = { {"Engine Parts", (rand()%3)+1} };
+            int amt = rand() % 41 + 10;
+            map<string, int> reward = {{"Engine Parts", (rand() % 3) + 1}};
             string desc = "Collect " + to_string(amt) + " " + chosen;
-            currentQuest = make_unique<DailyQuest>(desc, chosen, amt, reward);
+            currentQuest_ = make_unique<DailyQuest>(desc, chosen, amt, reward);
         }
     }
-    string currentDateString(){
+    string currentDateString() {
         time_t now = time(nullptr);
-        tm* gmt = gmtime(&now);
+        tm *gmt = gmtime(&now);
         char buf[11];
         strftime(buf, sizeof(buf), "%Y-%m-%d", gmt);
         return string(buf);
@@ -555,428 +735,655 @@ private:
 
 class ResearchManager {
 public:
-    ResearchManager(const vector<ResearchDef>& data) {
-        for(auto& rd : data) {
-            researches.push_back(Research(rd.name, rd.cost, rd.description, rd.effectName));
-        }
+    ResearchManager(const vector<ResearchDef> &data) {
+        for (const auto &rd : data)
+            researches_.push_back(Research(rd.name, rd.cost, rd.description,
+                                           rd.effectName));
     }
-    Research* findResearchByName(const string& name) {
-        for (auto& r : researches) {
-            if(r.getName() == name)
-                return &r;
-        }
+    Research *findResearchByName(const string &name) {
+        for (auto &research : researches_)
+            if (research.getName() == name)
+                return &research;
         return nullptr;
     }
-    vector<Research>& getAllResearches() { return researches; }
-    const vector<Research>& getAllResearchesConst() const { return researches; }
+    vector<Research> &getAllResearches() {
+        return researches_;
+    }
+    const vector<Research> &getAllResearchesConst() const {
+        return researches_;
+    }
 private:
-    vector<Research> researches;
+    vector<Research> researches_;
 };
 
 class CraftingManager {
 public:
-    CraftingManager(const map<string, CraftingRecipe>& recipes) : recipes(recipes) {}
-    void craft(const string& itemName, Planet* p, double fasterMultiplier, double costMultiplier, bool precisionToolsEnabled) {
-        auto it = recipes.find(itemName);
-        if(it == recipes.end()){
+    CraftingManager(const map<string, CraftingRecipe> &recipes)
+        : recipes_(recipes) {}
+    void craft(const string &itemName, Planet *planet, double fasterMultiplier,
+               double costMultiplier, bool precisionToolsEnabled) {
+        auto it = recipes_.find(itemName);
+        if (it == recipes_.end()) {
             cout << "No recipe for item '" << itemName << "'." << endl;
             return;
         }
         CraftingRecipe recipe = it->second;
-        if(!p->hasBuilding(recipe.requiredBuilding)){
-            cout << "You need a " << recipe.requiredBuilding << " on " << p->getName() << " to craft " << itemName << "." << endl;
+        if (!planet->hasBuilding(recipe.requiredBuilding)) {
+            cout << "You need a " << recipe.requiredBuilding << " on "
+                 << planet->getName() << " to craft " << itemName << "." << endl;
             return;
         }
-        for(auto &kv : recipe.inputs){
-            if(p->getStored(kv.first) < kv.second){
-                cout << "Not enough " << kv.first << " on " << p->getName() << " to craft " << itemName << "." << endl;
+        for (const auto &entry : recipe.inputs) {
+            if (planet->getStored(entry.first) < entry.second) {
+                cout << "Not enough " << entry.first << " on "
+                     << planet->getName() << " to craft " << itemName << "."
+                     << endl;
                 return;
             }
         }
         double effectiveCost = recipe.electricityCost * costMultiplier;
-        if(p->getCurrentEnergy() < effectiveCost){
-            cout << "Not enough energy on " << p->getName() << " to craft " << itemName << "." << endl;
+        if (planet->getCurrentEnergy() < effectiveCost) {
+            cout << "Not enough energy on " << planet->getName() << " to craft "
+                 << itemName << "." << endl;
             return;
         }
-        for(auto &kv : recipe.inputs)
-            p->removeFromStorage(kv.first, kv.second);
-        p->setCurrentEnergy(p->getCurrentEnergy() - effectiveCost);
+        for (const auto &entry : recipe.inputs)
+            planet->removeFromStorage(entry.first, entry.second);
+        planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
         double craftTime = recipe.timeRequired * fasterMultiplier;
-        cout << "Crafting " << itemName << " took " << craftTime << " seconds." << endl;
+        cout << "Crafting " << itemName << " took " << craftTime << " seconds."
+             << endl;
         int quantity = 1;
-        if(precisionToolsEnabled){
-            if(rand() % 100 < 10) {
+        if (precisionToolsEnabled) {
+            if (rand() % 100 < 10) {
                 quantity = 2;
                 cout << "Precision Tools activated: doubled output!" << endl;
             }
         }
-        p->addToStorage(itemName, quantity);
-        cout << "Crafted " << quantity << " " << itemName << "(s) on " << p->getName() << "." << endl;
+        planet->addToStorage(itemName, quantity);
+        cout << "Crafted " << quantity << " " << itemName << "(s) on "
+             << planet->getName() << "." << endl;
     }
 private:
-    map<string, CraftingRecipe> recipes;
+    map<string, CraftingRecipe> recipes_;
 };
 
 class Player {
 public:
     Player()
-        : planetManager(PLANET_DATA),
-          researchManager(RESEARCH_DATA),
-          craftingManager(CRAFTING_RECIPES),
-          fasterCraftingMultiplier(1.0),
-          craftingCostMultiplier(1.0),
-          precisionToolsEnabled(false),
-          energyConservationEnabled(false),
-          lastUpdateTime(time(nullptr))
-    {
+        : planetManager_(PLANET_DATA),
+          researchManager_(RESEARCH_DATA),
+          craftingManager_(CRAFTING_RECIPES),
+          fasterCraftingMultiplier_(1.0),
+          craftingCostMultiplier_(1.0),
+          precisionToolsEnabled_(false),
+          energyConservationEnabled_(false),
+          quantumCommunicationEnabled_(false),
+          lastUpdateTime_(time(nullptr)) {
         srand(static_cast<unsigned>(time(nullptr)));
     }
-    PlanetManager& getPlanetManager() { return planetManager; }
-    ResearchManager& getResearchManager() { return researchManager; }
-    CraftingManager& getCraftingManager() { return craftingManager; }
-    QuestManager& getQuestManager() { return questManager; }
-    vector<Ship>& getFleet() { return fleet; }
-    const PlanetManager& getPlanetManager() const { return planetManager; }
-    const ResearchManager& getResearchManager() const { return researchManager; }
-    const QuestManager& getQuestManager() const { return questManager; }
-    const vector<Ship>& getFleet() const { return fleet; }
-    double getFasterCraftingMultiplier() const { return fasterCraftingMultiplier; }
-    double getCraftingCostMultiplier() const { return craftingCostMultiplier; }
-    bool isPrecisionToolsEnabled() const { return precisionToolsEnabled; }
-    bool isEnergyConservationEnabled() const { return energyConservationEnabled; }
-    void setFasterCraftingMultiplier(double val) { fasterCraftingMultiplier = val; }
-    void setCraftingCostMultiplier(double val) { craftingCostMultiplier = val; }
-    void setPrecisionToolsEnabled(bool val) { precisionToolsEnabled = val; }
-    void setEnergyConservationEnabled(bool val) { energyConservationEnabled = val; }
+    PlanetManager &getPlanetManager() {
+        return planetManager_;
+    }
+    ResearchManager &getResearchManager() {
+        return researchManager_;
+    }
+    CraftingManager &getCraftingManager() {
+        return craftingManager_;
+    }
+    QuestManager &getQuestManager() {
+        return questManager_;
+    }
+    vector<Ship> &getFleet() {
+        return fleet_;
+    }
+    const PlanetManager &getPlanetManager() const {
+        return planetManager_;
+    }
+    const ResearchManager &getResearchManager() const {
+        return researchManager_;
+    }
+    const QuestManager &getQuestManager() const {
+        return questManager_;
+    }
+    const vector<Ship> &getFleet() const {
+        return fleet_;
+    }
+    double getFasterCraftingMultiplier() const {
+        return fasterCraftingMultiplier_;
+    }
+    double getCraftingCostMultiplier() const {
+        return craftingCostMultiplier_;
+    }
+    bool isPrecisionToolsEnabled() const {
+        return precisionToolsEnabled_;
+    }
+    bool isEnergyConservationEnabled() const {
+        return energyConservationEnabled_;
+    }
+    bool isQuantumCommunicationEnabled() const {
+        return quantumCommunicationEnabled_;
+    }
+    void setFasterCraftingMultiplier(double val) {
+        fasterCraftingMultiplier_ = val;
+    }
+    void setCraftingCostMultiplier(double val) {
+        craftingCostMultiplier_ = val;
+    }
+    void setPrecisionToolsEnabled(bool val) {
+        precisionToolsEnabled_ = val;
+    }
+    void setEnergyConservationEnabled(bool val) {
+        energyConservationEnabled_ = val;
+    }
+    void setQuantumCommunicationEnabled(bool val) {
+        quantumCommunicationEnabled_ = val;
+    }
     void produceResources() {
         time_t now = time(nullptr);
-        double diff = difftime(now, lastUpdateTime);
-        if(diff < 0) diff = 0;
-        planetManager.produceAll(diff, energyConservationEnabled);
-        lastUpdateTime = now;
+        double diff = difftime(now, lastUpdateTime_);
+        if (diff < 0)
+            diff = 0;
+        planetManager_.produceAll(diff, energyConservationEnabled_);
+        lastUpdateTime_ = now;
     }
-    void doResearch(const string& researchName) {
-        Research* r = researchManager.findResearchByName(researchName);
-        if(!r){ cout << "No research found by that name." << endl; return; }
-        if(r->isCompleted()){ cout << "Research already completed." << endl; return; }
-        Planet* terra = planetManager.getPlanetByName("Terra");
-        if(!terra){ cout << "Central planet Terra not found." << endl; return; }
-        if(r->canResearch(terra)){
-            r->doResearch(terra);
-            applyResearchEffect(r->getEffectName());
-            cout << "Research '" << r->getName() << "' completed!" << endl;
+    void doResearch(const string &researchName) {
+        Research *research = researchManager_.findResearchByName(researchName);
+        if (!research) {
+            cout << "No research found by that name." << endl;
+            return;
+        }
+        if (research->isCompleted()) {
+            cout << "Research already completed." << endl;
+            return;
+        }
+        Planet *terra = planetManager_.getPlanetByName("Terra");
+        if (!terra) {
+            cout << "Central planet Terra not found." << endl;
+            return;
+        }
+        if (research->canResearch(terra)) {
+            research->doResearch(terra);
+            applyResearchEffect(research->getEffectName());
+            cout << "Research '" << research->getName() << "' completed!" << endl;
         } else {
-            cout << "Not enough resources on Terra to perform research." << endl;
+            cout << "Not enough resources on Terra to perform research."
+                 << endl;
         }
     }
-    void craftItem(const string& itemName, const string& planetName = "Terra") {
-        Planet* p = planetManager.getPlanetByName(planetName);
-        if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
-        craftingManager.craft(itemName, p, fasterCraftingMultiplier, craftingCostMultiplier, precisionToolsEnabled);
+    void craftItem(const string &itemName, const string &planetName = "Terra") {
+        Planet *planet = planetManager_.getPlanetByName(planetName);
+        if (!planet) {
+            cout << "Planet " << planetName << " not found." << endl;
+            return;
+        }
+        craftingManager_.craft(itemName, planet, fasterCraftingMultiplier_,
+                               craftingCostMultiplier_, precisionToolsEnabled_);
     }
-    void craftShip(const string& shipType, const string& planetName = "Terra") {
-        Planet* p = planetManager.getPlanetByName(planetName);
-        if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
-        if(shipType == "Shield Ship"){
-            Research* rt = researchManager.findResearchByName("Shield Technology");
-            if(!rt || !rt->isCompleted()){
-                cout << "Shield Technology research is not complete. Cannot build Shield Ship." << endl;
-                return;
-            }
+    void craftShip(const string &shipType, const string &planetName = "Terra") {
+        Planet *planet = planetManager_.getPlanetByName(planetName);
+        if (!planet) {
+            cout << "Planet " << planetName << " not found." << endl;
+            return;
         }
-        if(shipType == "Repair Drone"){
-            Research* rd = researchManager.findResearchByName("Repair Drone Technology");
-            if(!rd || !rd->isCompleted()){
-                cout << "Repair Drone Technology research is not complete. Cannot build Repair Drone." << endl;
-                return;
-            }
-        }
-        if(shipType == "Radar Ship"){
-            if(!p->hasBuilding("Proximity Radar") || !p->hasBuilding("Mobile Radar")){
-                cout << "To build a Radar Ship, the planet must have both Proximity Radar and Mobile Radar." << endl;
-                return;
+        if (shipType == "Celestial Juggernaut" ||
+            shipType == "Nova Carrier" || shipType == "Obsidian Sovereign" ||
+            shipType == "Preemptor" || shipType == "Aurora Protector") {
+            for (const auto &ship : fleet_) {
+                if (ship.type == "Celestial Juggernaut" ||
+                    ship.type == "Nova Carrier" || ship.type == "Obsidian Sovereign" ||
+                    ship.type == "Preemptor" || ship.type == "Aurora Protector") {
+                    cout << "A capital ship is already active. Only one capital ship can "
+                         << "be active at a time." << endl;
+                    return;
+                }
             }
         }
         auto it = CRAFTING_RECIPES.find(shipType);
-        if(it == CRAFTING_RECIPES.end()){
+        if (it == CRAFTING_RECIPES.end()) {
             cout << "No recipe for ship type '" << shipType << "'." << endl;
             return;
         }
-        if(!p->hasBuilding(it->second.requiredBuilding)){
-            cout << "You need a " << it->second.requiredBuilding << " on " << planetName << " to build a " << shipType << "." << endl;
+        if (!planet->hasBuilding(it->second.requiredBuilding)) {
+            cout << "You need a " << it->second.requiredBuilding << " on " << planetName
+                 << " to build a " << shipType << "." << endl;
             return;
         }
-        for(auto &kv : it->second.inputs){
-            if(p->getStored(kv.first) < kv.second){
-                cout << "Not enough " << kv.first << " on " << planetName << " to build a " << shipType << "." << endl;
+        for (const auto &entry : it->second.inputs) {
+            if (planet->getStored(entry.first) < entry.second) {
+                cout << "Not enough " << entry.first << " on " << planetName
+                     << " to build a " << shipType << "." << endl;
                 return;
             }
         }
-        double effectiveCost = it->second.electricityCost * craftingCostMultiplier;
-        if(p->getCurrentEnergy() < effectiveCost){
-            cout << "Not enough energy on " << planetName << " to build a " << shipType << "." << endl;
+        double effectiveCost = it->second.electricityCost * craftingCostMultiplier_;
+        if (planet->getCurrentEnergy() < effectiveCost) {
+            cout << "Not enough energy on " << planetName << " to build a " << shipType
+                 << "." << endl;
             return;
         }
-        p->setCurrentEnergy(p->getCurrentEnergy() - effectiveCost);
-        for(auto &kv : it->second.inputs)
-            p->removeFromStorage(kv.first, kv.second);
-        cout << "Built a " << shipType << " on " << planetName << " consuming " << effectiveCost << " energy." << endl;
+        planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
+        for (const auto &entry : it->second.inputs)
+            planet->removeFromStorage(entry.first, entry.second);
+        cout << "Built a " << shipType << " on " << planetName << " consuming "
+             << effectiveCost << " energy." << endl;
         Ship newShip;
         newShip.type = shipType;
-        if(shipType == "Transport Vessel"){
-            newShip.hull = 100; newShip.maxShield = 50; newShip.currentShield = 50; newShip.weapons = 0; newShip.repairAmount = 0;
-        } else if(shipType == "Corvette"){
-            newShip.hull = 100; newShip.maxShield = 75; newShip.currentShield = 75; newShip.weapons = 30; newShip.repairAmount = 0;
-        } else if(shipType == "Shield Ship"){
-            newShip.hull = 120; newShip.maxShield = 150; newShip.currentShield = 150; newShip.weapons = 20; newShip.repairAmount = 0;
-        } else if(shipType == "Radar Ship"){
-            newShip.hull = 110; newShip.maxShield = 80; newShip.currentShield = 80; newShip.weapons = 25; newShip.repairAmount = 0;
-        } else if(shipType == "Salvage Ship"){
-            newShip.hull = 110; newShip.maxShield = 70; newShip.currentShield = 70; newShip.weapons = 15; newShip.repairAmount = 0;
-        } else if(shipType == "Repair Drone"){
-            newShip.hull = 80; newShip.maxShield = 40; newShip.currentShield = 40; newShip.weapons = 0; newShip.repairAmount = 10;
+        if (shipType == "Transport Vessel") {
+            newShip.hull = 100;
+            newShip.maxShield = 50;
+            newShip.currentShield = 50;
+            newShip.weapons = 0;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Corvette") {
+            newShip.hull = 100;
+            newShip.maxShield = 75;
+            newShip.currentShield = 75;
+            newShip.weapons = 30;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Shield Ship") {
+            newShip.hull = 120;
+            newShip.maxShield = 150;
+            newShip.currentShield = 150;
+            newShip.weapons = 20;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Radar Ship") {
+            newShip.hull = 110;
+            newShip.maxShield = 80;
+            newShip.currentShield = 80;
+            newShip.weapons = 25;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Salvage Ship") {
+            newShip.hull = 110;
+            newShip.maxShield = 70;
+            newShip.currentShield = 70;
+            newShip.weapons = 15;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Repair Drone") {
+            newShip.hull = 80;
+            newShip.maxShield = 40;
+            newShip.currentShield = 40;
+            newShip.weapons = 0;
+            newShip.repairAmount = 10;
+        } else if (shipType == "Interceptor") {
+            newShip.hull = 90;
+            newShip.maxShield = 60;
+            newShip.currentShield = 60;
+            newShip.weapons = 40;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Celestial Juggernaut") {
+            newShip.hull = 300;
+            newShip.maxShield = 200;
+            newShip.currentShield = 200;
+            newShip.weapons = 100;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Nova Carrier") {
+            newShip.hull = 250;
+            newShip.maxShield = 150;
+            newShip.currentShield = 150;
+            newShip.weapons = 80;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Obsidian Sovereign") {
+            newShip.hull = 350;
+            newShip.maxShield = 250;
+            newShip.currentShield = 250;
+            newShip.weapons = 120;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Preemptor") {
+            newShip.hull = 200;
+            newShip.maxShield = 100;
+            newShip.currentShield = 100;
+            newShip.weapons = 150;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Aurora Protector") {
+            newShip.hull = 280;
+            newShip.maxShield = 300;
+            newShip.currentShield = 300;
+            newShip.weapons = 70;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Juggernaut Frigate") {
+            newShip.hull = 150;
+            newShip.maxShield = 100;
+            newShip.currentShield = 100;
+            newShip.weapons = 40;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Carrier Frigate") {
+            newShip.hull = 130;
+            newShip.maxShield = 90;
+            newShip.currentShield = 90;
+            newShip.weapons = 30;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Sovereign Frigate") {
+            newShip.hull = 160;
+            newShip.maxShield = 110;
+            newShip.currentShield = 110;
+            newShip.weapons = 50;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Preemptor Frigate") {
+            newShip.hull = 120;
+            newShip.maxShield = 80;
+            newShip.currentShield = 80;
+            newShip.weapons = 60;
+            newShip.repairAmount = 0;
+        } else if (shipType == "Protector Frigate") {
+            newShip.hull = 140;
+            newShip.maxShield = 120;
+            newShip.currentShield = 120;
+            newShip.weapons = 35;
+            newShip.repairAmount = 0;
         }
-        fleet.push_back(newShip);
+        fleet_.push_back(newShip);
     }
-    void buildBuilding(const string& buildingName, const string& planetName) {
-        Planet* p = planetManager.getPlanetByName(planetName);
-        if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
+    void buildBuilding(const string &buildingName, const string &planetName) {
+        Planet *planet = planetManager_.getPlanetByName(planetName);
+        if (!planet) {
+            cout << "Planet " << planetName << " not found." << endl;
+            return;
+        }
         int totalBuildings = 0;
-        for(auto &b : p->getBuildings())
+        for (const auto &b : planet->getBuildings())
             totalBuildings += b.second;
-        if(totalBuildings >= p->getMaxBuildingPlots()){
-            cout << "No available building plots on " << planetName << ". Use 'upgrade_plots " << planetName << "' to increase capacity." << endl;
+        if (totalBuildings >= planet->getMaxBuildingPlots()) {
+            cout << "No available building plots on " << planetName
+                 << ". Use 'upgrade_plots " << planetName
+                 << "' to increase capacity." << endl;
             return;
         }
         auto it = BUILDING_RECIPES.find(buildingName);
-        if(it == BUILDING_RECIPES.end()){
+        if (it == BUILDING_RECIPES.end()) {
             cout << "No recipe for building '" << buildingName << "'." << endl;
             return;
         }
-        for(auto &kv : it->second.inputs){
-            if(p->getStored(kv.first) < kv.second){
-                cout << "Not enough " << kv.first << " on " << planetName << " to build " << buildingName << "." << endl;
+        for (const auto &entry : it->second.inputs) {
+            if (planet->getStored(entry.first) < entry.second) {
+                cout << "Not enough " << entry.first << " on " << planetName
+                     << " to build " << buildingName << "." << endl;
                 return;
             }
         }
-        if(p->getCurrentEnergy() < it->second.electricityCost){
-            cout << "Not enough energy on " << planetName << " to build " << buildingName << "." << endl;
+        if (planet->getCurrentEnergy() < it->second.electricityCost) {
+            cout << "Not enough energy on " << planetName << " to build "
+                 << buildingName << "." << endl;
             return;
         }
-        p->setCurrentEnergy(p->getCurrentEnergy() - it->second.electricityCost);
-        for(auto &kv : it->second.inputs)
-            p->removeFromStorage(kv.first, kv.second);
-        if(p->addBuilding(buildingName))
-            cout << "Built " << buildingName << " on " << planetName << "." << endl;
+        planet->setCurrentEnergy(planet->getCurrentEnergy() -
+                                 it->second.electricityCost);
+        for (const auto &entry : it->second.inputs)
+            planet->removeFromStorage(entry.first, entry.second);
+        if (planet->addBuilding(buildingName))
+            cout << "Built " << buildingName << " on " << planetName << "."
+                 << endl;
     }
-    void upgradeBuildingPlots(const string& planetName) {
-        Planet* p = planetManager.getPlanetByName(planetName);
-        if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
-        int totalBuildings = 0;
-        for(auto &b : p->getBuildings())
-            totalBuildings += b.second;
-        if(totalBuildings < p->getMaxBuildingPlots()){
-            cout << "There are still available building plots on " << planetName << "." << endl;
+    void upgradeBuildingPlots(const string &planetName) {
+        Planet *planet = planetManager_.getPlanetByName(planetName);
+        if (!planet) {
+            cout << "Planet " << planetName << " not found." << endl;
             return;
         }
-        if(p->getStored("Iron Bar") >= 10 && p->getStored("Engine Parts") >= 2){
-            if(p->upgradePlots()){
-                p->removeFromStorage("Iron Bar", 10);
-                p->removeFromStorage("Engine Parts", 2);
-                cout << "Building capacity on " << planetName << " increased by 2." << endl;
+        int totalBuildings = 0;
+        for (const auto &b : planet->getBuildings())
+            totalBuildings += b.second;
+        if (totalBuildings < planet->getMaxBuildingPlots()) {
+            cout << "There are still available building plots on " << planetName
+                 << "." << endl;
+            return;
+        }
+        if (planet->getStored("Iron Bar") >= 10 &&
+            planet->getStored("Engine Parts") >= 2) {
+            if (planet->upgradePlots()) {
+                planet->removeFromStorage("Iron Bar", 10);
+                planet->removeFromStorage("Engine Parts", 2);
+                cout << "Building capacity on " << planetName
+                     << " increased by 2." << endl;
             } else {
-                cout << "Building capacity on " << planetName << " has already been upgraded." << endl;
+                cout << "Building capacity on " << planetName
+                     << " has already been upgraded." << endl;
             }
         } else {
-            cout << "Not enough resources on " << planetName << " to upgrade building plots." << endl;
+            cout << "Not enough resources on " << planetName
+                 << " to upgrade building plots." << endl;
         }
     }
-    void transferResource(const string& resourceName, int amount, const string& fromPlanetName, const string& toPlanetName) {
-        Planet* fromP = planetManager.getPlanetByName(fromPlanetName);
-        Planet* toP = planetManager.getPlanetByName(toPlanetName);
-        if(!fromP || !toP){ cout << "Invalid planet(s) specified." << endl; return; }
-        if(fromP->getStored(resourceName) < amount){
-            cout << "Not enough " << resourceName << " on " << fromPlanetName << " to transfer." << endl;
+    void transferResource(const string &resourceName, int amount,
+                          const string &fromPlanetName,
+                          const string &toPlanetName) {
+        Planet *fromPlanet = planetManager_.getPlanetByName(fromPlanetName);
+        Planet *toPlanet = planetManager_.getPlanetByName(toPlanetName);
+        if (!fromPlanet || !toPlanet) {
+            cout << "Invalid planet(s) specified." << endl;
+            return;
+        }
+        if (fromPlanet->getStored(resourceName) < amount) {
+            cout << "Not enough " << resourceName << " on " << fromPlanetName
+                 << " to transfer." << endl;
             return;
         }
         bool hasTransport = false;
-        for(auto &ship : fleet)
-            if(ship.type == "Transport Vessel"){ hasTransport = true; break; }
-        if(!hasTransport){ cout << "At least one Transport Vessel is required in your fleet." << endl; return; }
-        cout << "Transferring " << amount << " " << resourceName << " from " << fromPlanetName << " to " << toPlanetName << "." << endl;
-        if((rand()%100) < 30){
+        for (const auto &ship : fleet_)
+            if (ship.type == "Transport Vessel") {
+                hasTransport = true;
+                break;
+            }
+        if (!hasTransport) {
+            cout << "At least one Transport Vessel is required in your fleet."
+                 << endl;
+            return;
+        }
+        cout << "Transferring " << amount << " " << resourceName << " from "
+             << fromPlanetName << " to " << toPlanetName << "." << endl;
+        int attackChance = quantumCommunicationEnabled_ ? 15 : 30;
+        if ((rand() % 100) < attackChance) {
             cout << "Raider attack on the convoy!" << endl;
             int convoyStrength = 0, bonus = 0;
-            for(auto it = fleet.begin(); it != fleet.end(); ){
-                if(it->type == "Transport Vessel"){
+            for (auto it = fleet_.begin(); it != fleet_.end();) {
+                if (it->type == "Transport Vessel") {
                     convoyStrength += it->currentShield;
-                    it = fleet.erase(it);
+                    it = fleet_.erase(it);
                     break;
-                } else { ++it; }
+                } else {
+                    ++it;
+                }
             }
-            for(auto &ship : fleet)
-                if(ship.type == "Corvette" || ship.type == "Shield Ship" || ship.type == "Radar Ship" || ship.type == "Salvage Ship")
+            for (const auto &ship : fleet_)
+                if (ship.type == "Corvette" || ship.type == "Shield Ship" ||
+                    ship.type == "Radar Ship" || ship.type == "Salvage Ship")
                     bonus += ship.weapons;
-            convoyStrength += bonus;
-            int raiderStrength = rand()%101 + 20;
-            cout << "Convoy strength: " << convoyStrength << ", Raider strength: " << raiderStrength << endl;
-            if(convoyStrength >= raiderStrength){
+            bool hasInterceptor = false;
+            for (const auto &ship : fleet_)
+                if (ship.type == "Interceptor") {
+                    hasInterceptor = true;
+                    break;
+                }
+            int raiderStrength = rand() % 101 + 20;
+            if (hasInterceptor) {
+                cout << "Interceptor in convoy reduces raider strength by 20!"
+                     << endl;
+                raiderStrength = max(0, raiderStrength - 20);
+            }
+            cout << "Convoy strength: " << (convoyStrength + bonus)
+                 << ", Raider strength: " << raiderStrength << endl;
+            if ((convoyStrength + bonus) >= raiderStrength) {
                 cout << "Convoy fended off the raiders!" << endl;
-                fromP->removeFromStorage(resourceName, amount);
-                toP->addToStorage(resourceName, amount);
+                fromPlanet->removeFromStorage(resourceName, amount);
+                toPlanet->addToStorage(resourceName, amount);
                 bool hasSalvageShip = false;
-                for(auto &ship : fleet)
-                    if(ship.type == "Salvage Ship"){ hasSalvageShip = true; break; }
-                if(hasSalvageShip){
-                    int extra = (rand()%6) + 5;
-                    fromP->addToStorage("Iron", extra);
-                    cout << "Your Salvage Ship recovered an extra " << extra << " Iron from the wreckage." << endl;
+                for (const auto &ship : fleet_)
+                    if (ship.type == "Salvage Ship") {
+                        hasSalvageShip = true;
+                        break;
+                    }
+                if (hasSalvageShip) {
+                    int extra = (rand() % 6) + 5;
+                    fromPlanet->addToStorage("Iron", extra);
+                    cout << "Your Salvage Ship recovered an extra " << extra
+                         << " Iron from the wreckage." << endl;
                 }
             } else {
                 cout << "Convoy was destroyed! Resources lost." << endl;
-                if(fromP->hasBuilding("Salvage Robot")){
-                    int salvage = (rand()%11)+5;
-                    fromP->addToStorage("Iron", salvage);
-                    cout << "Salvage Robot recovered " << salvage << " Iron." << endl;
+                if (fromPlanet->hasBuilding("Salvage Robot")) {
+                    int salvage = (rand() % 11) + 5;
+                    fromPlanet->addToStorage("Iron", salvage);
+                    cout << "Salvage Robot recovered " << salvage << " Iron."
+                         << endl;
                 }
             }
         } else {
-            fromP->removeFromStorage(resourceName, amount);
-            toP->addToStorage(resourceName, amount);
+            fromPlanet->removeFromStorage(resourceName, amount);
+            toPlanet->addToStorage(resourceName, amount);
             cout << "Transfer successful." << endl;
         }
     }
-    void showRadar(const string& planetName) {
-        Planet* p = planetManager.getPlanetByName(planetName);
-        if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
-        if(p->hasBuilding("Radar"))
-            cout << "Radar on " << planetName << " indicates HIGH raider activity." << endl;
+    void showRadar(const string &planetName) {
+        Planet *planet = planetManager_.getPlanetByName(planetName);
+        if (!planet) {
+            cout << "Planet " << planetName << " not found." << endl;
+            return;
+        }
+        if (planet->hasBuilding("Radar"))
+            cout << "Radar on " << planetName
+                 << " indicates HIGH raider activity." << endl;
         else
-            cout << "No Radar installed on " << planetName << ". Raider activity unknown." << endl;
+            cout << "No Radar installed on " << planetName
+                 << ". Raider activity unknown." << endl;
     }
     void updateDailyQuest() {
-        Planet* terra = planetManager.getPlanetByName("Terra");
-        if(!terra) return;
-        questManager.updateDailyQuest(terra, planetManager, fleet);
+        Planet *terra = planetManager_.getPlanetByName("Terra");
+        if (!terra)
+            return;
+        questManager_.updateDailyQuest(terra, planetManager_, fleet_);
     }
     void recalcUpgradesFromResearch() {
-        fasterCraftingMultiplier = 1.0;
-        craftingCostMultiplier = 1.0;
-        precisionToolsEnabled = false;
-        for(auto &r : researchManager.getAllResearches()){
-            if(r.isCompleted()){
-                string eff = r.getEffectName();
-                if(eff == "faster_crafting")
-                    fasterCraftingMultiplier = 0.5;
-                else if(eff == "crafting_mastery")
-                    craftingCostMultiplier = 0.8;
-                else if(eff == "precision_tools")
-                    precisionToolsEnabled = true;
-                else if(eff == "energy_conservation")
-                    energyConservationEnabled = true;
-                else if(eff == "unlock_solar_panels")
-                    cout << "Solar Panels unlocked! You can now build Solar Panels." << endl;
+        fasterCraftingMultiplier_ = 1.0;
+        craftingCostMultiplier_ = 1.0;
+        precisionToolsEnabled_ = false;
+        energyConservationEnabled_ = false;
+        quantumCommunicationEnabled_ = false;
+        for (const auto &research : researchManager_.getAllResearches()) {
+            if (research.isCompleted()) {
+                string effect = research.getEffectName();
+                if (effect == "faster_crafting")
+                    fasterCraftingMultiplier_ = 0.5;
+                else if (effect == "crafting_mastery")
+                    craftingCostMultiplier_ = 0.8;
+                else if (effect == "precision_tools")
+                    precisionToolsEnabled_ = true;
+                else if (effect == "energy_conservation")
+                    energyConservationEnabled_ = true;
+                else if (effect == "quantum_communication")
+                    quantumCommunicationEnabled_ = true;
             }
         }
     }
     void showFleet() {
-        if(fleet.empty()){ cout << "Your fleet is empty." << endl; return; }
+        if (fleet_.empty()) {
+            cout << "Your fleet is empty." << endl;
+            return;
+        }
         cout << "Your fleet:" << endl;
-        for(size_t i = 0; i < fleet.size(); i++){
-            cout << i+1 << ". " << fleet[i].type 
-                 << " (Hull: " << fleet[i].hull 
-                 << ", Shield: " << fleet[i].currentShield << "/" << fleet[i].maxShield;
-            if(fleet[i].type=="Corvette" || fleet[i].type=="Shield Ship" ||
-               fleet[i].type=="Radar Ship" || fleet[i].type=="Salvage Ship")
-                cout << ", Weapons: " << fleet[i].weapons;
-            if(fleet[i].type=="Repair Drone")
-                cout << ", Repairs: " << fleet[i].repairAmount << " HP/turn";
+        for (size_t i = 0; i < fleet_.size(); i++) {
+            cout << i + 1 << ". " << fleet_[i].type << " (Hull: " 
+                 << fleet_[i].hull << ", Shield: " << fleet_[i].currentShield
+                 << "/" << fleet_[i].maxShield;
+            if (fleet_[i].type == "Corvette" ||
+                fleet_[i].type == "Shield Ship" ||
+                fleet_[i].type == "Radar Ship" ||
+                fleet_[i].type == "Salvage Ship")
+                cout << ", Weapons: " << fleet_[i].weapons;
+            if (fleet_[i].type == "Repair Drone")
+                cout << ", Repairs: " << fleet_[i].repairAmount << " HP/turn";
             cout << ")" << endl;
         }
     }
-    time_t getLastUpdateTime() const { return lastUpdateTime; }
-    void setLastUpdateTime(time_t t) { lastUpdateTime = t; }
+    time_t getLastUpdateTime() const {
+        return lastUpdateTime_;
+    }
+    void setLastUpdateTime(time_t t) {
+        lastUpdateTime_ = t;
+    }
 private:
-    PlanetManager planetManager;
-    ResearchManager researchManager;
-    CraftingManager craftingManager;
-    QuestManager questManager;
-    vector<Ship> fleet;
-    double fasterCraftingMultiplier;
-    double craftingCostMultiplier;
-    bool precisionToolsEnabled;
-    bool energyConservationEnabled;
-    time_t lastUpdateTime;
-    void applyResearchEffect(const string& effectName) {
-        if(effectName == "unlock_mars")
-            planetManager.unlockPlanet("Mars");
-        else if(effectName == "unlock_zalthor")
-            planetManager.unlockPlanet("Zalthor");
-        else if(effectName == "faster_crafting")
-            fasterCraftingMultiplier = 0.5;
-        else if(effectName == "unlock_vulcan")
-            planetManager.unlockPlanet("Vulcan");
-        else if(effectName == "unlock_luna")
-            planetManager.unlockPlanet("Luna");
-        else if(effectName == "crafting_mastery")
-            craftingCostMultiplier = 0.8;
-        else if(effectName == "precision_tools")
-            precisionToolsEnabled = true;
-        else if(effectName == "unlock_shield_ships")
-            cout << "Shield Ships unlocked!" << endl;
-        else if(effectName == "energy_conservation")
-            energyConservationEnabled = true;
-        else if(effectName == "unlock_repair_drones")
-            cout << "Repair Drones unlocked!" << endl;
-        else if(effectName == "unlock_solar_panels")
+    PlanetManager planetManager_;
+    ResearchManager researchManager_;
+    CraftingManager craftingManager_;
+    QuestManager questManager_;
+    vector<Ship> fleet_;
+    double fasterCraftingMultiplier_;
+    double craftingCostMultiplier_;
+    bool precisionToolsEnabled_;
+    bool energyConservationEnabled_;
+    bool quantumCommunicationEnabled_;
+    time_t lastUpdateTime_;
+    void applyResearchEffect(const string &effectName) {
+        if (effectName == "unlock_mars")
+            planetManager_.unlockPlanet("Mars");
+        else if (effectName == "unlock_zalthor")
+            planetManager_.unlockPlanet("Zalthor");
+        else if (effectName == "faster_crafting")
+            fasterCraftingMultiplier_ = 0.5;
+        else if (effectName == "unlock_vulcan")
+            planetManager_.unlockPlanet("Vulcan");
+        else if (effectName == "unlock_luna")
+            planetManager_.unlockPlanet("Luna");
+        else if (effectName == "crafting_mastery")
+            craftingCostMultiplier_ = 0.8;
+        else if (effectName == "precision_tools")
+            precisionToolsEnabled_ = true;
+        else if (effectName == "energy_conservation")
+            energyConservationEnabled_ = true;
+        else if (effectName == "unlock_solar_panels")
             cout << "Solar Panels unlocked! You can now build Solar Panels." << endl;
+        else if (effectName == "unlock_capital_ships")
+            cout << "Capital Ship Initiative research completed! You can now build one "
+                 << "powerful capital ship at a time." << endl;
+        else if (effectName == "unlock_capital_frigates")
+            cout << "Auxiliary Frigate Development research completed! You can now build "
+                 << "smaller capital ship variants without limits." << endl;
         else
             cout << "Unknown research effect: " << effectName << endl;
     }
 };
 
-void saveGame(const Player& player) {
+void saveGame(const Player &player) {
     json j;
     {
-        json jp = json::array();
-        const auto& planets = player.getPlanetManager().getPlanetsConst();
-        for(auto& p : planets){
-            json pObj;
-            pObj["name"] = p.getName();
-            pObj["unlocked"] = p.isUnlocked();
-            pObj["current_energy"] = p.getCurrentEnergy();
-            pObj["max_energy"] = p.getMaxEnergy();
-            jp.push_back(pObj);
+        json planetsJson = json::array();
+        const auto &planets = player.getPlanetManager().getPlanetsConst();
+        for (const auto &planet : planets) {
+            json planetObj;
+            planetObj["name"] = planet.getName();
+            planetObj["unlocked"] = planet.isUnlocked();
+            planetObj["current_energy"] = planet.getCurrentEnergy();
+            planetObj["max_energy"] = planet.getMaxEnergy();
+            planetsJson.push_back(planetObj);
         }
-        j["planets"] = jp;
+        j["planets"] = planetsJson;
     }
     {
-        json jrch = json::array();
-        for(auto& r : player.getResearchManager().getAllResearchesConst()){
-            json rObj;
-            rObj["name"] = r.getName();
-            rObj["completed"] = r.isCompleted();
-            jrch.push_back(rObj);
+        json researchJson = json::array();
+        for (const auto &research : player.getResearchManager().getAllResearchesConst()) {
+            json researchObj;
+            researchObj["name"] = research.getName();
+            researchObj["completed"] = research.isCompleted();
+            researchJson.push_back(researchObj);
         }
-        j["researches"] = jrch;
+        j["researches"] = researchJson;
     }
     j["faster_crafting_multiplier"] = player.getFasterCraftingMultiplier();
     j["crafting_cost_multiplier"] = player.getCraftingCostMultiplier();
     j["precision_tools_enabled"] = player.isPrecisionToolsEnabled();
     {
         json questJson = nullptr;
-        const DailyQuest* dq = player.getQuestManager().getCurrentQuestConst();
-        if(dq){
+        const DailyQuest *dq = player.getQuestManager().getCurrentQuestConst();
+        if (dq) {
             questJson = json::object();
             questJson["description"] = dq->getDescription();
             questJson["objective_resource"] = dq->getObjectiveResource();
             questJson["objective_amount"] = dq->getObjectiveAmount();
-            json rew = json::object();
-            for(auto& kv : dq->getReward())
-                rew[kv.first] = kv.second;
-            questJson["reward"] = rew;
+            json rewardJson = json::object();
+            for (const auto &entry : dq->getReward())
+                rewardJson[entry.first] = entry.second;
+            questJson["reward"] = rewardJson;
             questJson["completed"] = dq->isCompleted();
-            if(dq->isRaider())
+            if (dq->isRaider())
                 questJson["target_planet"] = dq->getTargetPlanet();
         }
         j["current_quest"] = questJson;
@@ -985,7 +1392,7 @@ void saveGame(const Player& player) {
     j["last_update_time"] = static_cast<long long>(player.getLastUpdateTime());
     {
         json fleetJson = json::array();
-        for(auto& ship : player.getFleet()){
+        for (const auto &ship : player.getFleet()) {
             json shipJson;
             shipJson["type"] = ship.type;
             shipJson["hull"] = ship.hull;
@@ -997,7 +1404,7 @@ void saveGame(const Player& player) {
         j["fleet"] = fleetJson;
     }
     ofstream ofs(SAVE_FILE, ios::out | ios::trunc);
-    if(!ofs.is_open()){
+    if (!ofs.is_open()) {
         cerr << "Failed to open save file for writing." << endl;
         return;
     }
@@ -1006,9 +1413,10 @@ void saveGame(const Player& player) {
     cout << "Game saved." << endl;
 }
 
-void loadGame(Player& player) {
+void loadGame(Player &player) {
     ifstream ifs(SAVE_FILE);
-    if(!ifs.is_open()) return;
+    if (!ifs.is_open())
+        return;
     json j;
     ifs >> j;
     ifs.close();
@@ -1016,7 +1424,7 @@ void loadGame(Player& player) {
     cout << "Game loaded from " << SAVE_FILE << "." << endl;
 }
 
-void talkToCharacters(void) {
+void talkToCharacters() {
     cout << "\nLore: " << genericLore[rand() % genericLore.size()] << "\n";
 }
 
@@ -1040,166 +1448,167 @@ void showHelp() {
          << "  quit                           - Save and quit\n";
 }
 
-int main(){
+int main() {
     Player player;
     loadGame(player);
     player.recalcUpgradesFromResearch();
     cout << "Welcome to the Expanded Modular Idle Planet Miner!" << endl;
     cout << "Type 'help' for commands." << endl;
-    while(true){
+    while (true) {
         player.produceResources();
         player.updateDailyQuest();
         cout << "> ";
         string command;
-        if(!getline(cin, command))
+        if (!getline(cin, command))
             break;
-        if(command.empty())
+        if (command.empty())
             continue;
         auto spacePos = command.find(' ');
-        string cmd = (spacePos == string::npos) ? command : command.substr(0, spacePos);
-        string args = (spacePos == string::npos) ? "" : command.substr(spacePos+1);
+        string cmd = (spacePos == string::npos) ? command
+                                                : command.substr(0, spacePos);
+        string args = (spacePos == string::npos) ? "" : command.substr(spacePos + 1);
         transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        if(cmd=="help")
+        if (cmd == "help")
             showHelp();
-        else if(cmd=="stats"){
-            auto& planets = player.getPlanetManager().getPlanets();
-            for(auto& p : planets){
-                cout << "Planet " << p.getName() << " storage:" << endl;
-                for(auto& kv : p.getStorageMap())
-                    cout << "  " << kv.first << ": " << kv.second << endl;
+        else if (cmd == "stats") {
+            auto &planets = player.getPlanetManager().getPlanets();
+            for (auto &planet : planets) {
+                cout << "Planet " << planet.getName() << " storage:" << endl;
+                for (const auto &entry : planet.getStorageMap())
+                    cout << "  " << entry.first << ": " << entry.second << endl;
             }
-        }
-        else if(cmd=="planets"){
-            auto& plist = player.getPlanetManager().getPlanetsConst();
-            for(auto& p : plist)
-                cout << p.getName() << " => " << (p.isUnlocked()?"Unlocked":"Locked")
-                     << " | Energy: " << p.getCurrentEnergy() << "/" << p.getMaxEnergy() << endl;
-        }
-        else if(cmd=="fleet")
+        } else if (cmd == "planets") {
+            const auto &plist = player.getPlanetManager().getPlanetsConst();
+            for (const auto &planet : plist)
+                cout << planet.getName() << " => " 
+                     << (planet.isUnlocked() ? "Unlocked" : "Locked") << " | Energy: "
+                     << planet.getCurrentEnergy() << "/" << planet.getMaxEnergy()
+                     << endl;
+        } else if (cmd == "fleet")
             player.showFleet();
-        else if(cmd=="research"){
-            for(auto& r : player.getResearchManager().getAllResearchesConst()){
-                cout << r.getName() << " - " << (r.isCompleted()?"Completed":"Not Completed")
+        else if (cmd == "research") {
+            for (const auto &research : player.getResearchManager().getAllResearchesConst()) {
+                cout << research.getName() << " - " 
+                     << (research.isCompleted() ? "Completed" : "Not Completed")
                      << " | Cost: ";
-                for(auto& c : r.getCost())
-                    cout << c.first << ":" << c.second << " ";
-                cout << "| " << r.getDescription() << endl;
+                for (const auto &cost : research.getCost())
+                    cout << cost.first << ":" << cost.second << " ";
+                cout << "| " << research.getDescription() << endl;
             }
-        }
-        else if(cmd=="do_research"){
-            if(args.empty())
+        } else if (cmd == "do_research") {
+            if (args.empty())
                 cout << "Usage: do_research <research name>" << endl;
             else
                 player.doResearch(args);
-        }
-        else if(cmd=="craft"){
+        } else if (cmd == "craft") {
             string itemName, planetName;
             size_t pos = args.find(" on ");
-            if(pos != string::npos){
+            if (pos != string::npos) {
                 itemName = args.substr(0, pos);
-                planetName = args.substr(pos+4);
-            } else { itemName = args; planetName = "Terra"; }
-            if(itemName.empty())
+                planetName = args.substr(pos + 4);
+            } else {
+                itemName = args;
+                planetName = "Terra";
+            }
+            if (itemName.empty())
                 cout << "Usage: craft <item> [on <planet>]" << endl;
             else {
-                if(itemName=="Transport Vessel" || itemName=="Corvette" || itemName=="Shield Ship" ||
-                   itemName=="Radar Ship" || itemName=="Salvage Ship" || itemName=="Repair Drone")
+                if (itemName == "Transport Vessel" || itemName == "Corvette" ||
+                    itemName == "Shield Ship" || itemName == "Radar Ship" ||
+                    itemName == "Salvage Ship" || itemName == "Repair Drone" ||
+                    itemName == "Interceptor")
                     player.craftShip(itemName, planetName);
                 else
                     player.craftItem(itemName, planetName);
             }
-        }
-        else if(cmd=="build"){
+        } else if (cmd == "build") {
             size_t pos = args.find(" on ");
-            if(pos != string::npos){
+            if (pos != string::npos) {
                 string buildingName = args.substr(0, pos);
-                string planetName = args.substr(pos+4);
-                if(buildingName.empty() || planetName.empty())
+                string planetName = args.substr(pos + 4);
+                if (buildingName.empty() || planetName.empty())
                     cout << "Usage: build <building> on <planet>" << endl;
                 else
                     player.buildBuilding(buildingName, planetName);
             } else
                 cout << "Usage: build <building> on <planet>" << endl;
-        }
-        else if(cmd=="upgrade_plots"){
-            if(args.empty())
+        } else if (cmd == "upgrade_plots") {
+            if (args.empty())
                 cout << "Usage: upgrade_plots <planet>" << endl;
             else
                 player.upgradeBuildingPlots(args);
-        }
-        else if(cmd=="install"){
+        } else if (cmd == "install") {
             size_t pos = args.find(" on ");
-            if(pos != string::npos){
+            if (pos != string::npos) {
                 string facility = args.substr(0, pos);
-                string planetName = args.substr(pos+4);
-                if(facility.empty() || planetName.empty())
+                string planetName = args.substr(pos + 4);
+                if (facility.empty() || planetName.empty())
                     cout << "Usage: install <facility> on <planet>" << endl;
                 else {
-                    Planet* p = player.getPlanetManager().getPlanetByName(planetName);
-                    if(!p)
+                    Planet *planet = player.getPlanetManager().getPlanetByName(planetName);
+                    if (!planet)
                         cout << "Planet " << planetName << " not found." << endl;
                     else {
                         string facLower = facility;
-                        transform(facLower.begin(), facLower.end(), facLower.begin(), ::tolower);
-                        if(facLower == "generator"){
-                            if(!p->canBuildMore()){
-                                cout << "No building plots available on " << planetName << " for Generator." << endl;
+                        transform(facLower.begin(), facLower.end(), facLower.begin(),
+                                  ::tolower);
+                        if (facLower == "generator") {
+                            if (!planet->canBuildMore()) {
+                                cout << "No building plots available on " << planetName
+                                     << " for Generator." << endl;
                                 break;
                             }
                         }
-                        if(p->removeFromStorage(facility,1))
-                            p->installFacility(facility);
+                        if (planet->removeFromStorage(facility, 1))
+                            planet->installFacility(facility);
                         else
-                            cout << "No " << facility << " available on " << planetName << "." << endl;
+                            cout << "No " << facility << " available on " << planetName
+                                 << "." << endl;
                     }
                 }
             } else
                 cout << "Usage: install <facility> on <planet>" << endl;
-        }
-        else if(cmd=="transfer"){
+        } else if (cmd == "transfer") {
             istringstream iss(args);
             string resource;
             int amount;
             string fromWord, fromPlanet, toWord, toPlanet;
-            if(!(iss >> resource >> amount >> fromWord >> fromPlanet >> toWord >> toPlanet))
-                cout << "Usage: transfer <resource> <amount> from <planet1> to <planet2>" << endl;
+            if (!(iss >> resource >> amount >> fromWord >> fromPlanet >> toWord >> toPlanet))
+                cout << "Usage: transfer <resource> <amount> from <planet1> to <planet2>"
+                     << endl;
             else {
-                if(fromWord!="from" || toWord!="to")
-                    cout << "Usage: transfer <resource> <amount> from <planet1> to <planet2>" << endl;
+                if (fromWord != "from" || toWord != "to")
+                    cout << "Usage: transfer <resource> <amount> from <planet1> to <planet2>"
+                         << endl;
                 else
                     player.transferResource(resource, amount, fromPlanet, toPlanet);
             }
-        }
-        else if(cmd=="radar"){
-            if(args.empty())
+        } else if (cmd == "radar") {
+            if (args.empty())
                 cout << "Usage: radar <planet>" << endl;
             else
                 player.showRadar(args);
-        }
-        else if(cmd=="daily"){
-            DailyQuest* dq = player.getQuestManager().getCurrentQuest();
-            if(dq){
+        } else if (cmd == "daily") {
+            DailyQuest *dq = player.getQuestManager().getCurrentQuest();
+            if (dq) {
                 cout << dq->getDescription() << endl;
-                if(dq->isRaider())
+                if (dq->isRaider())
                     cout << "Target Planet: " << dq->getTargetPlanet() << endl;
                 else
-                    cout << "Objective: " << dq->getObjectiveAmount() << " " << dq->getObjectiveResource() << endl;
-                cout << "Completed: " << (dq->isCompleted()?"Yes":"No") << endl;
+                    cout << "Objective: " << dq->getObjectiveAmount() << " "
+                         << dq->getObjectiveResource() << endl;
+                cout << "Completed: " << (dq->isCompleted() ? "Yes" : "No") << endl;
             } else
                 cout << "No current daily quest." << endl;
-        }
-        else if(cmd=="talk"){
+        } else if (cmd == "talk") {
             talkToCharacters();
-        }
-        else if(cmd=="save"){
+        } else if (cmd == "save") {
             saveGame(player);
-        }
-        else if(cmd=="quit"){
+        } else if (cmd == "quit") {
             saveGame(player);
             cout << "Exiting game. Goodbye!" << endl;
             break;
-        }
-        else
+        } else
             cout << "Unknown command. Type 'help' for commands." << endl;
     }
     return 0;
