@@ -17,9 +17,6 @@
 using json = nlohmann::json;
 using namespace std;
 
-//---------------------------------------------------------------------
-// Global Lore Strings for Quest Dialogue
-//---------------------------------------------------------------------
 static const vector<string> resourceLore = {
     "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future.'",
     "Professor Lumen: 'Mining is the backbone of our civilization. Without its bounty, progress would stall.'",
@@ -37,45 +34,37 @@ static const vector<string> genericLore = {
     "Scribe Alric: 'Every day brings new challenges—and new opportunities—for those brave enough to seize them.'"
 };
 
-//---------------------------------------------------------------------
-// Define a constant for the save file.
-//---------------------------------------------------------------------
 const string SAVE_FILE = "savegame.json";
 
-//---------------------------------------------------------------------
-// 1) DATA DEFINITIONS
-//---------------------------------------------------------------------
-
-// Resource definitions.
 struct ResourceDef {
     string name;
     int initial;
 };
 
 static vector<ResourceDef> RESOURCE_DATA = {
-    {"Iron",           0},
-    {"Copper",         0},
-    {"Mithril",        0},
-    {"Coal",           0},
-    {"Tin",            0},
-    {"Silver",         0},
-    {"Gold",           0},
-    {"Iron Bar",       0},
-    {"Copper Bar",     0},
-    {"Mithril Bar",    0},
-    {"Engine Parts",   0},
-    {"Titanium",       0},
-    {"Titanium Bar",   0},
-    {"Generator",      0},
-    {"Accumulator",    0},
-    {"Obsidian",       0},
-    {"Crystal",        0},
-    {"Nanomaterial",   0},
+    {"Iron", 0},
+    {"Copper", 0},
+    {"Mithril", 0},
+    {"Coal", 0},
+    {"Tin", 0},
+    {"Silver", 0},
+    {"Gold", 0},
+    {"Iron Bar", 0},
+    {"Copper Bar", 0},
+    {"Mithril Bar", 0},
+    {"Engine Parts", 0},
+    {"Titanium", 0},
+    {"Titanium Bar", 0},
+    {"Generator", 0},
+    {"Accumulator", 0},
+    {"Obsidian", 0},
+    {"Crystal", 0},
+    {"Nanomaterial", 0},
     {"Advanced Engine Parts", 0},
-    {"Fusion Reactor", 0}
+    {"Fusion Reactor", 0},
+    {"Tritium", 0}
 };
 
-// Planet definitions.
 struct PlanetDef {
     string name;
     map<string, double> baseProduction;
@@ -90,7 +79,6 @@ static vector<PlanetDef> PLANET_DATA = {
     { "Luna", {{"Obsidian", 0.1}, {"Crystal", 0.05}, {"Nanomaterial", 0.02}}, false }
 };
 
-// Research definitions.
 struct ResearchDef {
     string name;
     map<string,int> cost;
@@ -108,10 +96,10 @@ static vector<ResearchDef> RESEARCH_DATA = {
     { "Precision Tools", {{"Iron Bar",10}, {"Mithril Bar",5}}, "Gives a 10% chance to double crafted output.", "precision_tools" },
     { "Shield Technology", {{"Mithril Bar",10}, {"Titanium Bar",5}}, "Allows building Shield Ships to protect convoys.", "unlock_shield_ships" },
     { "Emergency Energy Conservation", {{"Engine Parts",10}, {"Titanium Bar",5}}, "Allows a planet to halt production during an imminent raider attack, conserving energy for defense.", "energy_conservation" },
-    { "Repair Drone Technology", {{"Fusion Reactor",1}, {"Advanced Engine Parts",3}}, "Unlocks Repair Drones that can repair ships during combat.", "unlock_repair_drones" }
+    { "Repair Drone Technology", {{"Fusion Reactor",1}, {"Advanced Engine Parts",3}}, "Unlocks Repair Drones that can repair ships during combat.", "unlock_repair_drones" },
+    { "Solar Panels", {{"Iron",20}, {"Copper",30}}, "Unlock Solar Panels for energy production on planets.", "unlock_solar_panels" }
 };
 
-// Crafting recipes.
 struct CraftingRecipe {
     map<string,int> inputs;
     double timeRequired;
@@ -120,24 +108,23 @@ struct CraftingRecipe {
 };
 
 static map<string, CraftingRecipe> CRAFTING_RECIPES = {
-    {"Iron Bar",             { {{"Iron",5}},              1.0, 2.0, "Smelting Building" }},
-    {"Copper Bar",           { {{"Copper",5}},            1.0, 2.0, "Smelting Building" }},
-    {"Mithril Bar",          { {{"Mithril",5}},           2.0, 3.0, "Smelting Building" }},
-    {"Titanium Bar",         { {{"Titanium",10}},         5.0, 7.0, "Smelting Building" }},
-    {"Engine Parts",         { {{"Iron Bar",2}},          3.0, 5.0, "Crafting Building" }},
+    {"Iron Bar", { {{"Iron",5}}, 1.0, 2.0, "Smelting Building" }},
+    {"Copper Bar", { {{"Copper",5}}, 1.0, 2.0, "Smelting Building" }},
+    {"Mithril Bar", { {{"Mithril",5}}, 2.0, 3.0, "Smelting Building" }},
+    {"Titanium Bar", { {{"Titanium",10}}, 5.0, 7.0, "Smelting Building" }},
+    {"Engine Parts", { {{"Iron Bar",2}}, 3.0, 5.0, "Crafting Building" }},
     {"Advanced Engine Parts",{ {{"Engine Parts",2}, {"Nanomaterial",1}}, 4.0, 6.0, "Crafting Building" }},
-    {"Fusion Reactor",       { {{"Titanium Bar",5}, {"Crystal",3}, {"Nanomaterial",2}}, 10.0, 15.0, "Crafting Building" }},
-    {"Generator",            { {{"Copper",10}, {"Iron Bar",5}}, 2.0, 0.0, "Facility Workshop" }},
-    {"Accumulator",          { {{"Tin",10}, {"Copper Bar",5}}, 3.0, 0.0, "Facility Workshop" }},
-    {"Transport Vessel",     { {{"Iron Bar",5}, {"Engine Parts",1}}, 3.0, 10.0, "Shipyard" }},
-    {"Corvette",             { {{"Titanium Bar",3}, {"Advanced Engine Parts",1}}, 5.0, 15.0, "Shipyard" }},
-    {"Shield Ship",          { {{"Titanium Bar",4}, {"Advanced Engine Parts",1}}, 6.0, 25.0, "Shipyard" }},
-    {"Radar Ship",           { {{"Mithril Bar",2}, {"Engine Parts",1}}, 4.0, 20.0, "Shipyard" }},
-    {"Salvage Ship",         { {{"Iron Bar",3}, {"Engine Parts",2}}, 4.0, 15.0, "Shipyard" }},
-    {"Repair Drone",         { {{"Fusion Reactor",1}, {"Advanced Engine Parts",2}}, 8.0, 30.0, "Shipyard" }}
+    {"Fusion Reactor", { {{"Titanium Bar",5}, {"Crystal",3}, {"Nanomaterial",2}, {"Tritium",1}}, 10.0, 15.0, "Crafting Building" }},
+    {"Generator", { {{"Copper",10}, {"Iron Bar",5}}, 2.0, 0.0, "Facility Workshop" }},
+    {"Accumulator", { {{"Tin",10}, {"Copper Bar",5}}, 3.0, 0.0, "Facility Workshop" }},
+    {"Transport Vessel", { {{"Iron Bar",5}, {"Engine Parts",1}}, 3.0, 10.0, "Shipyard" }},
+    {"Corvette", { {{"Titanium Bar",3}, {"Advanced Engine Parts",1}}, 5.0, 15.0, "Shipyard" }},
+    {"Shield Ship", { {{"Titanium Bar",4}, {"Advanced Engine Parts",1}}, 6.0, 25.0, "Shipyard" }},
+    {"Radar Ship", { {{"Mithril Bar",2}, {"Engine Parts",1}}, 4.0, 20.0, "Shipyard" }},
+    {"Salvage Ship", { {{"Iron Bar",3}, {"Engine Parts",2}}, 4.0, 15.0, "Shipyard" }},
+    {"Repair Drone", { {{"Fusion Reactor",1}, {"Advanced Engine Parts",2}}, 8.0, 30.0, "Shipyard" }}
 };
 
-// Building recipes.
 struct BuildingRecipe {
     map<string,int> inputs;
     double timeRequired;
@@ -145,43 +132,31 @@ struct BuildingRecipe {
 };
 
 static map<string, BuildingRecipe> BUILDING_RECIPES = {
-    {"Crafting Building",   { {{"Iron Bar", 5}, {"Engine Parts", 2}}, 5.0, 10.0 }},
-    {"Smelting Building",   { {{"Copper Bar", 5}, {"Coal", 10}}, 5.0, 10.0 }},
-    {"Facility Workshop",   { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0 }},
-    {"Shipyard",            { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0 }},
-    {"Proximity Alarm",     { {{"Crystal",2}, {"Mithril Bar",1}}, 3.0, 5.0 }},
-    {"Proximity Radar",     { {{"Crystal",2}, {"Mithril Bar",1}}, 3.0, 5.0 }},
-    {"Mobile Radar",        { {{"Crystal",3}, {"Copper Bar",2}}, 3.0, 5.0 }},
-    {"Salvage Robot",       { {{"Obsidian",2}, {"Engine Parts",1}}, 3.0, 5.0 }},
-    {"Shield Generator",    { {{"Titanium Bar",2}, {"Copper Bar",2}}, 4.0, 5.0 }}
+    {"Crafting Building", { {{"Iron Bar", 5}, {"Engine Parts", 2}}, 5.0, 10.0 }},
+    {"Smelting Building", { {{"Copper Bar", 5}, {"Coal", 10}}, 5.0, 10.0 }},
+    {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0 }},
+    {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0 }},
+    {"Proximity Alarm", { {{"Crystal",2}, {"Mithril Bar",1}}, 3.0, 5.0 }},
+    {"Proximity Radar", { {{"Crystal",2}, {"Mithril Bar",1}}, 3.0, 5.0 }},
+    {"Mobile Radar", { {{"Crystal",3}, {"Copper Bar",2}}, 3.0, 5.0 }},
+    {"Salvage Robot", { {{"Obsidian",2}, {"Engine Parts",1}}, 3.0, 5.0 }},
+    {"Shield Generator", { {{"Titanium Bar",2}, {"Copper Bar",2}}, 4.0, 5.0 }},
+    {"Solar Panel", { {}, 3.0, 0.0 }}
 };
 
-//---------------------------------------------------------------------
-// Forward declarations to resolve compilation errors
-//---------------------------------------------------------------------
-struct Ship;  // already defined below
-class PlanetManager;  // defined below
+struct Ship;
 
-//---------------------------------------------------------------------
-// 2A) SHIP STRUCT
-//---------------------------------------------------------------------
+class PlanetManager;
+
 struct Ship {
-    string type; // "Transport Vessel", "Corvette", "Shield Ship", "Radar Ship", "Salvage Ship", "Repair Drone"
+    string type;
     int hull;
     int maxShield;
     int currentShield;
-    int weapons; // For offensive ships
-    int repairAmount; // Only used for Repair Drones (e.g., 10 HP per turn)
+    int weapons;
+    int repairAmount;
 };
 
-//---------------------------------------------------------------------
-// 2B) RESOURCE CLASS (already defined above)
-//---------------------------------------------------------------------
-// (see above)
-
-//---------------------------------------------------------------------
-// 2C) PLANET CLASS (updated with building plots and threat flag)
-//---------------------------------------------------------------------
 class Planet {
 public:
     Planet(const string& n, const map<string,double>& prod, bool u)
@@ -200,13 +175,25 @@ public:
             return;
         }
         if(!unlocked) return;
-        double energyProduced = generators * GENERATOR_RATE * elapsedSeconds;
+        double actualTime = elapsedSeconds;
+        if(generators > 0) {
+            double possibleTime = double(getStored("Coal")) / (generators * COAL_CONSUMPTION);
+            actualTime = min(elapsedSeconds, possibleTime);
+            int coalToConsume = static_cast<int>(ceil(generators * COAL_CONSUMPTION * actualTime));
+            removeFromStorage("Coal", coalToConsume);
+        }
+        double energyProduced = generators * GENERATOR_RATE * actualTime;
         currentEnergy = min(maxEnergy, currentEnergy + energyProduced);
-        double effectiveSeconds = min(elapsedSeconds, currentEnergy / ENERGY_COST_PER_SECOND);
+        if(hasBuilding("Solar Panel")) {
+            int solarCount = getBuildings().at("Solar Panel");
+            double solarEnergy = solarCount * SOLAR_RATE * elapsedSeconds;
+            currentEnergy = min(maxEnergy, currentEnergy + solarEnergy);
+        }
+        double effectiveSeconds = min(actualTime, currentEnergy / ENERGY_COST_PER_SECOND);
         double energyConsumed = effectiveSeconds * ENERGY_COST_PER_SECOND;
         currentEnergy -= energyConsumed;
         for(auto &kv : baseProduction){
-            int produced = static_cast<int>(floor(kv.second * effectiveSeconds));
+            int produced = static_cast<int>(floor(kv.second * actualTime));
             storage[kv.first] += produced;
         }
     }
@@ -256,9 +243,21 @@ public:
     void setAccumulators(int a) { accumulators = a; }
     void installFacility(const string& facility) {
         string fac = facility; transform(fac.begin(), fac.end(), fac.begin(), ::tolower);
-        if(fac == "generator") { generators++; cout << "Installed a Generator on " << name << ". Total: " << generators << endl; }
-        else if(fac == "accumulator") { accumulators++; maxEnergy += 50.0; cout << "Installed an Accumulator on " << name << ". Total: " << accumulators << ", new max energy: " << maxEnergy << endl; }
-        else { cout << "Unknown facility: " << facility << endl; }
+        if(fac == "generator") {
+            if(!canBuildMore()){
+                cout << "No building plots available on " << name << " for Generator." << endl;
+                return;
+            }
+            addBuilding("Generator");
+            generators++;
+            cout << "Installed a Generator on " << name << ". Total: " << generators << endl;
+        } else if(fac == "accumulator") {
+            accumulators++;
+            maxEnergy += 50.0;
+            cout << "Installed an Accumulator on " << name << ". Total: " << accumulators << ", new max energy: " << maxEnergy << endl;
+        } else {
+            cout << "Unknown facility: " << facility << endl;
+        }
     }
     bool isUnderThreat() const { return underThreat; }
     void setUnderThreat(bool flag) { underThreat = flag; }
@@ -279,11 +278,10 @@ private:
     bool underThreat;
     static constexpr double GENERATOR_RATE = 5.0;
     static constexpr double ENERGY_COST_PER_SECOND = 1.0;
+    static constexpr double COAL_CONSUMPTION = 0.5;
+    static constexpr double SOLAR_RATE = 2.0;
 };
 
-//---------------------------------------------------------------------
-// 2D) PLANET MANAGER
-//---------------------------------------------------------------------
 class PlanetManager {
 public:
     PlanetManager(const vector<PlanetDef>& data) {
@@ -311,9 +309,6 @@ private:
     vector<Planet> planets;
 };
 
-//---------------------------------------------------------------------
-// 2E) RESEARCH CLASS
-//---------------------------------------------------------------------
 class Research {
 public:
     Research(const string& n, const map<string,int>& c, const string& desc, const string& effName)
@@ -343,9 +338,6 @@ private:
     bool completed;
 };
 
-//---------------------------------------------------------------------
-// 2F) DAILY QUEST CLASS
-//---------------------------------------------------------------------
 class DailyQuest {
 public:
     DailyQuest(const string& d, const string& objRes, int objAmt, const map<string,int>& rew)
@@ -365,14 +357,10 @@ public:
             cout << "\nLore: " << resourceLore[rand() % resourceLore.size()] << endl;
         }
     }
-    // Now the combat lasts up to 10 turns (or until one party is destroyed).
-    // Each turn is one real minute if in active mode; if idle, resolve immediately.
-    // A repair drone (if present) repairs a chosen ship each turn.
     bool processRaiderAttack(PlanetManager& pm, vector<Ship>& fleet, bool realTime) {
         if(completed || !isRaiderAttack) return false;
         Planet* target = pm.getPlanetByName(targetPlanet);
         if(!target){ cout << "Target planet " << targetPlanet << " not found." << endl; return false; }
-        // Record combat start time if not already done.
         if(combatStartTime == 0)
             combatStartTime = time(nullptr);
         int raiderShield = rand() % 101 + 100;
@@ -383,13 +371,10 @@ public:
         while(turn < maxTurns && !fleet.empty() && raiderHull > 0){
             turn++;
             cout << "\n--- Turn " << turn << " ---" << endl;
-            // If in active real-time mode, wait 60 seconds (simulate 1 minute);
-            // otherwise, if idle, simulate instantly.
             if(realTime) {
                 cout << "Waiting 60 seconds for next combat turn..." << endl;
                 this_thread::sleep_for(chrono::seconds(60));
             }
-            // Defenders fire.
             int totalDamage = 0;
             for(auto &ship : fleet){
                 if(ship.type == "Corvette" || ship.type == "Shield Ship" || ship.type == "Radar Ship" || ship.type == "Salvage Ship")
@@ -412,10 +397,8 @@ public:
                 target->setUnderThreat(false);
                 break;
             }
-            // Raiders fire.
             int raiderDamage = rand() % 51 + 50;
             cout << "Raiders fire for " << raiderDamage << " damage." << endl;
-            // Shield Generators on target provide bonus shield.
             int numShieldGen = 0;
             auto blds = target->getBuildings();
             if(blds.find("Shield Generator") != blds.end())
@@ -429,7 +412,6 @@ public:
             }
             cout << "Shield Generators provide " << shieldBonus << " shield bonus." << endl;
             int effectiveDamage = max(0, raiderDamage - shieldBonus);
-            // Distribute effective damage evenly among defending ships.
             vector<int> indices;
             for(size_t i = 0; i < fleet.size(); i++){
                 if(fleet[i].type == "Corvette" || fleet[i].type == "Shield Ship" ||
@@ -459,23 +441,19 @@ public:
                 target->setUnderThreat(false);
                 break;
             }
-            // Process Repair Drones.
-            // For each Repair Drone in the fleet, choose the non-drone ship with lowest hull ratio.
             vector<Ship*> repairDrones;
             for(auto &ship : fleet)
                 if(ship.type == "Repair Drone")
                     repairDrones.push_back(&ship);
             if(!repairDrones.empty()){
-                // Find candidate ships (non-repair drones) that are damaged.
                 vector<Ship*> candidates;
                 for(auto &ship : fleet){
-                    if(ship.type != "Repair Drone" && ship.hull < 100)  // assume 100 (or 120) is full hull
+                    if(ship.type != "Repair Drone" && ship.hull < 100)
                         candidates.push_back(&ship);
                 }
                 if(!candidates.empty()){
-                    // Select the ship with lowest ratio of hull/hull_max.
                     Ship* targetShip = *min_element(candidates.begin(), candidates.end(),
-                        [](Ship* a, Ship* b){ 
+                        [](Ship* a, Ship* b){
                             double ra = double(a->hull) / (a->type=="Shield Ship" ? 120 : 100);
                             double rb = double(b->hull) / (b->type=="Shield Ship" ? 120 : 100);
                             return ra < rb;
@@ -485,7 +463,7 @@ public:
                 }
             }
             cout << "End of turn " << turn << ".\n";
-        } // end while
+        }
         if(turn >= 10){
             cout << "Combat ended after 10 turns." << endl;
             completed = true;
@@ -509,13 +487,10 @@ private:
     bool completed;
     bool isRaiderAttack;
     string targetPlanet;
-    time_t combatStartTime; // When combat started (for idle resolution)
+    time_t combatStartTime;
     int turnsElapsed;
 };
 
-//---------------------------------------------------------------------
-// 3G) QUEST MANAGER
-//---------------------------------------------------------------------
 class QuestManager {
 public:
     QuestManager() : currentQuest(nullptr), lastQuestDate("") {}
@@ -526,9 +501,7 @@ public:
             lastQuestDate = todayStr;
         }
         if(currentQuest){
-            // Pass a flag to indicate real-time if the game is active.
-            // (For simplicity, we assume the game is active if the user is at the prompt.)
-            bool realTime = true; 
+            bool realTime = true;
             currentQuest->processRaiderAttack(pm, fleet, realTime);
             currentQuest->checkCompletion(central);
         }
@@ -542,7 +515,7 @@ private:
     unique_ptr<DailyQuest> currentQuest;
     string lastQuestDate;
     void generateNewQuest(PlanetManager& pm) {
-        if((rand()%100) < 20) { // Raider attack quest.
+        if((rand()%100) < 20) {
             vector<string> candidates;
             for(auto &p : pm.getPlanets())
                 if(p.isUnlocked() && p.getName() != "Terra")
@@ -554,7 +527,6 @@ private:
             map<string,int> reward = { {"Engine Parts", 2} };
             auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
             quest->setRaiderAttack(target);
-            // If the target planet has a Proximity Alarm, issue a 5-minute warning.
             Planet* tgt = pm.getPlanetByName(target);
             if(tgt && tgt->hasBuilding("Proximity Alarm")){
                 cout << "Proximity Alarm on " << target << " issues a 5-minute warning of an imminent raider attack!" << endl;
@@ -581,9 +553,6 @@ private:
     }
 };
 
-//---------------------------------------------------------------------
-// 4) PLAYER CLASS
-//---------------------------------------------------------------------
 class ResearchManager {
 public:
     ResearchManager(const vector<ResearchDef>& data) {
@@ -607,7 +576,6 @@ private:
 class CraftingManager {
 public:
     CraftingManager(const map<string, CraftingRecipe>& recipes) : recipes(recipes) {}
-    
     void craft(const string& itemName, Planet* p, double fasterMultiplier, double costMultiplier, bool precisionToolsEnabled) {
         auto it = recipes.find(itemName);
         if(it == recipes.end()){
@@ -619,7 +587,6 @@ public:
             cout << "You need a " << recipe.requiredBuilding << " on " << p->getName() << " to craft " << itemName << "." << endl;
             return;
         }
-        // Check resource inputs
         for(auto &kv : recipe.inputs){
             if(p->getStored(kv.first) < kv.second){
                 cout << "Not enough " << kv.first << " on " << p->getName() << " to craft " << itemName << "." << endl;
@@ -631,16 +598,11 @@ public:
             cout << "Not enough energy on " << p->getName() << " to craft " << itemName << "." << endl;
             return;
         }
-        // Deduct resources and energy
         for(auto &kv : recipe.inputs)
             p->removeFromStorage(kv.first, kv.second);
         p->setCurrentEnergy(p->getCurrentEnergy() - effectiveCost);
-        
         double craftTime = recipe.timeRequired * fasterMultiplier;
-        // Simulate crafting time (for simplicity, we won't actually delay)
         cout << "Crafting " << itemName << " took " << craftTime << " seconds." << endl;
-        
-        // Determine output quantity; assume 1 by default, possibly double with 10% chance if precisionToolsEnabled.
         int quantity = 1;
         if(precisionToolsEnabled){
             if(rand() % 100 < 10) {
@@ -651,7 +613,6 @@ public:
         p->addToStorage(itemName, quantity);
         cout << "Crafted " << quantity << " " << itemName << "(s) on " << p->getName() << "." << endl;
     }
-    
 private:
     map<string, CraftingRecipe> recipes;
 };
@@ -670,13 +631,11 @@ public:
     {
         srand(static_cast<unsigned>(time(nullptr)));
     }
-    // Non-const getters.
     PlanetManager& getPlanetManager() { return planetManager; }
     ResearchManager& getResearchManager() { return researchManager; }
     CraftingManager& getCraftingManager() { return craftingManager; }
     QuestManager& getQuestManager() { return questManager; }
     vector<Ship>& getFleet() { return fleet; }
-    // Const getters.
     const PlanetManager& getPlanetManager() const { return planetManager; }
     const ResearchManager& getResearchManager() const { return researchManager; }
     const QuestManager& getQuestManager() const { return questManager; }
@@ -782,7 +741,6 @@ public:
     void buildBuilding(const string& buildingName, const string& planetName) {
         Planet* p = planetManager.getPlanetByName(planetName);
         if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
-        // Check building plot availability.
         int totalBuildings = 0;
         for(auto &b : p->getBuildings())
             totalBuildings += b.second;
@@ -811,7 +769,6 @@ public:
         if(p->addBuilding(buildingName))
             cout << "Built " << buildingName << " on " << planetName << "." << endl;
     }
-    // Only one definition of upgradeBuildingPlots is kept.
     void upgradeBuildingPlots(const string& planetName) {
         Planet* p = planetManager.getPlanetByName(planetName);
         if(!p){ cout << "Planet " << planetName << " not found." << endl; return; }
@@ -822,7 +779,6 @@ public:
             cout << "There are still available building plots on " << planetName << "." << endl;
             return;
         }
-        // Cost: 10 Iron Bars and 2 Engine Parts.
         if(p->getStored("Iron Bar") >= 10 && p->getStored("Engine Parts") >= 2){
             if(p->upgradePlots()){
                 p->removeFromStorage("Iron Bar", 10);
@@ -918,6 +874,8 @@ public:
                     precisionToolsEnabled = true;
                 else if(eff == "energy_conservation")
                     energyConservationEnabled = true;
+                else if(eff == "unlock_solar_panels")
+                    cout << "Solar Panels unlocked! You can now build Solar Panels." << endl;
             }
         }
     }
@@ -970,14 +928,13 @@ private:
             energyConservationEnabled = true;
         else if(effectName == "unlock_repair_drones")
             cout << "Repair Drones unlocked!" << endl;
+        else if(effectName == "unlock_solar_panels")
+            cout << "Solar Panels unlocked! You can now build Solar Panels." << endl;
         else
             cout << "Unknown research effect: " << effectName << endl;
     }
 };
 
-//---------------------------------------------------------------------
-// 5) SAVE/LOAD FUNCTIONS
-//---------------------------------------------------------------------
 void saveGame(const Player& player) {
     json j;
     {
@@ -989,7 +946,6 @@ void saveGame(const Player& player) {
             pObj["unlocked"] = p.isUnlocked();
             pObj["current_energy"] = p.getCurrentEnergy();
             pObj["max_energy"] = p.getMaxEnergy();
-            // (For brevity, storage, buildings, etc. are omitted.)
             jp.push_back(pObj);
         }
         j["planets"] = jp;
@@ -1056,21 +1012,14 @@ void loadGame(Player& player) {
     json j;
     ifs >> j;
     ifs.close();
-    // (Loading of planets, research, fleet, etc. omitted for brevity.)
     player.recalcUpgradesFromResearch();
     cout << "Game loaded from " << SAVE_FILE << "." << endl;
 }
 
-//---------------------------------------------------------------------
-// A simple function for "talk" command to output lore
-//---------------------------------------------------------------------
 void talkToCharacters(void) {
     cout << "\nLore: " << genericLore[rand() % genericLore.size()] << "\n";
 }
 
-//---------------------------------------------------------------------
-// 6) MAIN GAME LOOP
-//---------------------------------------------------------------------
 void showHelp() {
     cout << "Commands:\n"
          << "  help                           - Show this help\n"
@@ -1080,9 +1029,6 @@ void showHelp() {
          << "  research                       - List research options\n"
          << "  do_research <name>             - Perform research (using Terra's storage)\n"
          << "  craft <item> [on <planet>]     - Craft an item on a planet\n"
-         << "     (For ships, use 'craft Transport Vessel', 'craft Corvette',\n"
-         << "      'craft Shield Ship', 'craft Radar Ship', 'craft Salvage Ship',\n"
-         << "      or 'craft Repair Drone')\n"
          << "  build <building> on <planet>   - Build a building on a planet\n"
          << "  upgrade_plots <planet>         - Upgrade building capacity on a planet\n"
          << "  install <facility> on <planet> - Install a facility (Generator/Accumulator)\n"
@@ -1193,6 +1139,14 @@ int main(){
                     if(!p)
                         cout << "Planet " << planetName << " not found." << endl;
                     else {
+                        string facLower = facility;
+                        transform(facLower.begin(), facLower.end(), facLower.begin(), ::tolower);
+                        if(facLower == "generator"){
+                            if(!p->canBuildMore()){
+                                cout << "No building plots available on " << planetName << " for Generator." << endl;
+                                break;
+                            }
+                        }
                         if(p->removeFromStorage(facility,1))
                             p->installFacility(facility);
                         else
