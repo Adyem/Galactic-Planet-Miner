@@ -13,32 +13,27 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
+#include <cctype>
 
 using json = nlohmann::json;
 using namespace std;
 
+// Expanded lore arrays with more creative back‐stories
 static const vector<string> resourceLore = {
-    "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our "
-    "future.'",
-    "Professor Lumen: 'Mining is the backbone of our civilization. Without its bounty, progress "
-    "would stall.'",
-    "Farmer Daisy: 'Though I tend my fields, I know that without the mines, our tables would be "
-    "empty.'"
+    "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future. I once lost everything to a mining accident, and now I seek redemption in every pick strike.'",
+    "Professor Lumen: 'Mining is the backbone of our civilization. Behind every ore lies a story of sacrifice and hope, echoing the trials of those who came before us.'",
+    "Farmer Daisy: 'Though I tend my fields, I know that without the mines, our tables would be empty. The earth gives generously, yet it also demands respect for its hidden treasures.'"
 };
 
 static const vector<string> raiderLore = {
-    "Captain Blackthorne: 'These raiders aren’t mere bandits—they’re desperate souls preying on "
-    "our lifelines.'",
-    "Navigator Zara: 'Our convoys are the arteries of our colonies. Raiders strike to choke that "
-    "flow.'",
-    "Old Scout Finn: 'I’ve seen raider ships lurking in the void. Their attacks leave nothing "
-    "but wreckage and sorrow.'"
+    "Captain Blackthorne: 'We were once citizens like you, bound by honor. But betrayal and ruin forced us into the shadows. Now, as raiders, we fight against a corrupt system.'",
+    "Navigator Zara: 'Our convoys are the arteries of our colonies. We are driven not by greed, but by the need to survive in a world where hope was stripped away by those in power.'",
+    "Old Scout Finn: 'I’ve seen raider ships lurking in the void. They are not mere bandits; they are broken souls seeking justice in a galaxy that abandoned them.'"
 };
 
 static const vector<string> genericLore = {
-    "Town Crier: 'The times are hard, but unity and perseverance will see us through.'",
-    "Scribe Alric: 'Every day brings new challenges—and new opportunities—for those brave "
-    "enough to seize them.'"
+    "Town Crier: 'The times are hard, but unity and perseverance will see us through. Remember, every challenge is an opportunity in disguise.'",
+    "Scribe Alric: 'Every day brings new challenges—and new opportunities—for those brave enough to seize them. History is written by those who dare to dream.'"
 };
 
 const string SAVE_FILE = "savegame.json";
@@ -77,6 +72,7 @@ struct ResearchDef {
     string effectName;
 };
 
+// Removed the old "Urban Planning" research and replaced it with three separate entries.
 static vector<ResearchDef> RESEARCH_DATA = {
     {"Unlock Mars", {{"Iron", 100}, {"Copper", 50}},
      "Unlock the planet Mars for mining.", "unlock_mars"},
@@ -96,30 +92,25 @@ static vector<ResearchDef> RESEARCH_DATA = {
      "Allows building Shield Ships to protect convoys.", "unlock_shield_ships"},
     {"Emergency Energy Conservation",
      {{"Engine Parts", 10}, {"Titanium Bar", 5}},
-     "Allows a planet to halt production during an imminent raider attack, "
-     "conserving energy for defense.", "energy_conservation"},
+     "Allows a planet to halt production during an imminent raider attack, conserving energy for defense.", "energy_conservation"},
     {"Repair Drone Technology", {{"Fusion Reactor", 1}, {"Advanced Engine Parts", 3}},
-     "Unlocks Repair Drones that can repair ships during combat.",
-     "unlock_repair_drones"},
+     "Unlocks Repair Drones that can repair ships during combat.", "unlock_repair_drones"},
     {"Solar Panels", {{"Iron", 20}, {"Copper", 30}},
      "Unlock Solar Panels for energy production on planets.", "unlock_solar_panels"},
     {"Tritium Extraction", {{"Mithril Bar", 5}, {"Advanced Engine Parts", 2}},
-     "Unlocks the ability to build Tritium Extractors to harvest tritium for "
-     "Fusion Reactors.", "unlock_tritium_extraction"},
-    {"Urban Planning", {{"Iron Bar", 15}, {"Engine Parts", 5}},
-     "Expands building capacity on early game planets, reducing the need for "
-     "manual upgrades.", "urban_planning"},
-    {"Quantum Communication", {{"Copper Bar", 20}, {"Engine Parts", 3}},
-     "Enhances interplanetary transfers by reducing raider threat during convoys.",
-     "quantum_communication"},
+     "Unlocks the ability to build Tritium Extractors to harvest tritium for Fusion Reactors.", "unlock_tritium_extraction"},
+    {"Urban Planning I", {{"Iron Bar", 15}, {"Engine Parts", 5}},
+     "Increases Terra's building capacity by 4.", "urban_planning_terra"},
+    {"Urban Planning II", {{"Iron Bar", 30}, {"Engine Parts", 10}},
+     "Increases Mars' building capacity by 4.", "urban_planning_mars"},
+    {"Urban Planning III", {{"Iron Bar", 45}, {"Engine Parts", 15}},
+     "Increases Zalthor's building capacity by 4.", "urban_planning_zalthor"},
     {"Capital Ship Initiative",
      {{"Advanced Engine Parts", 5}, {"Fusion Reactor", 1}, {"Titanium Bar", 10}},
-     "Unlock the ability to construct a powerful capital ship. Only one such vessel "
-     "may be active at any time.", "unlock_capital_ships"},
+     "Unlock the ability to construct a powerful capital ship. Only one such vessel may be active at any time.", "unlock_capital_ships"},
     {"Auxiliary Frigate Development",
      {{"Engine Parts", 20}, {"Advanced Engine Parts", 5}, {"Mithril Bar", 10}},
-     "Unlock smaller versions of capital ships (frigates) that are less powerful but "
-     "can be built without limits.", "unlock_capital_frigates"}
+     "Unlock smaller versions of capital ships (frigates) that are less powerful but can be built without limits.", "unlock_capital_frigates"}
 };
 
 struct CraftingRecipe {
@@ -129,24 +120,25 @@ struct CraftingRecipe {
     string requiredBuilding;
 };
 
+// Note: Only capital ship recipes have been changed to require the "Flagship Dock" now.
 static map<string, CraftingRecipe> CRAFTING_RECIPES = {
     {"Iron Bar", { {{"Iron", 5}}, 1.0, 2.0, "Smelting Building" }},
     {"Interceptor", { {{"Engine Parts", 3}, {"Titanium Bar", 2}}, 4.0, 20.0, "Shipyard" }},
     {"Celestial Juggernaut", { {{"Fusion Reactor", 1}, {"Titanium Bar", 10},
                                  {"Advanced Engine Parts", 5}, {"Crystal", 5}},
-                                20.0, 40.0, "Shipyard" }},
+                                20.0, 40.0, "Flagship Dock" }},
     {"Nova Carrier", { {{"Fusion Reactor", 1}, {"Titanium Bar", 8},
                          {"Advanced Engine Parts", 4}, {"Mithril Bar", 10}},
-                        18.0, 35.0, "Shipyard" }},
+                        18.0, 35.0, "Flagship Dock" }},
     {"Obsidian Sovereign", { {{"Fusion Reactor", 1}, {"Titanium Bar", 12},
                                {"Advanced Engine Parts", 6}, {"Crystal", 7}},
-                              25.0, 45.0, "Shipyard" }},
+                              25.0, 45.0, "Flagship Dock" }},
     {"Preemptor", { {{"Fusion Reactor", 1}, {"Titanium Bar", 9},
                       {"Advanced Engine Parts", 5}, {"Mithril Bar", 8}},
-                    15.0, 50.0, "Shipyard" }},
+                    15.0, 50.0, "Flagship Dock" }},
     {"Aurora Protector", { {{"Fusion Reactor", 1}, {"Titanium Bar", 10},
                              {"Advanced Engine Parts", 5}, {"Crystal", 6}},
-                           20.0, 30.0, "Shipyard" }},
+                           20.0, 30.0, "Flagship Dock" }},
     {"Juggernaut Frigate", { {{"Titanium Bar", 5}, {"Advanced Engine Parts", 2},
                               {"Crystal", 2}},
                             10.0, 15.0, "Shipyard" }},
@@ -168,21 +160,23 @@ struct BuildingRecipe {
     map<string, int> inputs;
     double timeRequired;
     double electricityCost;
+    int plotCost; // New field: the number of building plots this structure uses.
 };
 
 static map<string, BuildingRecipe> BUILDING_RECIPES = {
-    {"Crafting Building", { {{"Iron Bar", 5}, {"Engine Parts", 2}}, 5.0, 10.0 }},
-    {"Smelting Building", { {{"Copper Bar", 5}, {"Coal", 10}}, 5.0, 10.0 }},
-    {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0 }},
-    {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0 }},
-    {"Proximity Alarm", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0 }},
-    {"Proximity Radar", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0 }},
-    {"Mobile Radar", { {{"Crystal", 3}, {"Copper Bar", 2}}, 3.0, 5.0 }},
-    {"Salvage Robot", { {{"Obsidian", 2}, {"Engine Parts", 1}}, 3.0, 5.0 }},
-    {"Shield Generator", { {{"Titanium Bar", 2}, {"Copper Bar", 2}}, 4.0, 5.0 }},
-    {"Solar Panel", { {}, 3.0, 0.0 }},
-    {"Tritium Extractor", { {{"Mithril Bar", 2}, {"Advanced Engine Parts", 1}},
-                            4.0, 8.0 }}
+    {"Crafting Building", { {{"Iron Bar", 5}, {"Engine Parts", 2}}, 5.0, 10.0, 1 }},
+    {"Smelting Building", { {{"Iron", 5}, {"Coal", 10}}, 5.0, 10.0, 1 }}, // modified recipe
+    {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0, 1 }},
+    {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0, 1 }},
+    {"Proximity Alarm", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0, 1 }},
+    {"Proximity Radar", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0, 1 }},
+    {"Mobile Radar", { {{"Crystal", 3}, {"Copper Bar", 2}}, 3.0, 5.0, 1 }},
+    {"Salvage Robot", { {{"Obsidian", 2}, {"Engine Parts", 1}}, 3.0, 5.0, 1 }},
+    {"Shield Generator", { {{"Titanium Bar", 2}, {"Copper Bar", 2}}, 4.0, 5.0, 1 }},
+    {"Solar Panel", { {}, 3.0, 0.0, 1 }},
+    {"Tritium Extractor", { {{"Mithril Bar", 2}, {"Advanced Engine Parts", 1}}, 4.0, 8.0, 1 }},
+    {"Defense Turret", { {{"Iron Bar", 3}, {"Engine Parts", 1}}, 3.0, 5.0, 1 }},
+    {"Flagship Dock", { {{"Iron Bar", 10}, {"Engine Parts", 5}, {"Titanium Bar", 5}}, 10.0, 30.0, 2 }}
 };
 
 struct Ship {
@@ -194,15 +188,65 @@ struct Ship {
     int repairAmount;
 };
 
+// Forward declaration for use in Planet
 class PlanetManager;
 
+//
+// JOURNAL SYSTEM
+//
+struct JournalEntry {
+    int id;
+    string title;
+    string text;
+    bool unlocked;
+};
+
+class Journal {
+public:
+    Journal() : nextId(1) {}
+    void addEntry(const string &title, const string &text) {
+        JournalEntry entry;
+        entry.id = nextId++;
+        entry.title = title;
+        entry.text = text;
+        entry.unlocked = true;
+        entries.push_back(entry);
+        cout << "New journal entry unlocked: [" << entry.id << "] " << entry.title << endl;
+    }
+    void listEntries() {
+        cout << "Journal Entries:" << endl;
+        for (const auto &entry : entries) {
+            if (entry.unlocked)
+                cout << "[" << entry.id << "] " << entry.title << endl;
+        }
+    }
+    void viewEntry(int id) {
+        for (const auto &entry : entries) {
+            if (entry.id == id && entry.unlocked) {
+                cout << "Journal Entry [" << entry.id << "] " << entry.title << ":\n";
+                cout << entry.text << "\n";
+                return;
+            }
+        }
+        cout << "Journal entry not found or locked." << endl;
+    }
+private:
+    vector<JournalEntry> entries;
+    int nextId;
+};
+
+Journal journal;
+
+//
+// PLANET CLASS
+//
 class Planet {
 public:
     Planet(const string &name, const map<string, double> &production,
            bool unlocked)
         : name_(name), baseProduction_(production), unlocked_(unlocked),
           generators_(0), accumulators_(0), currentEnergy_(0.0), maxEnergy_(50.0),
-          maxBuildingPlots_(3), currentBuildingCount_(0), plotsUpgraded_(false),
+          maxBuildingPlots_(8), currentBuildingCount_(0), plotsUpgraded_(false),
           underThreat_(false) {
         for (const auto &res : RESOURCE_DATA)
             storage_[res.name] = 0;
@@ -264,7 +308,19 @@ public:
     void increaseMaxBuildingPlots(int amount) {
         maxBuildingPlots_ += amount;
     }
+    // New method: add a building using a specific number of plots.
+    bool addBuildingWithCost(const string &buildingName, int plotCost) {
+        if (currentBuildingCount_ + plotCost > maxBuildingPlots_) {
+            cout << "No building plots available on " << name_
+                 << " for " << buildingName << "." << endl;
+            return false;
+        }
+        buildings_[buildingName]++;
+        currentBuildingCount_ += plotCost;
+        return true;
+    }
     bool addBuilding(const string &buildingName) {
+        // Used for facilities which always cost 1 plot.
         if (!canBuildMore()) {
             cout << "No building plots available on " << name_
                  << ". Upgrade building capacity first." << endl;
@@ -363,6 +419,9 @@ public:
     int getMaxBuildingPlots() const {
         return maxBuildingPlots_;
     }
+    int getUsedBuildingPlots() const {
+        return currentBuildingCount_;
+    }
 private:
     string name_;
     map<string, double> baseProduction_;
@@ -384,6 +443,9 @@ private:
     static constexpr double TRITIUM_EXTRACTION_RATE = 0.05;
 };
 
+//
+// PLANET MANAGER
+//
 class PlanetManager {
 public:
     PlanetManager(const vector<PlanetDef> &data) {
@@ -416,6 +478,9 @@ private:
     vector<Planet> planets_;
 };
 
+//
+// RESEARCH
+//
 class Research {
 public:
     Research(const string &name, const map<string, int> &cost,
@@ -459,6 +524,9 @@ private:
     bool completed_;
 };
 
+//
+// DAILY QUEST
+//
 class DailyQuest {
 public:
     DailyQuest(const string &desc, const string &objectiveRes, int objectiveAmt,
@@ -478,8 +546,12 @@ public:
             for (const auto &entry : reward_)
                 cout << entry.first << " +" << entry.second << " ";
             cout << endl;
-            cout << "\nLore: " << resourceLore[rand() % resourceLore.size()]
-                 << endl;
+            // Add a journal entry about the resource quest
+            string journalText = "You successfully gathered " + to_string(objectiveAmount_) +
+                                 " " + objectiveResource_ + ". The effort has not gone unnoticed. "
+                                 "Local legends speak of fortunes made from such endeavors.";
+            journal.addEntry("Resource Quest Completed", journalText);
+            cout << "\nLore: " << resourceLore[rand() % resourceLore.size()] << endl;
         }
     }
     bool processRaiderAttack(PlanetManager &pm, vector<Ship> &fleet,
@@ -530,8 +602,12 @@ public:
                     cout << "You receive 2 Engine Parts as reward." << endl;
                 }
                 completed_ = true;
-                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()]
-                     << endl;
+                // Add a journal entry about the repelled raider attack
+                string journalText = "In a fierce battle, your fleet repelled the raider onslaught. "
+                                     "It is whispered that these raiders were once honorable citizens, "
+                                     "divided by tragedy and betrayal.";
+                journal.addEntry("Raider Attack Repelled", journalText);
+                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()] << endl;
                 target->setUnderThreat(false);
                 break;
             }
@@ -581,8 +657,7 @@ public:
             if (fleet.empty()) {
                 cout << "All defending ships have been destroyed!" << endl;
                 completed_ = true;
-                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()]
-                     << endl;
+                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()] << endl;
                 target->setUnderThreat(false);
                 break;
             }
@@ -658,6 +733,9 @@ private:
     int turnsElapsed_;
 };
 
+//
+// QUEST MANAGER
+//
 class QuestManager {
 public:
     QuestManager() : currentQuest_(nullptr), lastQuestDate_("") {}
@@ -707,11 +785,11 @@ private:
             Planet *tgt = pm.getPlanetByName(target);
             if (tgt && tgt->hasBuilding("Proximity Alarm")) {
                 cout << "Proximity Alarm on " << target
-                     << " issues a 5-minute warning of an imminent raider attack!"
-                     << endl;
+                     << " issues a 5-minute warning of an imminent raider attack!" << endl;
                 this_thread::sleep_for(chrono::minutes(5));
                 tgt->setUnderThreat(true);
             }
+            journal.addEntry("Raider Warning", "Intelligence reports suggest that raiders, once dignified citizens driven to desperation, are now mobilizing near " + target + ". Their motives are as murky as the void, born from past injustices.");
             currentQuest_ = std::move(quest);
         } else {
             vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar",
@@ -733,6 +811,9 @@ private:
     }
 };
 
+//
+// RESEARCH MANAGER
+//
 class ResearchManager {
 public:
     ResearchManager(const vector<ResearchDef> &data) {
@@ -756,6 +837,9 @@ private:
     vector<Research> researches_;
 };
 
+//
+// CRAFTING MANAGER
+//
 class CraftingManager {
 public:
     CraftingManager(const map<string, CraftingRecipe> &recipes)
@@ -791,8 +875,7 @@ public:
             planet->removeFromStorage(entry.first, entry.second);
         planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
         double craftTime = recipe.timeRequired * fasterMultiplier;
-        cout << "Crafting " << itemName << " took " << craftTime << " seconds."
-             << endl;
+        cout << "Crafting " << itemName << " took " << craftTime << " seconds." << endl;
         int quantity = 1;
         if (precisionToolsEnabled) {
             if (rand() % 100 < 10) {
@@ -808,6 +891,9 @@ private:
     map<string, CraftingRecipe> recipes_;
 };
 
+//
+// PLAYER
+//
 class Player {
 public:
     Player()
@@ -907,8 +993,7 @@ public:
             applyResearchEffect(research->getEffectName());
             cout << "Research '" << research->getName() << "' completed!" << endl;
         } else {
-            cout << "Not enough resources on Terra to perform research."
-                 << endl;
+            cout << "Not enough resources on Terra to perform research." << endl;
         }
     }
     void craftItem(const string &itemName, const string &planetName = "Terra") {
@@ -1080,18 +1165,14 @@ public:
             cout << "Planet " << planetName << " not found." << endl;
             return;
         }
-        int totalBuildings = 0;
-        for (const auto &b : planet->getBuildings())
-            totalBuildings += b.second;
-        if (totalBuildings >= planet->getMaxBuildingPlots()) {
-            cout << "No available building plots on " << planetName
-                 << ". Use 'upgrade_plots " << planetName
-                 << "' to increase capacity." << endl;
-            return;
-        }
         auto it = BUILDING_RECIPES.find(buildingName);
         if (it == BUILDING_RECIPES.end()) {
             cout << "No recipe for building '" << buildingName << "'." << endl;
+            return;
+        }
+        int plotCost = it->second.plotCost;
+        if (planet->getUsedBuildingPlots() + plotCost > planet->getMaxBuildingPlots()) {
+            cout << "Not enough building plots on " << planetName << " to build " << buildingName << "." << endl;
             return;
         }
         for (const auto &entry : it->second.inputs) {
@@ -1102,17 +1183,14 @@ public:
             }
         }
         if (planet->getCurrentEnergy() < it->second.electricityCost) {
-            cout << "Not enough energy on " << planetName << " to build "
-                 << buildingName << "." << endl;
+            cout << "Not enough energy on " << planetName << " to build " << buildingName << "." << endl;
             return;
         }
-        planet->setCurrentEnergy(planet->getCurrentEnergy() -
-                                 it->second.electricityCost);
+        planet->setCurrentEnergy(planet->getCurrentEnergy() - it->second.electricityCost);
         for (const auto &entry : it->second.inputs)
             planet->removeFromStorage(entry.first, entry.second);
-        if (planet->addBuilding(buildingName))
-            cout << "Built " << buildingName << " on " << planetName << "."
-                 << endl;
+        if (planet->addBuildingWithCost(buildingName, plotCost))
+            cout << "Built " << buildingName << " on " << planetName << "." << endl;
     }
     void upgradeBuildingPlots(const string &planetName) {
         Planet *planet = planetManager_.getPlanetByName(planetName);
@@ -1120,12 +1198,8 @@ public:
             cout << "Planet " << planetName << " not found." << endl;
             return;
         }
-        int totalBuildings = 0;
-        for (const auto &b : planet->getBuildings())
-            totalBuildings += b.second;
-        if (totalBuildings < planet->getMaxBuildingPlots()) {
-            cout << "There are still available building plots on " << planetName
-                 << "." << endl;
+        if (planet->getUsedBuildingPlots() < planet->getMaxBuildingPlots()) {
+            cout << "There are still available building plots on " << planetName << "." << endl;
             return;
         }
         if (planet->getStored("Iron Bar") >= 10 &&
@@ -1133,15 +1207,12 @@ public:
             if (planet->upgradePlots()) {
                 planet->removeFromStorage("Iron Bar", 10);
                 planet->removeFromStorage("Engine Parts", 2);
-                cout << "Building capacity on " << planetName
-                     << " increased by 2." << endl;
+                cout << "Building capacity on " << planetName << " increased by 2." << endl;
             } else {
-                cout << "Building capacity on " << planetName
-                     << " has already been upgraded." << endl;
+                cout << "Building capacity on " << planetName << " has already been upgraded." << endl;
             }
         } else {
-            cout << "Not enough resources on " << planetName
-                 << " to upgrade building plots." << endl;
+            cout << "Not enough resources on " << planetName << " to upgrade building plots." << endl;
         }
     }
     void transferResource(const string &resourceName, int amount,
@@ -1165,8 +1236,7 @@ public:
                 break;
             }
         if (!hasTransport) {
-            cout << "At least one Transport Vessel is required in your fleet."
-                 << endl;
+            cout << "At least one Transport Vessel is required in your fleet." << endl;
             return;
         }
         cout << "Transferring " << amount << " " << resourceName << " from "
@@ -1196,8 +1266,7 @@ public:
                 }
             int raiderStrength = rand() % 101 + 20;
             if (hasInterceptor) {
-                cout << "Interceptor in convoy reduces raider strength by 20!"
-                     << endl;
+                cout << "Interceptor in convoy reduces raider strength by 20!" << endl;
                 raiderStrength = max(0, raiderStrength - 20);
             }
             cout << "Convoy strength: " << (convoyStrength + bonus)
@@ -1223,8 +1292,7 @@ public:
                 if (fromPlanet->hasBuilding("Salvage Robot")) {
                     int salvage = (rand() % 11) + 5;
                     fromPlanet->addToStorage("Iron", salvage);
-                    cout << "Salvage Robot recovered " << salvage << " Iron."
-                         << endl;
+                    cout << "Salvage Robot recovered " << salvage << " Iron." << endl;
                 }
             }
         } else {
@@ -1313,35 +1381,77 @@ private:
     bool quantumCommunicationEnabled_;
     time_t lastUpdateTime_;
     void applyResearchEffect(const string &effectName) {
-        if (effectName == "unlock_mars")
+        if (effectName == "unlock_mars") {
             planetManager_.unlockPlanet("Mars");
-        else if (effectName == "unlock_zalthor")
+            cout << "Mars unlocked!" << endl;
+            journal.addEntry("Mars Unlocked", "The barren red plains of Mars are now open for resource extraction. Rumors of ancient relics stir excitement among pioneers.");
+        } else if (effectName == "unlock_zalthor") {
             planetManager_.unlockPlanet("Zalthor");
-        else if (effectName == "faster_crafting")
+            cout << "Zalthor unlocked!" << endl;
+            journal.addEntry("Zalthor Revealed", "Zalthor's mysterious landscapes hold both peril and promise. Ancient secrets beckon those brave enough to mine its depths.");
+        } else if (effectName == "faster_crafting") {
             fasterCraftingMultiplier_ = 0.5;
-        else if (effectName == "unlock_vulcan")
+            cout << "Faster crafting unlocked!" << endl;
+            journal.addEntry("Crafting Breakthrough", "New techniques have halved crafting times. Efficiency in production may tip the scales of future conflicts.");
+        } else if (effectName == "unlock_vulcan") {
             planetManager_.unlockPlanet("Vulcan");
-        else if (effectName == "unlock_luna")
+            cout << "Vulcan unlocked!" << endl;
+            journal.addEntry("Vulcan Emerges", "Vulcan's volatile environment now offers rare resources. Its fiery heart burns with both danger and opportunity.");
+        } else if (effectName == "unlock_luna") {
             planetManager_.unlockPlanet("Luna");
-        else if (effectName == "crafting_mastery")
+            cout << "Luna unlocked!" << endl;
+            journal.addEntry("Luna Unbound", "Luna's icy plains hold untapped potential. The balance between light and shadow has shifted in its favor.");
+        } else if (effectName == "crafting_mastery") {
             craftingCostMultiplier_ = 0.8;
-        else if (effectName == "precision_tools")
+            cout << "Crafting mastery achieved!" << endl;
+            journal.addEntry("Crafting Mastery", "Skilled hands have refined the art of crafting, reducing costs and waste. The line between art and science blurs.");
+        } else if (effectName == "precision_tools") {
             precisionToolsEnabled_ = true;
-        else if (effectName == "energy_conservation")
+            cout << "Precision tools enabled!" << endl;
+            journal.addEntry("Precision Engineering", "Advanced tools increase your chance to double production. Every measurement, every cut, resonates with perfection.");
+        } else if (effectName == "energy_conservation") {
             energyConservationEnabled_ = true;
-        else if (effectName == "unlock_solar_panels")
+            cout << "Emergency Energy Conservation active!" << endl;
+            journal.addEntry("Energy Conservation", "New protocols allow for rapid energy shutdown during crises, fortifying defenses in the face of raider aggression.");
+        } else if (effectName == "unlock_solar_panels") {
             cout << "Solar Panels unlocked! You can now build Solar Panels." << endl;
-        else if (effectName == "unlock_capital_ships")
-            cout << "Capital Ship Initiative research completed! You can now build one "
-                 << "powerful capital ship at a time." << endl;
-        else if (effectName == "unlock_capital_frigates")
-            cout << "Auxiliary Frigate Development research completed! You can now build "
-                 << "smaller capital ship variants without limits." << endl;
-        else
+            journal.addEntry("Solar Revolution", "Harnessing the power of the sun, new solar panels provide an abundant energy source, fueling the expansion of your empire.");
+        } else if (effectName == "unlock_capital_ships") {
+            cout << "Capital Ship Initiative research completed! You can now build one powerful capital ship at a time." << endl;
+            journal.addEntry("Capital Ship Initiative", "A colossal leap in naval engineering, capital ships now stand as behemoths of war, their presence a deterrent to would-be aggressors.");
+        } else if (effectName == "unlock_capital_frigates") {
+            cout << "Auxiliary Frigate Development research completed! You can now build smaller capital ship variants without limits." << endl;
+            journal.addEntry("Frigate Development", "Streamlined designs allow for the rapid deployment of frigates, versatile vessels that combine speed and firepower.");
+        } else if (effectName == "urban_planning_terra") {
+            Planet *terra = planetManager_.getPlanetByName("Terra");
+            if (terra) {
+                 terra->increaseMaxBuildingPlots(4);
+                 cout << "Terra's building capacity increased by 4." << endl;
+                 journal.addEntry("Urban Planning in Terra", "New infrastructure plans have been approved for Terra, allowing for an expansion of facilities. The promise of progress energizes the citizens.");
+            }
+        } else if (effectName == "urban_planning_mars") {
+            Planet *mars = planetManager_.getPlanetByName("Mars");
+            if (mars) {
+                 mars->increaseMaxBuildingPlots(4);
+                 cout << "Mars' building capacity increased by 4." << endl;
+                 journal.addEntry("Urban Planning in Mars", "Mars is not just a barren wasteland; new urban planning initiatives promise to transform its rugged terrain into thriving outposts.");
+            }
+        } else if (effectName == "urban_planning_zalthor") {
+            Planet *zalthor = planetManager_.getPlanetByName("Zalthor");
+            if (zalthor) {
+                 zalthor->increaseMaxBuildingPlots(4);
+                 cout << "Zalthor's building capacity increased by 4." << endl;
+                 journal.addEntry("Urban Planning in Zalthor", "Zalthor's enigmatic landscapes are set to be reshaped by ambitious urban planning projects, blending innovation with the mysteries of the past.");
+            }
+        } else {
             cout << "Unknown research effect: " << effectName << endl;
+        }
     }
 };
 
+//
+// SAVE / LOAD
+//
 void saveGame(const Player &player) {
     json j;
     {
@@ -1424,6 +1534,9 @@ void loadGame(Player &player) {
     cout << "Game loaded from " << SAVE_FILE << "." << endl;
 }
 
+//
+// CHARACTERS / LORE
+//
 void talkToCharacters() {
     cout << "\nLore: " << genericLore[rand() % genericLore.size()] << "\n";
 }
@@ -1444,6 +1557,7 @@ void showHelp() {
          << "  radar <planet>                 - Get radar info for a planet\n"
          << "  daily                          - Show the current daily quest\n"
          << "  talk                           - Talk to characters for lore\n"
+         << "  journal [<number>]             - List or view journal entries\n"
          << "  save                           - Save game\n"
          << "  quit                           - Save and quit\n";
 }
@@ -1483,7 +1597,7 @@ int main() {
                 cout << planet.getName() << " => " 
                      << (planet.isUnlocked() ? "Unlocked" : "Locked") << " | Energy: "
                      << planet.getCurrentEnergy() << "/" << planet.getMaxEnergy()
-                     << endl;
+                     << " | Building Plots: " << planet.getUsedBuildingPlots() << "/" << planet.getMaxBuildingPlots() << endl;
         } else if (cmd == "fleet")
             player.showFleet();
         else if (cmd == "research") {
@@ -1602,6 +1716,28 @@ int main() {
                 cout << "No current daily quest." << endl;
         } else if (cmd == "talk") {
             talkToCharacters();
+        } else if (cmd == "journal") {
+            if (args.empty()) {
+                journal.listEntries();
+                cout << "Enter a journal entry number to read, or press enter to return:" << endl;
+                string input;
+                getline(cin, input);
+                if (!input.empty()) {
+                    try {
+                        int entryNum = stoi(input);
+                        journal.viewEntry(entryNum);
+                    } catch (...) {
+                        cout << "Invalid entry number." << endl;
+                    }
+                }
+            } else {
+                try {
+                    int entryNum = stoi(args);
+                    journal.viewEntry(entryNum);
+                } catch (...) {
+                    cout << "Invalid entry number." << endl;
+                }
+            }
         } else if (cmd == "save") {
             saveGame(player);
         } else if (cmd == "quit") {
