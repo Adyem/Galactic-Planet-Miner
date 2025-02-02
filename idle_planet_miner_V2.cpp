@@ -18,6 +18,51 @@
 using json = nlohmann::json;
 using namespace std;
 
+/*
+ * GALACTIC MINERS: A COHESIVE STORY OUTLINE
+ *
+ * BACKSTORY:
+ * In a distant era, humanity has spread across star systems, with Terra as its core.
+ * Colonies on Mars, Zalthor, Vulcan, and Luna supply vital resources: iron, rare metals,
+ * titanium, crystals, and obsidian. Amid these efforts, raiders led by Captain Blackthorne
+ * and Navigator Zara threaten fragile peace, driven by their own quest for survival.
+ *
+ * MAIN CHARACTERS:
+ * - Old Miner Joe:
+ *   A hardworking veteran who mines tirelessly to cope with personal tragedy. His passion
+ *   for refining mining techniques pushes resource extraction forward.
+ *
+ * - Professor Lumen:
+ *   An academic who studies planetary anomalies, warning of cosmic dangers. Her research
+ *   hints at looming threats requiring urgent technological innovation.
+ *
+ * - Farmer Daisy:
+ *   A dedicated agriculturalist who underscores the vital link between farming and mining.
+ *   She struggles to sustain colonies reliant on stable resource convoys.
+ *
+ * - Captain Blackthorne & Navigator Zara:
+ *   Former citizens turned raider leaders. Betrayed and cast aside, they now fight for
+ *   justice—or vengeance—using hidden enclaves to strike the colonies.
+ *
+ * QUEST SYSTEM OVERVIEW (Modified):
+ * - Story Quests:
+ *   Your journey unfolds through four main story quests:
+ *     1) "The Spark of Ambition": Old Miner Joe asks you to collect 50 Iron Bars on Terra,
+ *        symbolizing hope and redemption.
+ *     2) "The Warning of the Anomalies": Professor Lumen warns you of cosmic disturbances
+ *        near Mars and a raider attack. (Defensive mission)
+ *     3) "The Heart of the Matter": Farmer Daisy urges you to disrupt a raider outpost on Zalthor,
+ *        revealing that these foes are driven by desperate circumstances.
+ *     4) "The Final Confrontation": The climactic showdown against Captain Blackthorne at his fortified
+ *        base – where multiple capital ships make the battle tough but not unwinnable.
+ *
+ *   Each quest, upon completion, unlocks an expanded journal entry that reveals more of the lore.
+ *
+ * - Random Daily Tasks:
+ *   Once the story arc is complete, random daily quests (resource collection or raider warnings)
+ *   continue as before.
+ */
+
 // Expanded lore arrays with more creative back‐stories
 static const vector<string> resourceLore = {
     "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future. I once lost everything to a mining accident, and now I seek redemption in every pick strike.'",
@@ -164,7 +209,7 @@ struct BuildingRecipe {
 };
 
 static map<string, BuildingRecipe> BUILDING_RECIPES = {
-    {"Crafting Building", { {{"Iron Bar", 5}, {"Engine Parts", 2}}, 5.0, 10.0, 1 }},
+    {"Crafting Building", { {{"Iron Bar", 5}, {"Copper Bar", 2}}, 5.0, 10.0, 1 }},
     {"Smelting Building", { {{"Iron", 5}, {"Coal", 10}}, 5.0, 10.0, 1 }}, // modified recipe
     {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0, 1 }},
     {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0, 1 }},
@@ -525,20 +570,19 @@ private:
 };
 
 //
-// DAILY QUEST
+// DAILY QUEST / STORY QUEST
 //
 class DailyQuest {
 public:
     DailyQuest(const string &desc, const string &objectiveRes, int objectiveAmt,
                const map<string, int> &reward)
-        : description_(desc), objectiveResource_(objectiveRes),
-          objectiveAmount_(objectiveAmt), reward_(reward), completed_(false),
-          isRaiderAttack_(false), targetPlanet_(""), combatStartTime_(0),
-          turnsElapsed_(0) {}
+        : description_(desc), objectiveResource_(objectiveRes), objectiveAmount_(objectiveAmt), reward_(reward),
+          completed_(false), isRaiderAttack_(false), targetPlanet_(""), combatStartTime_(0), turnsElapsed_(0),
+          isStoryQuest_(false), isFinalConfrontation_(false) {}
     void checkCompletion(Planet *central) {
         if (completed_ || isRaiderAttack_)
             return;
-        if (central->getStored(objectiveResource_) >= objectiveAmount_) {
+        if (!objectiveResource_.empty() && central->getStored(objectiveResource_) >= objectiveAmount_) {
             completed_ = true;
             for (const auto &entry : reward_)
                 central->addToStorage(entry.first, entry.second);
@@ -546,16 +590,16 @@ public:
             for (const auto &entry : reward_)
                 cout << entry.first << " +" << entry.second << " ";
             cout << endl;
-            // Add a journal entry about the resource quest
-            string journalText = "You successfully gathered " + to_string(objectiveAmount_) +
-                                 " " + objectiveResource_ + ". The effort has not gone unnoticed. "
-                                 "Local legends speak of fortunes made from such endeavors.";
-            journal.addEntry("Resource Quest Completed", journalText);
-            cout << "\nLore: " << resourceLore[rand() % resourceLore.size()] << endl;
+            // For non-story quests, add a generic journal entry.
+            if (!isStoryQuest_) {
+                string journalText = "You successfully gathered " + to_string(objectiveAmount_) +
+                                 " " + objectiveResource_ + ". The effort has not gone unnoticed.";
+                journal.addEntry("Resource Quest Completed", journalText);
+                cout << "\nLore: " << resourceLore[rand() % resourceLore.size()] << endl;
+            }
         }
     }
-    bool processRaiderAttack(PlanetManager &pm, vector<Ship> &fleet,
-                             bool realTime) {
+    bool processRaiderAttack(PlanetManager &pm, vector<Ship> &fleet, bool realTime) {
         if (completed_ || !isRaiderAttack_)
             return false;
         Planet *target = pm.getPlanetByName(targetPlanet_);
@@ -565,9 +609,12 @@ public:
         }
         if (combatStartTime_ == 0)
             combatStartTime_ = time(nullptr);
-        int raiderShield = rand() % 101 + 100;
-        int raiderHull = rand() % 201 + 300;
+        // Adjust enemy stats if this is the final confrontation.
+        int raiderShield = (isFinalConfrontation_) ? rand() % 101 + 200 : rand() % 101 + 100;
+        int raiderHull = (isFinalConfrontation_) ? rand() % 201 + 600 : rand() % 201 + 300;
         cout << "Commencing raider battle at " << targetPlanet_ << "!" << endl;
+        if (isFinalConfrontation_)
+            cout << "Multiple enemy capital ships support the assault, their cannons roaring in unison!" << endl;
         const int maxTurns = 10;
         int turn = 0;
         while (turn < maxTurns && !fleet.empty() && raiderHull > 0) {
@@ -602,16 +649,18 @@ public:
                     cout << "You receive 2 Engine Parts as reward." << endl;
                 }
                 completed_ = true;
-                // Add a journal entry about the repelled raider attack
-                string journalText = "In a fierce battle, your fleet repelled the raider onslaught. "
-                                     "It is whispered that these raiders were once honorable citizens, "
-                                     "divided by tragedy and betrayal.";
-                journal.addEntry("Raider Attack Repelled", journalText);
-                cout << "\nLore: " << raiderLore[rand() % raiderLore.size()] << endl;
+                if (!isStoryQuest_) {
+                    string journalText = "In a fierce battle, your fleet repelled the raider onslaught.";
+                    journal.addEntry("Raider Attack Repelled", journalText);
+                    cout << "\nLore: " << raiderLore[rand() % raiderLore.size()] << endl;
+                }
                 target->setUnderThreat(false);
                 break;
             }
             int raiderDamage = rand() % 51 + 50;
+            // If final confrontation, add extra damage to simulate capital ship firepower.
+            if (isFinalConfrontation_)
+                raiderDamage += 30;
             cout << "Raiders fire for " << raiderDamage << " damage." << endl;
             int shieldBonus = 0;
             int numShieldGen = 0;
@@ -721,6 +770,11 @@ public:
     const string &getTargetPlanet() const {
         return targetPlanet_;
     }
+    // New setters/getters for story quest flags:
+    void setStoryQuest(bool val) { isStoryQuest_ = val; }
+    bool isStoryQuest() const { return isStoryQuest_; }
+    void setFinalConfrontation(bool val) { isFinalConfrontation_ = val; }
+    bool isFinalConfrontation() const { return isFinalConfrontation_; }
 private:
     string description_;
     string objectiveResource_;
@@ -731,6 +785,8 @@ private:
     string targetPlanet_;
     time_t combatStartTime_;
     int turnsElapsed_;
+    bool isStoryQuest_;
+    bool isFinalConfrontation_;
 };
 
 //
@@ -738,7 +794,7 @@ private:
 //
 class QuestManager {
 public:
-    QuestManager() : currentQuest_(nullptr), lastQuestDate_("") {}
+    QuestManager() : currentQuest_(nullptr), lastQuestDate_(""), storyStage_(0) {}
     void updateDailyQuest(Planet *central, PlanetManager &pm, vector<Ship> &fleet) {
         string todayStr = currentDateString();
         if (lastQuestDate_.empty() || lastQuestDate_ < todayStr) {
@@ -747,8 +803,29 @@ public:
         }
         if (currentQuest_) {
             bool realTime = true;
-            currentQuest_->processRaiderAttack(pm, fleet, realTime);
-            currentQuest_->checkCompletion(central);
+            if (currentQuest_->isRaider())
+                currentQuest_->processRaiderAttack(pm, fleet, realTime);
+            else
+                currentQuest_->checkCompletion(central);
+            if (currentQuest_->isCompleted() && currentQuest_->isStoryQuest()) {
+                // Expanded journal entries based on story stage.
+                switch(storyStage_) {
+                  case 0:
+                     journal.addEntry("The Spark Ignited", "Old Miner Joe's voice trembles with hope as you deliver the 50 Iron Bars. 'Every piece of ore holds a memory,' he says, reminding you that even in darkness, a spark can ignite a revolution.");
+                     break;
+                  case 1:
+                     journal.addEntry("A Cosmic Warning", "Professor Lumen's eyes glisten with concern as she explains that the raider attack on Mars, though devastating, revealed the fragile balance between survival and morality. 'They are not evil by nature,' she whispers, 'but victims of a corrupt system.'");
+                     break;
+                  case 2:
+                     journal.addEntry("The Heart Revealed", "After a fierce battle on Zalthor, Farmer Daisy's gentle determination shines through. The raiders, now seen in a new light, are desperate souls fighting against overwhelming odds. 'We must look beyond labels,' she advises.");
+                     break;
+                  case 3:
+                     journal.addEntry("The Final Stand", "In the climactic confrontation at Blackthorne's fortified base, you face not just an enemy, but a broken man. The clash is brutal, with multiple capital ships raining fire from above. Yet, as Blackthorne falls, you sense that his path was forged by betrayal and sorrow, not pure malice.");
+                     break;
+                }
+                storyStage_++;
+                currentQuest_.reset();
+            }
         }
     }
     DailyQuest *getCurrentQuest() {
@@ -769,37 +846,73 @@ public:
 private:
     unique_ptr<DailyQuest> currentQuest_;
     string lastQuestDate_;
+    int storyStage_;
     void generateNewQuest(PlanetManager &pm) {
-        if ((rand() % 100) < 20) {
-            vector<string> candidates;
-            for (auto &planet : pm.getPlanets())
-                if (planet.isUnlocked() && planet.getName() != "Terra")
-                    candidates.push_back(planet.getName());
-            if (candidates.empty())
-                candidates.push_back("Terra");
-            string target = candidates[rand() % candidates.size()];
-            string desc = "Raiders are approaching " + target + "! Prepare to defend!";
-            map<string, int> reward = {{"Engine Parts", 2}};
-            auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
-            quest->setRaiderAttack(target);
-            Planet *tgt = pm.getPlanetByName(target);
-            if (tgt && tgt->hasBuilding("Proximity Alarm")) {
-                cout << "Proximity Alarm on " << target
-                     << " issues a 5-minute warning of an imminent raider attack!" << endl;
-                this_thread::sleep_for(chrono::minutes(5));
-                tgt->setUnderThreat(true);
+        if (storyStage_ < 4) {
+            if (storyStage_ == 0) { // The Spark of Ambition
+                string desc = "Old Miner Joe tells you: 'Deep in Terra's veins lie the secrets of redemption. Collect 50 Iron Bars to prove your resolve.'";
+                map<string, int> reward = {{"Engine Parts", 3}};
+                auto quest = make_unique<DailyQuest>(desc, "Iron Bar", 50, reward);
+                quest->setStoryQuest(true);
+                currentQuest_ = std::move(quest);
+            } else if (storyStage_ == 1) { // The Warning of the Anomalies
+                pm.unlockPlanet("Mars");
+                string desc = "Professor Lumen urgently warns: 'Cosmic anomalies near Mars are stirring trouble. Defend Mars from an imminent raider attack!'";
+                map<string, int> reward = {{"Engine Parts", 2}};
+                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+                quest->setRaiderAttack("Mars");
+                quest->setStoryQuest(true);
+                currentQuest_ = std::move(quest);
+            } else if (storyStage_ == 2) { // The Heart of the Matter
+                pm.unlockPlanet("Zalthor");
+                string desc = "Farmer Daisy pleads: 'Our survival depends on unity. Disrupt the raider outpost on Zalthor and secure our future!'";
+                map<string, int> reward = {{"Engine Parts", 3}};
+                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+                quest->setRaiderAttack("Zalthor");
+                quest->setStoryQuest(true);
+                currentQuest_ = std::move(quest);
+            } else if (storyStage_ == 3) { // The Final Confrontation
+                string desc = "The Final Confrontation: 'Blackthorne's base, armed with multiple capital ships, stands as a testament to despair. Lead your fleet and confront him to decide our fate!'";
+                map<string, int> reward = {{"Engine Parts", 5}};
+                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+                quest->setRaiderAttack("Terra"); // using Terra as the battlefield
+                quest->setStoryQuest(true);
+                quest->setFinalConfrontation(true);
+                currentQuest_ = std::move(quest);
             }
-            journal.addEntry("Raider Warning", "Intelligence reports suggest that raiders, once dignified citizens driven to desperation, are now mobilizing near " + target + ". Their motives are as murky as the void, born from past injustices.");
-            currentQuest_ = std::move(quest);
         } else {
-            vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar",
-                                                "Titanium Bar", "Advanced Engine Parts"};
-            int idx = rand() % resourceChoices.size();
-            string chosen = resourceChoices[idx];
-            int amt = rand() % 41 + 10;
-            map<string, int> reward = {{"Engine Parts", (rand() % 3) + 1}};
-            string desc = "Collect " + to_string(amt) + " " + chosen;
-            currentQuest_ = make_unique<DailyQuest>(desc, chosen, amt, reward);
+            // Fallback to random daily quests.
+            if ((rand() % 100) < 20) {
+                vector<string> candidates;
+                for (auto &planet : pm.getPlanets())
+                    if (planet.isUnlocked() && planet.getName() != "Terra")
+                        candidates.push_back(planet.getName());
+                if (candidates.empty())
+                    candidates.push_back("Terra");
+                string target = candidates[rand() % candidates.size()];
+                string desc = "Raiders are approaching " + target + "! Prepare to defend!";
+                map<string, int> reward = {{"Engine Parts", 2}};
+                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+                quest->setRaiderAttack(target);
+                Planet *tgt = pm.getPlanetByName(target);
+                if (tgt && tgt->hasBuilding("Proximity Alarm")) {
+                    cout << "Proximity Alarm on " << target
+                         << " issues a 5-minute warning of an imminent raider attack!" << endl;
+                    this_thread::sleep_for(chrono::minutes(5));
+                    tgt->setUnderThreat(true);
+                }
+                journal.addEntry("Raider Warning", "Intelligence reports suggest that raiders, once dignified citizens driven to desperation, are now mobilizing near " + target + ". Their motives are as murky as the void, born from past injustices.");
+                currentQuest_ = std::move(quest);
+            } else {
+                vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar",
+                                                    "Titanium Bar", "Advanced Engine Parts"};
+                int idx = rand() % resourceChoices.size();
+                string chosen = resourceChoices[idx];
+                int amt = rand() % 41 + 10;
+                map<string, int> reward = {{"Engine Parts", (rand() % 3) + 1}};
+                string desc = "Collect " + to_string(amt) + " " + chosen;
+                currentQuest_ = make_unique<DailyQuest>(desc, chosen, amt, reward);
+            }
         }
     }
     string currentDateString() {
@@ -1043,8 +1156,7 @@ public:
         }
         double effectiveCost = it->second.electricityCost * craftingCostMultiplier_;
         if (planet->getCurrentEnergy() < effectiveCost) {
-            cout << "Not enough energy on " << planetName << " to build a " << shipType
-                 << "." << endl;
+            cout << "Not enough energy on " << planetName << " to build a " << shipType << "." << endl;
             return;
         }
         planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
@@ -1555,7 +1667,7 @@ void showHelp() {
          << "  install <facility> on <planet> - Install a facility (Generator/Accumulator)\n"
          << "  transfer <resource> <amount> from <planet1> to <planet2> - Transfer resources\n"
          << "  radar <planet>                 - Get radar info for a planet\n"
-         << "  daily                          - Show the current daily quest\n"
+         << "  daily                          - Show the current daily (or story) quest\n"
          << "  talk                           - Talk to characters for lore\n"
          << "  journal [<number>]             - List or view journal entries\n"
          << "  save                           - Save game\n"
