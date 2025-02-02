@@ -1,0 +1,119 @@
+{
+  "crafting_cost_multiplier": 1.0,
+  "current_quest": {
+    "completed": false,
+    "description": "Old Miner Joe says: 'Deep in Terra's veins lie the secrets of redemption. Collect 50 Iron Bars to prove your resolve.'",
+    "objective_amount": 50,
+    "objective_resource": "Iron Bar",
+    "reward": {
+      "Engine Parts": 3
+    }
+  },
+  "faster_crafting_multiplier": 1.0,
+  "fleet": [],
+  "last_quest_date": "2025-02-02",
+  "last_update_time": 1738534022,
+  "planets": [
+    {
+      "current_energy": 0.0,
+      "max_energy": 50.0,
+      "name": "Terra",
+      "unlocked": true
+    },
+    {
+      "current_energy": 0.0,
+      "max_energy": 50.0,
+      "name": "Mars",
+      "unlocked": false
+    },
+    {
+      "current_energy": 0.0,
+      "max_energy": 50.0,
+      "name": "Zalthor",
+      "unlocked": false
+    },
+    {
+      "current_energy": 0.0,
+      "max_energy": 50.0,
+      "name": "Vulcan",
+      "unlocked": false
+    },
+    {
+      "current_energy": 0.0,
+      "max_energy": 50.0,
+      "name": "Luna",
+      "unlocked": false
+    }
+  ],
+  "precision_tools_enabled": false,
+  "researches": [
+    {
+      "completed": false,
+      "name": "Unlock Mars"
+    },
+    {
+      "completed": false,
+      "name": "Unlock Zalthor"
+    },
+    {
+      "completed": false,
+      "name": "Faster Crafting"
+    },
+    {
+      "completed": false,
+      "name": "Unlock Vulcan"
+    },
+    {
+      "completed": false,
+      "name": "Unlock Luna"
+    },
+    {
+      "completed": false,
+      "name": "Crafting Mastery"
+    },
+    {
+      "completed": false,
+      "name": "Precision Tools"
+    },
+    {
+      "completed": false,
+      "name": "Shield Technology"
+    },
+    {
+      "completed": false,
+      "name": "Emergency Energy Conservation"
+    },
+    {
+      "completed": false,
+      "name": "Repair Drone Technology"
+    },
+    {
+      "completed": false,
+      "name": "Solar Panels"
+    },
+    {
+      "completed": false,
+      "name": "Tritium Extraction"
+    },
+    {
+      "completed": false,
+      "name": "Urban Planning I"
+    },
+    {
+      "completed": false,
+      "name": "Urban Planning II"
+    },
+    {
+      "completed": false,
+      "name": "Urban Planning III"
+    },
+    {
+      "completed": false,
+      "name": "Capital Ship Initiative"
+    },
+    {
+      "completed": false,
+      "name": "Auxiliary Frigate Development"
+    }
+  ]
+}
