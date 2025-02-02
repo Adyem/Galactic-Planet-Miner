@@ -71,9 +71,9 @@ static const vector<string> resourceLore = {
 };
 
 static const vector<string> raiderLore = {
-    "Captain Blackthorne: 'We were once citizens like you, bound by honor. But betrayal and ruin forced us into the shadows. Now, as raiders, we fight against a corrupt system.'",
-    "Navigator Zara: 'Our convoys are the arteries of our colonies. We are driven not by greed, but by the need to survive in a world where hope was stripped away by those in power.'",
-    "Old Scout Finn: 'I’ve seen raider ships lurking in the void. They are not mere bandits; they are broken souls seeking justice in a galaxy that abandoned them.'"
+    "Captain Blackthorne: 'I never chose this path. Forced into desperation by a system that failed us, we strike not out of malice, but as a cry for justice.'",
+    "Navigator Zara: 'Every course we chart is a reminder of the choices we were left with. We become raiders because survival left us no other way, not because we relish conflict.'",
+    "Old Scout Finn: 'In the void, I've seen the truth—our fury is the echo of neglect, a tragic response by souls abandoned by hope.'"
 };
 
 static const vector<string> genericLore = {
@@ -803,29 +803,66 @@ public:
         }
         if (currentQuest_) {
             bool realTime = true;
-            if (currentQuest_->isRaider())
-                currentQuest_->processRaiderAttack(pm, fleet, realTime);
-            else
-                currentQuest_->checkCompletion(central);
-            if (currentQuest_->isCompleted() && currentQuest_->isStoryQuest()) {
-                // Expanded journal entries based on story stage.
-                switch(storyStage_) {
-                  case 0:
-                     journal.addEntry("The Spark Ignited", "Old Miner Joe's voice trembles with hope as you deliver the 50 Iron Bars. 'Every piece of ore holds a memory,' he says, reminding you that even in darkness, a spark can ignite a revolution.");
-                     break;
-                  case 1:
-                     journal.addEntry("A Cosmic Warning", "Professor Lumen's eyes glisten with concern as she explains that the raider attack on Mars, though devastating, revealed the fragile balance between survival and morality. 'They are not evil by nature,' she whispers, 'but victims of a corrupt system.'");
-                     break;
-                  case 2:
-                     journal.addEntry("The Heart Revealed", "After a fierce battle on Zalthor, Farmer Daisy's gentle determination shines through. The raiders, now seen in a new light, are desperate souls fighting against overwhelming odds. 'We must look beyond labels,' she advises.");
-                     break;
-                  case 3:
-                     journal.addEntry("The Final Stand", "In the climactic confrontation at Blackthorne's fortified base, you face not just an enemy, but a broken man. The clash is brutal, with multiple capital ships raining fire from above. Yet, as Blackthorne falls, you sense that his path was forged by betrayal and sorrow, not pure malice.");
-                     break;
-                }
-                storyStage_++;
-                currentQuest_.reset();
+        if (currentQuest_->isRaider())
+            currentQuest_->processRaiderAttack(pm, fleet, realTime);
+        else
+            currentQuest_->checkCompletion(central);
+        if (currentQuest_->isCompleted() && currentQuest_->isStoryQuest()) {
+            switch(storyStage_) {
+                case 0:
+                    journal.addEntry("The Spark Ignited",
+                        "Old Miner Joe, his voice roughened by years of hardship and loss, speaks with quiet resolve as you deliver 50 Iron Bars. 'Each bar is not merely forged from metal but from the very essence of our past struggles,' he murmurs. In that moment, his words resonate as both a personal confession and a rallying cry—a spark of hope amid the darkness of Terra's endless mines.");
+                    break;
+                case 1:
+                    journal.addEntry("A Cosmic Warning",
+                        "Professor Lumen’s eyes glisten with a mix of academic curiosity and genuine concern. 'The cosmos itself trembles under the weight of disturbances near Mars,' she intones softly. Her measured tone—half observation, half lament—reveals a world where cosmic anomalies and human neglect converge, suggesting that the raider threat may stem not only from greed but also from desperation born of systemic failures.");
+                    break;
+                case 2:
+                    journal.addEntry("Bandit Outpost Assault",
+                        "Farmer Daisy, ever the voice of the common folk, urges you with both passion and pragmatism: 'Our supply lines on Zalthor are being bled dry by raider incursions. Strike at their bandit outposts and restore what is rightfully ours!' Her plea, laced with the weariness of endless toil and the fierce protectiveness of a nurturer, exposes the bitter reality behind the raider attacks—desperate acts in a world where survival often demands hard choices.");
+                    break;
+                case 3:
+                    journal.addEntry("Shadows Over Vulcan",
+                        "On the scorched plains of Vulcan, amidst the ruin and relentless heat, the truth begins to surface. Observers note that the raiders’ precision, often dismissed as sheer cruelty, may actually be fueled by a deep-seated sense of betrayal. It is as if every calculated strike carries with it an echo of past wounds—a grim reminder that even those deemed villains are sometimes the products of circumstance and neglect.");
+                    break;
+                case 4:
+                    journal.addEntry("Convoy Under Fire",
+                        "In the chaos of a desperate defense on Terra, your eyes catch a fleeting glimpse of regret in a raider's gaze. As vital convoys are battered under heavy fire, there emerges an unsettling realization: behind every aggressive act, there may lie a silent lament—a wish for another way. This unexpected humanizing moment forces an objective observer to question the simplistic labels of 'good' and 'evil' in a conflict defined by survival.");
+                    break;
+                case 5:
+                    journal.addEntry("Echoes of Betrayal",
+                        "Professor Lumen confides during a rare moment of vulnerability, 'Betrayal on Mars is more than a political misstep—it is a wound that festers in the hearts of those left behind.' As you face raiders whose furious assaults hint at long-buried grievances, her words intertwine with the somber objective reality: that the cycle of betrayal and retribution has shaped both sides of this conflict, leaving scars that run deeper than mere resource disputes.");
+                    break;
+                case 6:
+                    journal.addEntry("Broken Chains",
+                        "Old Miner Joe challenges you once again: 'Collect 30 Mithril Bars from Terra—each one is a small step toward shattering the chains that bind us in this cycle of oppression.' His call is as much an invitation to reclaim personal dignity as it is a strategic directive. In his measured tone, one hears not only the resolve of a hardened miner but also the quiet hope of an individual who dares to dream of a future unshackled by past injustices.");
+                    break;
+                case 7:
+                    journal.addEntry("Siege of the Forgotten",
+                        "Under Luna's eerie, otherworldly glow, your forces lay siege to a raider stronghold. As the battle rages, a contemplative silence falls over the scene—a moment where the tactical brilliance of the enemy is juxtaposed against the tragic necessity of their actions. It becomes evident that these raiders, though reviled, are not devoid of humanity; their strategies speak of survival in a harsh, unforgiving galaxy.");
+                    break;
+                case 8:
+                    journal.addEntry("Whispers in the Void",
+                        "Intercepted transmissions reveal voices that are as harsh as they are sorrowful. In these fragmented messages, the raiders hint at deep-seated wounds and forced choices—tales of regret intermingled with their militant resolve. The objective observer cannot help but wonder if these whispered laments are cries for understanding from those trapped in a cycle of violence and loss.");
+                    break;
+                case 9:
+                    journal.addEntry("The Great Siege",
+                        "On the ravaged battlegrounds of Mars, you lead an assault against a well-fortified raider outpost. Every counterstrike echoes with the weight of lost honor and the bitter cost of survival. In the midst of the fierce combat, there emerges a dual narrative: one of tactical brilliance and one of tragic inevitability, where every act of aggression is shadowed by the lingering specter of past betrayals.");
+                    break;
+                case 10:
+                    journal.addEntry("Rising Tempest",
+                            "As merchant guilds and desperate colonists cry out for aid, you begin to notice an unsettling truth: every resource you gather to bolster your defenses also seems to fuel the raiders’ ever-evolving tactics. It is a rising tempest—a turbulent dance of survival where the lines between protector and aggressor blur, and even the raiders, in their ruthless pursuit, reveal moments of reluctant humanity.");
+                    break;
+                case 11:
+                    journal.addEntry("The Final Stand",
+                            "At last, you stand face-to-face with Captain Blackthorne in his hidden lair—a final confrontation where the boundaries of heroism and villainy melt away. In the heat of battle, every strike, every parry becomes a question of redemption versus retribution. The encounter lays bare a complex truth: the man before you, shaped by betrayal and sorrow, is as much a victim of circumstance as he is an agent of chaos.");
+                    break;
+                default:
+                    journal.addEntry("Unknown Stage", "The story continues beyond known bounds, each moment a testament to the complexity of survival and the enduring search for truth.");
+                    break;
             }
+            storyStage_++;
+            currentQuest_.reset();			}
         }
     }
     DailyQuest *getCurrentQuest() {
@@ -847,74 +884,144 @@ private:
     unique_ptr<DailyQuest> currentQuest_;
     string lastQuestDate_;
     int storyStage_;
-    void generateNewQuest(PlanetManager &pm) {
-        if (storyStage_ < 4) {
-            if (storyStage_ == 0) { // The Spark of Ambition
-                string desc = "Old Miner Joe tells you: 'Deep in Terra's veins lie the secrets of redemption. Collect 50 Iron Bars to prove your resolve.'";
-                map<string, int> reward = {{"Engine Parts", 3}};
-                auto quest = make_unique<DailyQuest>(desc, "Iron Bar", 50, reward);
-                quest->setStoryQuest(true);
-                currentQuest_ = std::move(quest);
-            } else if (storyStage_ == 1) { // The Warning of the Anomalies
-                pm.unlockPlanet("Mars");
-                string desc = "Professor Lumen urgently warns: 'Cosmic anomalies near Mars are stirring trouble. Defend Mars from an imminent raider attack!'";
-                map<string, int> reward = {{"Engine Parts", 2}};
-                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
-                quest->setRaiderAttack("Mars");
-                quest->setStoryQuest(true);
-                currentQuest_ = std::move(quest);
-            } else if (storyStage_ == 2) { // The Heart of the Matter
-                pm.unlockPlanet("Zalthor");
-                string desc = "Farmer Daisy pleads: 'Our survival depends on unity. Disrupt the raider outpost on Zalthor and secure our future!'";
-                map<string, int> reward = {{"Engine Parts", 3}};
-                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
-                quest->setRaiderAttack("Zalthor");
-                quest->setStoryQuest(true);
-                currentQuest_ = std::move(quest);
-            } else if (storyStage_ == 3) { // The Final Confrontation
-                string desc = "The Final Confrontation: 'Blackthorne's base, armed with multiple capital ships, stands as a testament to despair. Lead your fleet and confront him to decide our fate!'";
-                map<string, int> reward = {{"Engine Parts", 5}};
-                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
-                quest->setRaiderAttack("Terra"); // using Terra as the battlefield
-                quest->setStoryQuest(true);
-                quest->setFinalConfrontation(true);
-                currentQuest_ = std::move(quest);
-            }
-        } else {
-            // Fallback to random daily quests.
-            if ((rand() % 100) < 20) {
-                vector<string> candidates;
-                for (auto &planet : pm.getPlanets())
-                    if (planet.isUnlocked() && planet.getName() != "Terra")
-                        candidates.push_back(planet.getName());
-                if (candidates.empty())
-                    candidates.push_back("Terra");
-                string target = candidates[rand() % candidates.size()];
-                string desc = "Raiders are approaching " + target + "! Prepare to defend!";
-                map<string, int> reward = {{"Engine Parts", 2}};
-                auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
-                quest->setRaiderAttack(target);
-                Planet *tgt = pm.getPlanetByName(target);
-                if (tgt && tgt->hasBuilding("Proximity Alarm")) {
-                    cout << "Proximity Alarm on " << target
-                         << " issues a 5-minute warning of an imminent raider attack!" << endl;
-                    this_thread::sleep_for(chrono::minutes(5));
-                    tgt->setUnderThreat(true);
-                }
-                journal.addEntry("Raider Warning", "Intelligence reports suggest that raiders, once dignified citizens driven to desperation, are now mobilizing near " + target + ". Their motives are as murky as the void, born from past injustices.");
-                currentQuest_ = std::move(quest);
-            } else {
-                vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar",
-                                                    "Titanium Bar", "Advanced Engine Parts"};
-                int idx = rand() % resourceChoices.size();
-                string chosen = resourceChoices[idx];
-                int amt = rand() % 41 + 10;
-                map<string, int> reward = {{"Engine Parts", (rand() % 3) + 1}};
-                string desc = "Collect " + to_string(amt) + " " + chosen;
-                currentQuest_ = make_unique<DailyQuest>(desc, chosen, amt, reward);
-            }
-        }
-    }
+    // ----- EXPANDED DAILY QUEST SYSTEM -----
+// In your QuestManager class, update generateNewQuest as follows:
+
+	void generateNewQuest(PlanetManager &pm) {
+		if (storyStage_ < 12) {
+			if (storyStage_ == 0) {
+				// The Spark of Ambition
+				string desc = "Old Miner Joe says: 'Deep in Terra's veins lie the secrets of redemption. Collect 50 Iron Bars to prove your resolve.'";
+				map<string, int> reward = {{"Engine Parts", 3}};
+				auto quest = make_unique<DailyQuest>(desc, "Iron Bar", 50, reward);
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 1) {
+				// A Cosmic Warning
+				pm.unlockPlanet("Mars");
+				string desc = "Professor Lumen warns: 'Cosmic anomalies stir near Mars. Prepare to defend against an impending raider attack!'";
+				map<string, int> reward = {{"Engine Parts", 2}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Mars");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 2) {
+				// Bandit Outpost Assault
+				pm.unlockPlanet("Zalthor");
+				string desc = "Farmer Daisy urges: 'Bandit outposts in Zalthor threaten our supplies. Lead an assault to disrupt their operations!'";
+				map<string, int> reward = {{"Engine Parts", 3}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Zalthor");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 3) {
+				// Shadows Over Vulcan
+				pm.unlockPlanet("Vulcan");
+				string desc = "A distress call from Vulcan: 'Raider forces have established a foothold. Strike at their encampments and reclaim our honor!'";
+				map<string, int> reward = {{"Engine Parts", 3}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Vulcan");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 4) {
+				// Convoy Under Fire
+				string desc = "Merchant voices cry out: 'Our convoys are ambushed! Secure the passage by defending the transport routes on Terra!'";
+				map<string, int> reward = {{"Engine Parts", 2}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Terra");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 5) {
+				// Echoes of Betrayal
+				string desc = "Professor Lumen reveals: 'A hidden raider outpost on Mars holds secrets of betrayal. Infiltrate and expose their past.'";
+				map<string, int> reward = {{"Engine Parts", 3}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Mars");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 6) {
+				// Broken Chains
+				string desc = "Old Miner Joe challenges: 'Collect 30 Mithril Bars from Terra; let each bar be a link breaking the chains of oppression.'";
+				map<string, int> reward = {{"Engine Parts", 2}};
+				auto quest = make_unique<DailyQuest>(desc, "Mithril Bar", 30, reward);
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 7) {
+				// Siege of the Forgotten
+				pm.unlockPlanet("Luna");
+				string desc = "A desperate plea echoes: 'A raider stronghold in Luna must fall. Lead the siege and reclaim what was lost.'";
+				map<string, int> reward = {{"Engine Parts", 4}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Luna");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 8) {
+				// Whispers in the Void
+				string desc = "An urgent message: 'Defend Terra from a sudden raider strike. The whispers of dissent hint at internal turmoil among the raiders.'";
+				map<string, int> reward = {{"Engine Parts", 2}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Terra");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 9) {
+				// The Great Siege
+				string desc = "A clarion call resounds: 'Assault the fortified raider outpost on Mars. Their defenses may be strong, but their resolve wavers.'";
+				map<string, int> reward = {{"Engine Parts", 4}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Mars");
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 10) {
+				// Rising Tempest
+				string desc = "Merchant guilds request: 'Collect 200 Coal from Terra to fuel our defenses as tempests of war approach.'";
+				map<string, int> reward = {{"Engine Parts", 3}};
+				auto quest = make_unique<DailyQuest>(desc, "Coal", 200, reward);
+				quest->setStoryQuest(true);
+				currentQuest_ = std::move(quest);
+			} else if (storyStage_ == 11) {
+				// The Final Confrontation
+				string desc = "The decisive moment: 'Blackthorne's hideout looms. Lead your fleet to its heart and end the cycle of despair once and for all!'";
+				map<string, int> reward = {{"Engine Parts", 5}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack("Terra");
+				quest->setStoryQuest(true);
+				quest->setFinalConfrontation(true);
+				currentQuest_ = std::move(quest);
+			}
+		} else {
+			// Fallback to random daily quests with extra variety.
+			if ((rand() % 100) < 20) {
+				vector<string> candidates;
+				for (auto &planet : pm.getPlanets())
+					if (planet.isUnlocked() && planet.getName() != "Terra")
+						candidates.push_back(planet.getName());
+				if (candidates.empty())
+					candidates.push_back("Terra");
+				string target = candidates[rand() % candidates.size()];
+				string desc = "Urgent alert: Raiders are approaching " + target + "! Prepare your defenses!";
+				map<string, int> reward = {{"Engine Parts", 2}};
+				auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
+				quest->setRaiderAttack(target);
+				Planet *tgt = pm.getPlanetByName(target);
+				if (tgt && tgt->hasBuilding("Proximity Alarm")) {
+					cout << "Proximity Alarm on " << target << " issues a 5-minute warning of an imminent raider attack!" << endl;
+					this_thread::sleep_for(chrono::minutes(5));
+					tgt->setUnderThreat(true);
+				}
+				journal.addEntry("Raider Warning", "Intelligence reports hint at an emerging threat near " + target + ". The raiders, though ruthless, bear the scars of neglect.");
+				currentQuest_ = std::move(quest);
+			} else {
+				vector<string> resourceChoices = {"Iron Bar", "Copper Bar", "Mithril Bar",
+													"Titanium Bar", "Advanced Engine Parts"};
+				int idx = rand() % resourceChoices.size();
+				string chosen = resourceChoices[idx];
+				int amt = rand() % 41 + 10;
+				map<string, int> reward = {{"Engine Parts", (rand() % 3) + 1}};
+				string desc = "Side quest: Collect " + to_string(amt) + " " + chosen;
+				currentQuest_ = make_unique<DailyQuest>(desc, chosen, amt, reward);
+			}
+		}
+	}
     string currentDateString() {
         time_t now = time(nullptr);
         tm *gmt = gmtime(&now);
