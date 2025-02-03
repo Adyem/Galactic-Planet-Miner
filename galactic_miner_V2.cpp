@@ -53,7 +53,6 @@ using namespace std;
  *   continue as before.
  */
 
-// Expanded lore arrays with more creative back‐stories
 static const vector<string> resourceLore = {
     "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future. I once lost everything to a mining accident, and now I seek redemption in every pick strike.'",
     "Professor Lumen: 'Mining is the backbone of our civilization. Behind every ore lies a story of sacrifice and hope, echoing the trials of those who came before us.'",
@@ -107,7 +106,6 @@ struct ResearchDef {
     string effectName;
 };
 
-// Removed the old "Urban Planning" research and replaced it with three separate entries.
 static vector<ResearchDef> RESEARCH_DATA = {
     {"Unlock Mars", {{"Iron", 100}, {"Copper", 50}},
      "Unlock the planet Mars for mining.", "unlock_mars"},
@@ -155,7 +153,6 @@ struct CraftingRecipe {
     string requiredBuilding;
 };
 
-// Note: Only capital ship recipes have been changed to require the "Flagship Dock" now.
 static map<string, CraftingRecipe> CRAFTING_RECIPES = {
     {"Iron Bar", { {{"Iron", 5}}, 1.0, 2.0, "Smelting Building" }},
     {"Interceptor", { {{"Engine Parts", 3}, {"Titanium Bar", 2}}, 4.0, 20.0, "Shipyard" }},
@@ -195,12 +192,12 @@ struct BuildingRecipe {
     map<string, int> inputs;
     double timeRequired;
     double electricityCost;
-    int plotCost; // New field: the number of building plots this structure uses.
+    int plotCost; // The number of building plots this structure uses.
 };
 
 static map<string, BuildingRecipe> BUILDING_RECIPES = {
     {"Crafting Building", { {{"Iron Bar", 5}, {"Copper Bar", 2}}, 5.0, 10.0, 1 }},
-    {"Smelting Building", { {{"Iron", 5}, {"Coal", 10}}, 5.0, 10.0, 1 }}, // modified recipe
+    {"Smelting Building", { {{"Iron", 5}, {"Coal", 10}}, 5.0, 10.0, 1 }},
     {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0, 1 }},
     {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0, 1 }},
     {"Proximity Alarm", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0, 1 }},
@@ -211,7 +208,9 @@ static map<string, BuildingRecipe> BUILDING_RECIPES = {
     {"Solar Panel", { {}, 3.0, 0.0, 1 }},
     {"Tritium Extractor", { {{"Mithril Bar", 2}, {"Advanced Engine Parts", 1}}, 4.0, 8.0, 1 }},
     {"Defense Turret", { {{"Iron Bar", 3}, {"Engine Parts", 1}}, 3.0, 5.0, 1 }},
-    {"Flagship Dock", { {{"Iron Bar", 10}, {"Engine Parts", 5}, {"Titanium Bar", 5}}, 10.0, 30.0, 2 }}
+    {"Flagship Dock", { {{"Iron Bar", 10}, {"Engine Parts", 5}, {"Titanium Bar", 5}}, 10.0, 30.0, 2 }},
+    // NEW: A Mine building – note that when building a Mine the player must select an ore type.
+    {"Mine", { {{"Iron Bar", 1}}, 3.0, 5.0, 1 }}
 };
 
 struct Ship {
@@ -281,8 +280,9 @@ public:
            bool unlocked)
         : name_(name), baseProduction_(production), unlocked_(unlocked),
           generators_(0), accumulators_(0), currentEnergy_(0.0), maxEnergy_(50.0),
-          maxBuildingPlots_(8), currentBuildingCount_(0), plotsUpgraded_(false),
-          underThreat_(false) {
+          maxBuildingPlots_(8), currentBuildingCount_(0),
+          upgradePlotsCount_(0), underThreat_(false) {
+        // Initialize resource storage.
         for (const auto &res : RESOURCE_DATA)
             storage_[res.name] = 0;
     }
@@ -328,13 +328,20 @@ public:
                 cout << "Tritium Extractor on " << name_ << " produced "
                      << tritiumProduced << " Tritium." << endl;
         }
+        // NEW: For each Mine building, produce ore. (Assume 1 unit per second per mine.)
+        for (const auto &ore : mineOres_) {
+            int produced = static_cast<int>(floor(1.0 * elapsedSeconds));
+            storage_[ore] += produced;
+            cout << "Mine on " << name_ << " produced " << produced << " " << ore << "." << endl;
+        }
     }
     bool canBuildMore() const {
         return currentBuildingCount_ < maxBuildingPlots_;
     }
+    // Allow upgrading plots twice.
     bool upgradePlots() {
-        if (!plotsUpgraded_) {
-            plotsUpgraded_ = true;
+        if (upgradePlotsCount_ < 2) {
+            upgradePlotsCount_++;
             maxBuildingPlots_ += 2;
             return true;
         }
@@ -343,7 +350,7 @@ public:
     void increaseMaxBuildingPlots(int amount) {
         maxBuildingPlots_ += amount;
     }
-    // New method: add a building using a specific number of plots.
+    // NEW: add a building using a specific number of plots.
     bool addBuildingWithCost(const string &buildingName, int plotCost) {
         if (currentBuildingCount_ + plotCost > maxBuildingPlots_) {
             cout << "No building plots available on " << name_
@@ -422,6 +429,7 @@ public:
     void setAccumulators(int accumulators) {
         accumulators_ = accumulators;
     }
+    // When installing a facility (Generator/Accumulator) on this planet.
     void installFacility(const string &facility) {
         string fac = facility;
         transform(fac.begin(), fac.end(), fac.begin(), ::tolower);
@@ -436,6 +444,7 @@ public:
             cout << "Installed a Generator on " << name_
                  << ". Total: " << generators_ << endl;
         } else if (fac == "accumulator") {
+            addBuilding("Accumulator");
             accumulators_++;
             maxEnergy_ += 50.0;
             cout << "Installed an Accumulator on " << name_
@@ -457,6 +466,13 @@ public:
     int getUsedBuildingPlots() const {
         return currentBuildingCount_;
     }
+    // NEW: When building a Mine, record the ore type that will be mined.
+    void addMine(const string &ore) {
+        mineOres_.push_back(ore);
+    }
+    const vector<string>& getMineOres() const {
+        return mineOres_;
+    }
 private:
     string name_;
     map<string, double> baseProduction_;
@@ -469,8 +485,9 @@ private:
     map<string, int> buildings_;
     int maxBuildingPlots_;
     int currentBuildingCount_;
-    bool plotsUpgraded_;
+    int upgradePlotsCount_;  // NEW: How many times plots have been upgraded (max 2)
     bool underThreat_;
+    vector<string> mineOres_; // NEW: For each Mine building, the ore type being mined.
     static constexpr double GENERATOR_RATE = 5.0;
     static constexpr double ENERGY_COST_PER_SECOND = 1.0;
     static constexpr double COAL_CONSUMPTION = 0.5;
@@ -580,7 +597,6 @@ public:
             for (const auto &entry : reward_)
                 cout << entry.first << " +" << entry.second << " ";
             cout << endl;
-            // For non-story quests, add a generic journal entry.
             if (!isStoryQuest_) {
                 string journalText = "You successfully gathered " + to_string(objectiveAmount_) +
                                  " " + objectiveResource_ + ". The effort has not gone unnoticed.";
@@ -599,7 +615,6 @@ public:
         }
         if (combatStartTime_ == 0)
             combatStartTime_ = time(nullptr);
-        // Adjust enemy stats if this is the final confrontation.
         int raiderShield = (isFinalConfrontation_) ? rand() % 101 + 200 : rand() % 101 + 100;
         int raiderHull = (isFinalConfrontation_) ? rand() % 201 + 600 : rand() % 201 + 300;
         cout << "Commencing raider battle at " << targetPlanet_ << "!" << endl;
@@ -648,7 +663,6 @@ public:
                 break;
             }
             int raiderDamage = rand() % 51 + 50;
-            // If final confrontation, add extra damage to simulate capital ship firepower.
             if (isFinalConfrontation_)
                 raiderDamage += 30;
             cout << "Raiders fire for " << raiderDamage << " damage." << endl;
@@ -760,7 +774,6 @@ public:
     const string &getTargetPlanet() const {
         return targetPlanet_;
     }
-    // New setters/getters for story quest flags:
     void setStoryQuest(bool val) { isStoryQuest_ = val; }
     bool isStoryQuest() const { return isStoryQuest_; }
     void setFinalConfrontation(bool val) { isFinalConfrontation_ = val; }
@@ -879,14 +892,12 @@ private:
     void generateNewQuest(PlanetManager &pm) {
         if (storyStage_ < 12) {
             if (storyStage_ == 0) {
-                // The Spark of Ambition
                 string desc = "Old Miner Joe says: 'Deep in Terra's veins lie the secrets of redemption. Collect 50 Iron Bars to prove your resolve.'";
                 map<string, int> reward = {{"Engine Parts", 3}};
                 auto quest = make_unique<DailyQuest>(desc, "Iron Bar", 50, reward);
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 1) {
-                // A Cosmic Warning
                 pm.unlockPlanet("Mars");
                 string desc = "Professor Lumen warns: 'Cosmic anomalies stir near Mars. Prepare to defend against an impending raider attack!'";
                 map<string, int> reward = {{"Engine Parts", 2}};
@@ -895,7 +906,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 2) {
-                // Bandit Outpost Assault
                 pm.unlockPlanet("Zalthor");
                 string desc = "Farmer Daisy urges: 'Bandit outposts in Zalthor threaten our supplies. Lead an assault to disrupt their operations!'";
                 map<string, int> reward = {{"Engine Parts", 3}};
@@ -904,7 +914,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 3) {
-                // Shadows Over Vulcan
                 pm.unlockPlanet("Vulcan");
                 string desc = "A distress call from Vulcan: 'Raider forces have established a foothold. Strike at their encampments and reclaim our honor!'";
                 map<string, int> reward = {{"Engine Parts", 3}};
@@ -913,7 +922,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 4) {
-                // Convoy Under Fire
                 string desc = "Merchant voices cry out: 'Our convoys are ambushed! Secure the passage by defending the transport routes on Terra!'";
                 map<string, int> reward = {{"Engine Parts", 2}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -921,7 +929,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 5) {
-                // Echoes of Betrayal
                 string desc = "Professor Lumen reveals: 'A hidden raider outpost on Mars holds secrets of betrayal. Infiltrate and expose their past.'";
                 map<string, int> reward = {{"Engine Parts", 3}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -929,14 +936,12 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 6) {
-                // Broken Chains
                 string desc = "Old Miner Joe challenges: 'Collect 30 Mithril Bars from Terra; let each bar be a link breaking the chains of oppression.'";
                 map<string, int> reward = {{"Engine Parts", 2}};
                 auto quest = make_unique<DailyQuest>(desc, "Mithril Bar", 30, reward);
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 7) {
-                // Siege of the Forgotten
                 pm.unlockPlanet("Luna");
                 string desc = "A desperate plea echoes: 'A raider stronghold in Luna must fall. Lead the siege and reclaim what was lost.'";
                 map<string, int> reward = {{"Engine Parts", 4}};
@@ -945,7 +950,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 8) {
-                // Whispers in the Void
                 string desc = "An urgent message: 'Defend Terra from a sudden raider strike. The whispers of dissent hint at internal turmoil among the raiders.'";
                 map<string, int> reward = {{"Engine Parts", 2}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -953,7 +957,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 9) {
-                // The Great Siege
                 string desc = "A clarion call resounds: 'Assault the fortified raider outpost on Mars. Their defenses may be strong, but their resolve wavers.'";
                 map<string, int> reward = {{"Engine Parts", 4}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -961,14 +964,12 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 10) {
-                // Rising Tempest
                 string desc = "Merchant guilds request: 'Collect 200 Coal from Terra to fuel our defenses as tempests of war approach.'";
                 map<string, int> reward = {{"Engine Parts", 3}};
                 auto quest = make_unique<DailyQuest>(desc, "Coal", 200, reward);
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 11) {
-                // The Final Confrontation
                 string desc = "The decisive moment: 'Blackthorne's hideout looms. Lead your fleet to its heart and end the cycle of despair once and for all!'";
                 map<string, int> reward = {{"Engine Parts", 5}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -978,7 +979,7 @@ private:
                 currentQuest_ = std::move(quest);
             }
         } else {
-            // Fallback to random daily quests with extra variety.
+            // Fallback to random daily quests.
             if ((rand() % 100) < 20) {
                 vector<string> candidates;
                 for (auto &planet : pm.getPlanets())
@@ -1047,14 +1048,14 @@ private:
 };
 
 //
-// CRAFTING MANAGER
+// CRAFTING MANAGER (modified to accept an optional quantity parameter)
 //
 class CraftingManager {
 public:
     CraftingManager(const map<string, CraftingRecipe> &recipes)
         : recipes_(recipes) {}
     void craft(const string &itemName, Planet *planet, double fasterMultiplier,
-               double costMultiplier, bool precisionToolsEnabled) {
+               double costMultiplier, bool precisionToolsEnabled, int quantity = 1) {
         auto it = recipes_.find(itemName);
         if (it == recipes_.end()) {
             cout << "No recipe for item '" << itemName << "'." << endl;
@@ -1066,35 +1067,40 @@ public:
                  << planet->getName() << " to craft " << itemName << "." << endl;
             return;
         }
-        for (const auto &entry : recipe.inputs) {
-            if (planet->getStored(entry.first) < entry.second) {
-                cout << "Not enough " << entry.first << " on "
-                     << planet->getName() << " to craft " << itemName << "."
-                     << endl;
+        for (int q = 0; q < quantity; q++) {
+            bool canCraft = true;
+            for (const auto &entry : recipe.inputs) {
+                if (planet->getStored(entry.first) < entry.second) {
+                    cout << "Not enough " << entry.first << " on "
+                         << planet->getName() << " to craft " << itemName << "." << endl;
+                    canCraft = false;
+                    break;
+                }
+            }
+            if (!canCraft)
+                return;
+            double effectiveCost = recipe.electricityCost * costMultiplier;
+            if (planet->getCurrentEnergy() < effectiveCost) {
+                cout << "Not enough energy on " << planet->getName() << " to craft "
+                     << itemName << "." << endl;
                 return;
             }
-        }
-        double effectiveCost = recipe.electricityCost * costMultiplier;
-        if (planet->getCurrentEnergy() < effectiveCost) {
-            cout << "Not enough energy on " << planet->getName() << " to craft "
-                 << itemName << "." << endl;
-            return;
-        }
-        for (const auto &entry : recipe.inputs)
-            planet->removeFromStorage(entry.first, entry.second);
-        planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
-        double craftTime = recipe.timeRequired * fasterMultiplier;
-        cout << "Crafting " << itemName << " took " << craftTime << " seconds." << endl;
-        int quantity = 1;
-        if (precisionToolsEnabled) {
-            if (rand() % 100 < 10) {
-                quantity = 2;
-                cout << "Precision Tools activated: doubled output!" << endl;
+            for (const auto &entry : recipe.inputs)
+                planet->removeFromStorage(entry.first, entry.second);
+            planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
+            double craftTime = recipe.timeRequired * fasterMultiplier;
+            cout << "Crafting " << itemName << " took " << craftTime << " seconds." << endl;
+            int outQuantity = 1;
+            if (precisionToolsEnabled) {
+                if (rand() % 100 < 10) {
+                    outQuantity = 2;
+                    cout << "Precision Tools activated: doubled output!" << endl;
+                }
             }
+            planet->addToStorage(itemName, outQuantity);
+            cout << "Crafted " << outQuantity << " " << itemName << "(s) on "
+                 << planet->getName() << "." << endl;
         }
-        planet->addToStorage(itemName, quantity);
-        cout << "Crafted " << quantity << " " << itemName << "(s) on "
-             << planet->getName() << "." << endl;
     }
 private:
     map<string, CraftingRecipe> recipes_;
@@ -1116,6 +1122,23 @@ public:
           quantumCommunicationEnabled_(false),
           lastUpdateTime_(time(nullptr)) {
         srand(static_cast<unsigned>(time(nullptr)));
+        // If no save file exists, assume a new game and give Terra a starting kit:
+        ifstream ifs(SAVE_FILE);
+        bool newGame = !ifs.is_open();
+        ifs.close();
+        if (newGame) {
+            Planet *terra = planetManager_.getPlanetByName("Terra");
+            if (terra) {
+                terra->addToStorage("Coal", 100);
+                terra->addToStorage("Iron", 100);
+                // Automatically install a power generator on Terra:
+                terra->installFacility("Generator");
+                // Build one Mine on Terra and set it to mine Iron:
+                terra->addBuilding("Mine");
+                terra->addMine("Iron");
+                cout << "New game: Terra starts with a Generator, 100 Coal, 100 Iron, and one Mine set to mine Iron." << endl;
+            }
+        }
     }
     PlanetManager &getPlanetManager() {
         return planetManager_;
@@ -1205,19 +1228,40 @@ public:
             cout << "Not enough resources on Terra to perform research." << endl;
         }
     }
-    void craftItem(const string &itemName, const string &planetName = "Terra") {
-        Planet *planet = planetManager_.getPlanetByName(planetName);
+    // NEW: craftItem now accepts an optional quantity. If no planet is specified, default to the first unlocked planet.
+    void craftItem(const string &itemName, const string &planetName = "") {
+        Planet *planet = nullptr;
+        if (planetName.empty()) {
+            // default to first unlocked planet
+            for (auto &p : planetManager_.getPlanets()) {
+                if (p.isUnlocked()) { planet = &p; break; }
+            }
+        } else {
+            planet = planetManager_.getPlanetByName(planetName);
+        }
         if (!planet) {
-            cout << "Planet " << planetName << " not found." << endl;
+            cout << "No valid planet found for crafting." << endl;
             return;
         }
+        cout << "Enter the quantity to craft (default 1): ";
+        string qtyStr;
+        getline(cin, qtyStr);
+        int quantity = qtyStr.empty() ? 1 : stoi(qtyStr);
         craftingManager_.craft(itemName, planet, fasterCraftingMultiplier_,
-                               craftingCostMultiplier_, precisionToolsEnabled_);
+                               craftingCostMultiplier_, precisionToolsEnabled_, quantity);
     }
-    void craftShip(const string &shipType, const string &planetName = "Terra") {
-        Planet *planet = planetManager_.getPlanetByName(planetName);
+    // NEW: craftShip remains similar.
+    void craftShip(const string &shipType, const string &planetName = "") {
+        Planet *planet = nullptr;
+        if (planetName.empty()) {
+            for (auto &p : planetManager_.getPlanets()) {
+                if (p.isUnlocked()) { planet = &p; break; }
+            }
+        } else {
+            planet = planetManager_.getPlanetByName(planetName);
+        }
         if (!planet) {
-            cout << "Planet " << planetName << " not found." << endl;
+            cout << "No valid planet found for ship crafting." << endl;
             return;
         }
         if (shipType == "Celestial Juggernaut" ||
@@ -1239,26 +1283,26 @@ public:
             return;
         }
         if (!planet->hasBuilding(it->second.requiredBuilding)) {
-            cout << "You need a " << it->second.requiredBuilding << " on " << planetName
+            cout << "You need a " << it->second.requiredBuilding << " on " << planet->getName()
                  << " to build a " << shipType << "." << endl;
             return;
         }
         for (const auto &entry : it->second.inputs) {
             if (planet->getStored(entry.first) < entry.second) {
-                cout << "Not enough " << entry.first << " on " << planetName
+                cout << "Not enough " << entry.first << " on " << planet->getName()
                      << " to build a " << shipType << "." << endl;
                 return;
             }
         }
         double effectiveCost = it->second.electricityCost * craftingCostMultiplier_;
         if (planet->getCurrentEnergy() < effectiveCost) {
-            cout << "Not enough energy on " << planetName << " to build a " << shipType << "." << endl;
+            cout << "Not enough energy on " << planet->getName() << " to build a " << shipType << "." << endl;
             return;
         }
         planet->setCurrentEnergy(planet->getCurrentEnergy() - effectiveCost);
         for (const auto &entry : it->second.inputs)
             planet->removeFromStorage(entry.first, entry.second);
-        cout << "Built a " << shipType << " on " << planetName << " consuming "
+        cout << "Built a " << shipType << " on " << planet->getName() << " consuming "
              << effectiveCost << " energy." << endl;
         Ship newShip;
         newShip.type = shipType;
@@ -1367,10 +1411,18 @@ public:
         }
         fleet_.push_back(newShip);
     }
-    void buildBuilding(const string &buildingName, const string &planetName) {
-        Planet *planet = planetManager_.getPlanetByName(planetName);
+    // NEW: Build a building – if no planet is specified, default to the first unlocked planet.
+    void buildBuilding(const string &buildingName, const string &planetName = "") {
+        Planet *planet = nullptr;
+        if (planetName.empty()) {
+            for (auto &p : planetManager_.getPlanets()) {
+                if (p.isUnlocked()) { planet = &p; break; }
+            }
+        } else {
+            planet = planetManager_.getPlanetByName(planetName);
+        }
         if (!planet) {
-            cout << "Planet " << planetName << " not found." << endl;
+            cout << "No valid planet found for building construction." << endl;
             return;
         }
         auto it = BUILDING_RECIPES.find(buildingName);
@@ -1380,25 +1432,41 @@ public:
         }
         int plotCost = it->second.plotCost;
         if (planet->getUsedBuildingPlots() + plotCost > planet->getMaxBuildingPlots()) {
-            cout << "Not enough building plots on " << planetName << " to build " << buildingName << "." << endl;
+            cout << "Not enough building plots on " << planet->getName() << " to build " << buildingName << "." << endl;
             return;
         }
         for (const auto &entry : it->second.inputs) {
             if (planet->getStored(entry.first) < entry.second) {
-                cout << "Not enough " << entry.first << " on " << planetName
+                cout << "Not enough " << entry.first << " on " << planet->getName()
                      << " to build " << buildingName << "." << endl;
                 return;
             }
         }
         if (planet->getCurrentEnergy() < it->second.electricityCost) {
-            cout << "Not enough energy on " << planetName << " to build " << buildingName << "." << endl;
+            cout << "Not enough energy on " << planet->getName() << " to build " << buildingName << "." << endl;
             return;
         }
         planet->setCurrentEnergy(planet->getCurrentEnergy() - it->second.electricityCost);
         for (const auto &entry : it->second.inputs)
             planet->removeFromStorage(entry.first, entry.second);
-        if (planet->addBuildingWithCost(buildingName, plotCost))
-            cout << "Built " << buildingName << " on " << planetName << "." << endl;
+        // Special handling for a Mine – ask the user which ore to mine.
+        if (buildingName == "Mine") {
+            cout << "Enter the ore type for this Mine (e.g., Iron, Copper, Mithril, etc.): ";
+            string ore;
+            getline(cin, ore);
+            if (ore.empty()) {
+                cout << "No ore type entered. Mine construction cancelled." << endl;
+                return;
+            }
+            // Build the mine and record the ore.
+            if (planet->addBuildingWithCost(buildingName, plotCost)) {
+                planet->addMine(ore);
+                cout << "Built a Mine on " << planet->getName() << " set to mine " << ore << "." << endl;
+            }
+        } else {
+            if (planet->addBuildingWithCost(buildingName, plotCost))
+                cout << "Built " << buildingName << " on " << planet->getName() << "." << endl;
+        }
     }
     void upgradeBuildingPlots(const string &planetName) {
         Planet *planet = planetManager_.getPlanetByName(planetName);
@@ -1417,7 +1485,7 @@ public:
                 planet->removeFromStorage("Engine Parts", 2);
                 cout << "Building capacity on " << planetName << " increased by 2." << endl;
             } else {
-                cout << "Building capacity on " << planetName << " has already been upgraded." << endl;
+                cout << "Building capacity on " << planetName << " has already been upgraded twice." << endl;
             }
         } else {
             cout << "Not enough resources on " << planetName << " to upgrade building plots." << endl;
@@ -1509,6 +1577,7 @@ public:
             cout << "Transfer successful." << endl;
         }
     }
+    // NEW: Show radar info for a specified planet.
     void showRadar(const string &planetName) {
         Planet *planet = planetManager_.getPlanetByName(planetName);
         if (!planet) {
@@ -1522,6 +1591,7 @@ public:
             cout << "No Radar installed on " << planetName
                  << ". Raider activity unknown." << endl;
     }
+    // NEW: Update daily quest.
     void updateDailyQuest() {
         Planet *terra = planetManager_.getPlanetByName("Terra");
         if (!terra)
@@ -1550,6 +1620,7 @@ public:
             }
         }
     }
+    // NEW: List the fleet.
     void showFleet() {
         if (fleet_.empty()) {
             cout << "Your fleet is empty." << endl;
@@ -1588,6 +1659,7 @@ private:
     bool energyConservationEnabled_;
     bool quantumCommunicationEnabled_;
     time_t lastUpdateTime_;
+    // NEW: Apply research effects.
     void applyResearchEffect(const string &effectName) {
         if (effectName == "unlock_mars") {
             planetManager_.unlockPlanet("Mars");
@@ -1626,7 +1698,7 @@ private:
             journal.addEntry("Solar Revolution", "Harnessing the power of the sun, new solar panels provide an abundant energy source, fueling the expansion of your empire.");
         } else if (effectName == "unlock_capital_ships") {
             cout << "Capital Ship Initiative research completed! You can now build one powerful capital ship at a time." << endl;
-            journal.addEntry("Capital Ship Initiative", "A colossal leap in naval engineering, capital ships now stand as behemoths of war, their presence a deterrent to would-be aggressors.");
+            journal.addEntry("Capital Ship Initiative", "A colossal leap in naval engineering, capital ships now stand as behemoths of war, their presence a deterrent to would‐be aggressors.");
         } else if (effectName == "unlock_capital_frigates") {
             cout << "Auxiliary Frigate Development research completed! You can now build smaller capital ship variants without limits." << endl;
             journal.addEntry("Frigate Development", "Streamlined designs allow for the rapid deployment of frigates, versatile vessels that combine speed and firepower.");
@@ -1752,15 +1824,15 @@ void talkToCharacters() {
 void showHelp() {
     cout << "Commands:\n"
          << "  help                           - Show this help\n"
-         << "  stats                          - Show resource storage on each planet\n"
+         << "  stats                          - Show resource storage for a chosen planet\n"
          << "  planets                        - Show planet status (energy, building plots, and if locked, the research requirement)\n"
          << "  fleet                          - Show your fleet\n"
          << "  research                       - List research options (with resource costs)\n"
          << "  do_research <name>             - Perform research (using Terra's storage)\n"
-         << "  craft [<item> [on <planet>]]     - Craft an item. If no arguments are given, you will be prompted interactively.\n"
-         << "  build <building> on <planet>   - Build a building on a planet\n"
-         << "  upgrade_plots <planet>         - Upgrade building capacity on a planet\n"
-         << "  install <facility> on <planet> - Install a facility (Generator/Accumulator)\n"
+         << "  craft [<item> [on <planet>]]     - Craft an item (you will be prompted for quantity if not specified)\n"
+         << "  build [<building> [amount] [on <planet>]] - Build a building (for Mine, you will be prompted for ore type)\n"
+         << "  upgrade_plots <planet>         - Upgrade building capacity on a planet (can be done twice)\n"
+         << "  install [<facility> [on <planet>]] - Install a facility (if not specified, available facilities will be listed)\n"
          << "  transfer <resource> <amount> from <planet1> to <planet2> - Transfer resources\n"
          << "  radar <planet>                 - Get radar info for a planet\n"
          << "  daily                          - Show the current daily (or story) quest\n"
@@ -1793,11 +1865,16 @@ int main() {
         if (cmd == "help")
             showHelp();
         else if (cmd == "stats") {
-            auto &planets = player.getPlanetManager().getPlanets();
-            for (auto &planet : planets) {
-                cout << "Planet " << planet.getName() << " storage:" << endl;
-                for (const auto &entry : planet.getStorageMap())
+            cout << "Enter the planet name to view its resources: ";
+            string pname;
+            getline(cin, pname);
+            Planet *p = player.getPlanetManager().getPlanetByName(pname);
+            if (p) {
+                cout << "Resources on " << p->getName() << ":\n";
+                for (const auto &entry : p->getStorageMap())
                     cout << "  " << entry.first << ": " << entry.second << endl;
+            } else {
+                cout << "Planet not found." << endl;
             }
         } else if (cmd == "planets") {
             const auto &plist = player.getPlanetManager().getPlanetsConst();
@@ -1835,28 +1912,13 @@ int main() {
                 player.doResearch(args);
         }
         else if (cmd == "craft") {
-            // If no extra arguments are provided, use interactive mode.
+            // If arguments are provided, try to parse them.
             if (args.empty()) {
                 cout << "Available craftable items:" << endl;
-                // List each craftable item from the global CRAFTING_RECIPES
                 for (const auto &entry : CRAFTING_RECIPES) {
                     string itemName = entry.first;
                     string reqBuilding = entry.second.requiredBuilding;
-                    cout << " - " << itemName << " (Requires: " << reqBuilding << ")";
-                    // List unlocked planets that already have the required building.
-                    vector<string> availablePlanets;
-                    for (const auto &planet : player.getPlanetManager().getPlanetsConst()) {
-                        if (planet.isUnlocked() && planet.getBuildings().count(reqBuilding) && planet.getBuildings().at(reqBuilding) > 0)
-                            availablePlanets.push_back(planet.getName());
-                    }
-                    if (!availablePlanets.empty()) {
-                        cout << " Available on: ";
-                        for (const auto &p : availablePlanets)
-                            cout << p << " ";
-                    } else {
-                        cout << " [Locked: No planet has " << reqBuilding << "]";
-                    }
-                    cout << endl;
+                    cout << " - " << itemName << " (Requires: " << reqBuilding << ")" << endl;
                 }
                 cout << "Enter the item you want to craft: ";
                 string chosenItem;
@@ -1865,39 +1927,9 @@ int main() {
                     cout << "No item chosen." << endl;
                     continue;
                 }
-                if (CRAFTING_RECIPES.find(chosenItem) == CRAFTING_RECIPES.end()) {
-                    cout << "Invalid item selected." << endl;
-                    continue;
-                }
-                string reqBuilding = CRAFTING_RECIPES[chosenItem].requiredBuilding;
-                vector<string> availablePlanets;
-                for (const auto &planet : player.getPlanetManager().getPlanetsConst()) {
-                    if (planet.isUnlocked() && planet.getBuildings().count(reqBuilding) && planet.getBuildings().at(reqBuilding) > 0)
-                        availablePlanets.push_back(planet.getName());
-                }
-                if (availablePlanets.empty()) {
-                    cout << "No available planets have the required building (" << reqBuilding << ") for crafting " << chosenItem << "." << endl;
-                    continue;
-                } else {
-                    cout << "Available planets for crafting " << chosenItem << ": ";
-                    for (const auto &p : availablePlanets)
-                        cout << p << " ";
-                    cout << endl;
-                }
-                cout << "Enter the planet you want to craft on: ";
-                string chosenPlanet;
-                getline(cin, chosenPlanet);
-                if (chosenPlanet.empty()) {
-                    cout << "No planet chosen." << endl;
-                    continue;
-                }
-                // Determine if this is a ship (if required building is Shipyard or Flagship Dock)
-                if (reqBuilding == "Shipyard" || reqBuilding == "Flagship Dock")
-                    player.craftShip(chosenItem, chosenPlanet);
-                else
-                    player.craftItem(chosenItem, chosenPlanet);
+                player.craftItem(chosenItem);
             } else {
-                // Fallback to non-interactive mode if arguments are provided.
+                // Parse the arguments for item and optionally "on <planet>"
                 string itemName, planetName;
                 size_t pos = args.find(" on ");
                 if (pos != string::npos) {
@@ -1905,70 +1937,83 @@ int main() {
                     planetName = args.substr(pos + 4);
                 } else {
                     itemName = args;
-                    planetName = "Terra";
                 }
-                if (itemName.empty())
-                    cout << "Usage: craft <item> [on <planet>]" << endl;
-                else {
-                    auto it = CRAFTING_RECIPES.find(itemName);
-                    if (it == CRAFTING_RECIPES.end()) {
-                        cout << "No recipe for item '" << itemName << "'." << endl;
-                    } else {
-                        string reqBuilding = it->second.requiredBuilding;
-                        if (reqBuilding == "Shipyard" || reqBuilding == "Flagship Dock")
-                            player.craftShip(itemName, planetName);
-                        else
-                            player.craftItem(itemName, planetName);
-                    }
-                }
+                player.craftItem(itemName, planetName);
             }
         } else if (cmd == "build") {
-            size_t pos = args.find(" on ");
-            if (pos != string::npos) {
-                string buildingName = args.substr(0, pos);
-                string planetName = args.substr(pos + 4);
-                if (buildingName.empty() || planetName.empty())
-                    cout << "Usage: build <building> on <planet>" << endl;
-                else
-                    player.buildBuilding(buildingName, planetName);
-            } else
-                cout << "Usage: build <building> on <planet>" << endl;
+            // If no arguments are given, list options.
+            if (args.empty()) {
+                cout << "Available buildings:" << endl;
+                for (const auto &entry : BUILDING_RECIPES) {
+                    cout << " - " << entry.first << " | Requires: ";
+                    for (const auto &r : entry.second.inputs)
+                        cout << r.first << ":" << r.second << " ";
+                    cout << "| Electricity Cost: " << entry.second.electricityCost
+                         << " | Plot Cost: " << entry.second.plotCost << endl;
+                }
+                cout << "Enter the building you want to construct: ";
+                string bName;
+                getline(cin, bName);
+                if (bName.empty()) {
+                    cout << "No building selected." << endl;
+                    continue;
+                }
+                cout << "Enter the quantity to build (default 1): ";
+                string qtyStr;
+                getline(cin, qtyStr);
+                int qty = qtyStr.empty() ? 1 : stoi(qtyStr);
+                cout << "Enter the planet to build on (default: first unlocked): ";
+                string pName;
+                getline(cin, pName);
+                for (int i = 0; i < qty; i++)
+                    player.buildBuilding(bName, pName);
+            } else {
+                // Parse the arguments: format: "<building> [quantity] on <planet>"
+                istringstream iss(args);
+                string bName, token, planetName;
+                int qty = 1;
+                iss >> bName;
+                if (iss >> token) {
+                    // If token is numeric, it is quantity
+                    if (isdigit(token[0])) {
+                        qty = stoi(token);
+                        if (iss >> token && token == "on") {
+                            iss >> planetName;
+                        }
+                    } else if (token == "on") {
+                        iss >> planetName;
+                    }
+                }
+                for (int i = 0; i < qty; i++)
+                    player.buildBuilding(bName, planetName);
+            }
         } else if (cmd == "upgrade_plots") {
             if (args.empty())
                 cout << "Usage: upgrade_plots <planet>" << endl;
             else
                 player.upgradeBuildingPlots(args);
         } else if (cmd == "install") {
-            size_t pos = args.find(" on ");
-            if (pos != string::npos) {
-                string facility = args.substr(0, pos);
-                string planetName = args.substr(pos + 4);
-                if (facility.empty() || planetName.empty())
-                    cout << "Usage: install <facility> on <planet>" << endl;
-                else {
-                    Planet *planet = player.getPlanetManager().getPlanetByName(planetName);
-                    if (!planet)
-                        cout << "Planet " << planetName << " not found." << endl;
-                    else {
-                        string facLower = facility;
-                        transform(facLower.begin(), facLower.end(), facLower.begin(),
-                                  ::tolower);
-                        if (facLower == "generator") {
-                            if (!planet->canBuildMore()) {
-                                cout << "No building plots available on " << planetName
-                                     << " for Generator." << endl;
-                                break;
-                            }
-                        }
-                        if (planet->removeFromStorage(facility, 1))
-                            planet->installFacility(facility);
-                        else
-                            cout << "No " << facility << " available on " << planetName
-                                 << "." << endl;
-                    }
+            // If no arguments, list available facilities.
+            if (args.empty()) {
+                cout << "Available facilities to install: Generator, Accumulator" << endl;
+                cout << "Enter facility to install: ";
+                string facility;
+                getline(cin, facility);
+                cout << "Enter the planet (default: first unlocked): ";
+                string pName;
+                getline(cin, pName);
+                player.getPlanetManager().getPlanetByName(pName)->installFacility(facility);
+            } else {
+                size_t pos = args.find(" on ");
+                string facility, planetName;
+                if (pos != string::npos) {
+                    facility = args.substr(0, pos);
+                    planetName = args.substr(pos + 4);
+                } else {
+                    facility = args;
                 }
-            } else
-                cout << "Usage: install <facility> on <planet>" << endl;
+                player.getPlanetManager().getPlanetByName(planetName)->installFacility(facility);
+            }
         } else if (cmd == "transfer") {
             istringstream iss(args);
             string resource;
@@ -2004,7 +2049,6 @@ int main() {
         } else if (cmd == "talk") {
             talkToCharacters();
         } else if (cmd == "journal") {
-            // List all open journal entries and then prompt for which entry to view.
             journal.listEntries();
             cout << "Enter a journal entry number to read (or press enter to cancel): ";
             string input;
