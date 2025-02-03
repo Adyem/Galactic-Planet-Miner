@@ -53,42 +53,6 @@
 using json = nlohmann::json;
 using namespace std;
 
-/*
- * GALACTIC MINERS: A COHESIVE STORY OUTLINE
- *
- * BACKSTORY:
- * In a distant era, humanity has spread across star systems, with Terra as its core.
- * Colonies on Mars, Zalthor, Vulcan, and Luna supply vital resources: iron, rare metals,
- * titanium, crystals, and obsidian. Amid these efforts, raiders led by Captain Blackthorne
- * and Navigator Zara threaten fragile peace, driven by their own quest for survival.
- *
- * MAIN CHARACTERS:
- * - Old Miner Joe:
- *   A hardworking veteran who mines tirelessly to cope with personal tragedy. His passion
- *   for refining mining techniques pushes resource extraction forward.
- *
- * - Professor Lumen:
- *   An academic who studies planetary anomalies, warning of cosmic dangers. Her research
- *   hints at looming threats requiring urgent technological innovation.
- *
- * - Farmer Daisy:
- *   A dedicated agriculturalist who underscores the vital link between farming and mining.
- *   She struggles to sustain colonies reliant on stable resource convoys.
- *
- * - Captain Blackthorne & Navigator Zara:
- *   Former citizens turned raider leaders. Betrayed and cast aside, they now fight for
- *   justice—or vengeance—using hidden enclaves to strike the colonies.
- *
- * QUEST SYSTEM OVERVIEW (Modified):
- * - Story Quests:
- *   Your journey unfolds through a series of story and daily quests.
- *
- * - Random Daily Tasks:
- *   Once the story arc is complete, random daily quests (resource collection or raider warnings)
- *   continue as before.
- */
-
-// Expanded lore arrays with more creative back‐stories
 static const vector<string> resourceLore = {
     "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future. I once lost everything to a mining accident, and now I seek redemption in every pick strike.'",
     "Professor Lumen: 'Mining is the backbone of our civilization. Behind every ore lies a story of sacrifice and hope, echoing the trials of those who came before us.'",
@@ -142,7 +106,6 @@ struct ResearchDef {
     string effectName;
 };
 
-// Removed the old "Urban Planning" research and replaced it with three separate entries.
 static vector<ResearchDef> RESEARCH_DATA = {
     {"Unlock Mars", {{"Iron", 100}, {"Copper", 50}},
      "Unlock the planet Mars for mining.", "unlock_mars"},
@@ -190,7 +153,6 @@ struct CraftingRecipe {
     string requiredBuilding;
 };
 
-// Note: Only capital ship recipes have been changed to require the "Flagship Dock" now.
 static map<string, CraftingRecipe> CRAFTING_RECIPES = {
     {"Iron Bar", { {{"Iron", 5}}, 1.0, 2.0, "Smelting Building" }},
     {"Interceptor", { {{"Engine Parts", 3}, {"Titanium Bar", 2}}, 4.0, 20.0, "Shipyard" }},
@@ -230,12 +192,12 @@ struct BuildingRecipe {
     map<string, int> inputs;
     double timeRequired;
     double electricityCost;
-    int plotCost; // New field: the number of building plots this structure uses.
+    int plotCost;
 };
 
 static map<string, BuildingRecipe> BUILDING_RECIPES = {
     {"Crafting Building", { {{"Iron Bar", 5}, {"Copper Bar", 2}}, 5.0, 10.0, 1 }},
-    {"Smelting Building", { {{"Iron", 5}, {"Coal", 10}}, 5.0, 10.0, 1 }}, // modified recipe
+    {"Smelting Building", { {{"Iron", 5}, {"Coal", 10}}, 5.0, 10.0, 1 }},
     {"Facility Workshop", { {{"Generator", 2}, {"Accumulator", 2}}, 3.0, 5.0, 1 }},
     {"Shipyard", { {{"Iron Bar", 10}, {"Engine Parts", 5}}, 8.0, 20.0, 1 }},
     {"Proximity Alarm", { {{"Crystal", 2}, {"Mithril Bar", 1}}, 3.0, 5.0, 1 }},
@@ -258,12 +220,8 @@ struct Ship {
     int repairAmount;
 };
 
-// Forward declaration for use in Planet
 class PlanetManager;
 
-//
-// JOURNAL SYSTEM
-//
 struct JournalEntry {
     int id;
     string title;
@@ -307,9 +265,6 @@ private:
 
 Journal journal;
 
-//
-// PLANET CLASS
-//
 class Planet {
 public:
     Planet(const string &name, const map<string, double> &production,
@@ -378,7 +333,6 @@ public:
     void increaseMaxBuildingPlots(int amount) {
         maxBuildingPlots_ += amount;
     }
-    // New method: add a building using a specific number of plots.
     bool addBuildingWithCost(const string &buildingName, int plotCost) {
         if (currentBuildingCount_ + plotCost > maxBuildingPlots_) {
             cout << "No building plots available on " << name_
@@ -390,7 +344,6 @@ public:
         return true;
     }
     bool addBuilding(const string &buildingName) {
-        // Used for facilities which always cost 1 plot.
         if (!canBuildMore()) {
             cout << "No building plots available on " << name_
                  << ". Upgrade building capacity first." << endl;
@@ -513,9 +466,6 @@ private:
     static constexpr double TRITIUM_EXTRACTION_RATE = 0.05;
 };
 
-//
-// PLANET MANAGER
-//
 class PlanetManager {
 public:
     PlanetManager(const vector<PlanetDef> &data) {
@@ -548,9 +498,6 @@ private:
     vector<Planet> planets_;
 };
 
-//
-// RESEARCH
-//
 class Research {
 public:
     Research(const string &name, const map<string, int> &cost,
@@ -594,9 +541,6 @@ private:
     bool completed_;
 };
 
-//
-// DAILY QUEST / STORY QUEST
-//
 class DailyQuest {
 public:
     DailyQuest(const string &desc, const string &objectiveRes, int objectiveAmt,
@@ -615,7 +559,6 @@ public:
             for (const auto &entry : reward_)
                 cout << entry.first << " +" << entry.second << " ";
             cout << endl;
-            // For non-story quests, add a generic journal entry.
             if (!isStoryQuest_) {
                 string journalText = "You successfully gathered " + to_string(objectiveAmount_) +
                                  " " + objectiveResource_ + ". The effort has not gone unnoticed.";
@@ -634,7 +577,6 @@ public:
         }
         if (combatStartTime_ == 0)
             combatStartTime_ = time(nullptr);
-        // Adjust enemy stats if this is the final confrontation.
         int raiderShield = (isFinalConfrontation_) ? rand() % 101 + 200 : rand() % 101 + 100;
         int raiderHull = (isFinalConfrontation_) ? rand() % 201 + 600 : rand() % 201 + 300;
         cout << "Commencing raider battle at " << targetPlanet_ << "!" << endl;
@@ -683,7 +625,6 @@ public:
                 break;
             }
             int raiderDamage = rand() % 51 + 50;
-            // If final confrontation, add extra damage to simulate capital ship firepower.
             if (isFinalConfrontation_)
                 raiderDamage += 30;
             cout << "Raiders fire for " << raiderDamage << " damage." << endl;
@@ -795,7 +736,6 @@ public:
     const string &getTargetPlanet() const {
         return targetPlanet_;
     }
-    // New setters/getters for story quest flags:
     void setStoryQuest(bool val) { isStoryQuest_ = val; }
     bool isStoryQuest() const { return isStoryQuest_; }
     void setFinalConfrontation(bool val) { isFinalConfrontation_ = val; }
@@ -814,9 +754,6 @@ private:
     bool isFinalConfrontation_;
 };
 
-//
-// QUEST MANAGER
-//
 class QuestManager {
 public:
     QuestManager() : currentQuest_(nullptr), lastQuestDate_(""), storyStage_(0) {}
@@ -910,18 +847,15 @@ private:
     unique_ptr<DailyQuest> currentQuest_;
     string lastQuestDate_;
     int storyStage_;
-    // ----- EXPANDED DAILY QUEST SYSTEM -----
     void generateNewQuest(PlanetManager &pm) {
         if (storyStage_ < 12) {
             if (storyStage_ == 0) {
-                // The Spark of Ambition
                 string desc = "Old Miner Joe says: 'Deep in Terra's veins lie the secrets of redemption. Collect 50 Iron Bars to prove your resolve.'";
                 map<string, int> reward = {{"Engine Parts", 3}};
                 auto quest = make_unique<DailyQuest>(desc, "Iron Bar", 50, reward);
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 1) {
-                // A Cosmic Warning
                 pm.unlockPlanet("Mars");
                 string desc = "Professor Lumen warns: 'Cosmic anomalies stir near Mars. Prepare to defend against an impending raider attack!'";
                 map<string, int> reward = {{"Engine Parts", 2}};
@@ -930,7 +864,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 2) {
-                // Bandit Outpost Assault
                 pm.unlockPlanet("Zalthor");
                 string desc = "Farmer Daisy urges: 'Bandit outposts in Zalthor threaten our supplies. Lead an assault to disrupt their operations!'";
                 map<string, int> reward = {{"Engine Parts", 3}};
@@ -939,7 +872,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 3) {
-                // Shadows Over Vulcan
                 pm.unlockPlanet("Vulcan");
                 string desc = "A distress call from Vulcan: 'Raider forces have established a foothold. Strike at their encampments and reclaim our honor!'";
                 map<string, int> reward = {{"Engine Parts", 3}};
@@ -948,7 +880,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 4) {
-                // Convoy Under Fire
                 string desc = "Merchant voices cry out: 'Our convoys are ambushed! Secure the passage by defending the transport routes on Terra!'";
                 map<string, int> reward = {{"Engine Parts", 2}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -956,7 +887,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 5) {
-                // Echoes of Betrayal
                 string desc = "Professor Lumen reveals: 'A hidden raider outpost on Mars holds secrets of betrayal. Infiltrate and expose their past.'";
                 map<string, int> reward = {{"Engine Parts", 3}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -964,14 +894,12 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 6) {
-                // Broken Chains
                 string desc = "Old Miner Joe challenges: 'Collect 30 Mithril Bars from Terra; let each bar be a link breaking the chains of oppression.'";
                 map<string, int> reward = {{"Engine Parts", 2}};
                 auto quest = make_unique<DailyQuest>(desc, "Mithril Bar", 30, reward);
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 7) {
-                // Siege of the Forgotten
                 pm.unlockPlanet("Luna");
                 string desc = "A desperate plea echoes: 'A raider stronghold in Luna must fall. Lead the siege and reclaim what was lost.'";
                 map<string, int> reward = {{"Engine Parts", 4}};
@@ -980,7 +908,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 8) {
-                // Whispers in the Void
                 string desc = "An urgent message: 'Defend Terra from a sudden raider strike. The whispers of dissent hint at internal turmoil among the raiders.'";
                 map<string, int> reward = {{"Engine Parts", 2}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -988,7 +915,6 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 9) {
-                // The Great Siege
                 string desc = "A clarion call resounds: 'Assault the fortified raider outpost on Mars. Their defenses may be strong, but their resolve wavers.'";
                 map<string, int> reward = {{"Engine Parts", 4}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -996,14 +922,12 @@ private:
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 10) {
-                // Rising Tempest
                 string desc = "Merchant guilds request: 'Collect 200 Coal from Terra to fuel our defenses as tempests of war approach.'";
                 map<string, int> reward = {{"Engine Parts", 3}};
                 auto quest = make_unique<DailyQuest>(desc, "Coal", 200, reward);
                 quest->setStoryQuest(true);
                 currentQuest_ = std::move(quest);
             } else if (storyStage_ == 11) {
-                // The Final Confrontation
                 string desc = "The decisive moment: 'Blackthorne's hideout looms. Lead your fleet to its heart and end the cycle of despair once and for all!'";
                 map<string, int> reward = {{"Engine Parts", 5}};
                 auto quest = make_unique<DailyQuest>(desc, "", 1, reward);
@@ -1013,7 +937,6 @@ private:
                 currentQuest_ = std::move(quest);
             }
         } else {
-            // Fallback to random daily quests with extra variety.
             if ((rand() % 100) < 20) {
                 vector<string> candidates;
                 for (auto &planet : pm.getPlanets())
@@ -1055,9 +978,6 @@ private:
     }
 };
 
-//
-// RESEARCH MANAGER
-//
 class ResearchManager {
 public:
     ResearchManager(const vector<ResearchDef> &data) {
@@ -1081,9 +1001,6 @@ private:
     vector<Research> researches_;
 };
 
-//
-// CRAFTING MANAGER
-//
 class CraftingManager {
 public:
     CraftingManager(const map<string, CraftingRecipe> &recipes)
@@ -1135,9 +1052,6 @@ private:
     map<string, CraftingRecipe> recipes_;
 };
 
-//
-// PLAYER
-//
 class Player {
 public:
     Player()
@@ -1692,9 +1606,6 @@ private:
     }
 };
 
-//
-// SAVE / LOAD
-//
 void saveGame(const Player &player) {
     json j;
     {
@@ -1777,9 +1688,6 @@ void loadGame(Player &player) {
     cout << "Game loaded from " << SAVE_FILE << "." << endl;
 }
 
-//
-// CHARACTERS / LORE
-//
 void talkToCharacters() {
     cout << "\nLore: " << genericLore[rand() % genericLore.size()] << "\n";
 }
@@ -1870,15 +1778,12 @@ int main() {
                 player.doResearch(args);
         }
         else if (cmd == "craft") {
-            // If no extra arguments are provided, use interactive mode.
             if (args.empty()) {
                 cout << "Available craftable items:" << endl;
-                // List each craftable item from the global CRAFTING_RECIPES
                 for (const auto &entry : CRAFTING_RECIPES) {
                     string itemName = entry.first;
                     string reqBuilding = entry.second.requiredBuilding;
                     cout << " - " << itemName << " (Requires: " << reqBuilding << ")";
-                    // List unlocked planets that already have the required building.
                     vector<string> availablePlanets;
                     for (const auto &planet : player.getPlanetManager().getPlanetsConst()) {
                         if (planet.isUnlocked() && planet.getBuildings().count(reqBuilding) && planet.getBuildings().at(reqBuilding) > 0)
@@ -1926,13 +1831,11 @@ int main() {
                     cout << "No planet chosen." << endl;
                     continue;
                 }
-                // Determine if this is a ship (if required building is Shipyard or Flagship Dock)
                 if (reqBuilding == "Shipyard" || reqBuilding == "Flagship Dock")
                     player.craftShip(chosenItem, chosenPlanet);
                 else
                     player.craftItem(chosenItem, chosenPlanet);
             } else {
-                // Fallback to non-interactive mode if arguments are provided.
                 string itemName, planetName;
                 size_t pos = args.find(" on ");
                 if (pos != string::npos) {
@@ -2039,7 +1942,6 @@ int main() {
         } else if (cmd == "talk") {
             talkToCharacters();
         } else if (cmd == "journal") {
-            // List all open journal entries and then prompt for which entry to view.
             journal.listEntries();
             cout << "Enter a journal entry number to read (or press enter to cancel): ";
             string input;
