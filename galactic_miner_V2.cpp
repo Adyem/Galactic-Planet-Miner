@@ -53,6 +53,9 @@
 using json = nlohmann::json;
 using namespace std;
 
+// Bonus energy rate for each docked solar panel ship (Sunflare Sloop)
+static constexpr double SOLAR_SHIP_BONUS_RATE = 5.0;
+
 static const vector<string> resourceLore = {
     "Old Miner Joe: 'The veins of our beloved planet run deep—every ounce of ore fuels our future. I once lost everything to a mining accident, and now I seek redemption in every pick strike.'",
     "Professor Lumen: 'Mining is the backbone of our civilization. Behind every ore lies a story of sacrifice and hope, echoing the trials of those who came before us.'",
@@ -185,7 +188,10 @@ static map<string, CraftingRecipe> CRAFTING_RECIPES = {
                            8.0, 20.0, "Shipyard" }},
     {"Protector Frigate", { {{"Titanium Bar", 5}, {"Advanced Engine Parts", 2},
                              {"Crystal", 3}},
-                           10.0, 15.0, "Shipyard" }}
+                           10.0, 15.0, "Shipyard" }},
+    // --- New Ship Recipe: Sunflare Sloop ---
+    {"Sunflare Sloop", { {{"Titanium Bar", 3}, {"Advanced Engine Parts", 1}},
+                         5.0, 15.0, "Shipyard" }}
 };
 
 struct BuildingRecipe {
@@ -208,7 +214,9 @@ static map<string, BuildingRecipe> BUILDING_RECIPES = {
     {"Solar Panel", { {}, 3.0, 0.0, 1 }},
     {"Tritium Extractor", { {{"Mithril Bar", 2}, {"Advanced Engine Parts", 1}}, 4.0, 8.0, 1 }},
     {"Defense Turret", { {{"Iron Bar", 3}, {"Engine Parts", 1}}, 3.0, 5.0, 1 }},
-    {"Flagship Dock", { {{"Iron Bar", 10}, {"Engine Parts", 5}, {"Titanium Bar", 5}}, 10.0, 30.0, 2 }}
+    {"Flagship Dock", { {{"Iron Bar", 10}, {"Engine Parts", 5}, {"Titanium Bar", 5}}, 10.0, 30.0, 2 }},
+    // --- New Building: Helios Beacon ---
+    {"Helios Beacon", { {{"Crystal", 5}, {"Advanced Engine Parts", 2}}, 6.0, 10.0, 1 }}
 };
 
 struct Ship {
@@ -1123,12 +1131,33 @@ public:
     void setQuantumCommunicationEnabled(bool val) {
         quantumCommunicationEnabled_ = val;
     }
+    // Modified produceResources: after regular production, add bonus energy
+    // to any planet with a Helios Beacon from docked Sunflare Sloop ships.
     void produceResources() {
         time_t now = time(nullptr);
         double diff = difftime(now, lastUpdateTime_);
         if (diff < 0)
             diff = 0;
         planetManager_.produceAll(diff, energyConservationEnabled_);
+        
+        // Count the number of Sunflare Sloop ships in the fleet.
+        int solarShipCount = 0;
+        for (const auto &ship : fleet_) {
+            if (ship.type == "Sunflare Sloop")
+                solarShipCount++;
+        }
+        int effectiveShips = min(solarShipCount, 3);
+        if (effectiveShips > 0) {
+            for (auto &planet : planetManager_.getPlanets()) {
+                if (planet.hasBuilding("Helios Beacon")) {
+                    double bonusEnergy = effectiveShips * SOLAR_SHIP_BONUS_RATE * diff;
+                    double newEnergy = min(planet.getMaxEnergy(), planet.getCurrentEnergy() + bonusEnergy);
+                    planet.setCurrentEnergy(newEnergy);
+                    cout << "Helios Beacon on " << planet.getName() << " received bonus energy: " << bonusEnergy << endl;
+                }
+            }
+        }
+        
         lastUpdateTime_ = now;
     }
     void doResearch(const string &researchName) {
@@ -1163,6 +1192,7 @@ public:
         craftingManager_.craft(itemName, planet, fasterCraftingMultiplier_,
                                craftingCostMultiplier_, precisionToolsEnabled_);
     }
+    // Modified craftShip: now supports the new ship type "Sunflare Sloop"
     void craftShip(const string &shipType, const string &planetName = "Terra") {
         Planet *planet = planetManager_.getPlanetByName(planetName);
         if (!planet) {
@@ -1247,6 +1277,14 @@ public:
             newShip.currentShield = 40;
             newShip.weapons = 0;
             newShip.repairAmount = 10;
+        } 
+        // --- New Ship: Sunflare Sloop ---
+        else if (shipType == "Sunflare Sloop") {
+            newShip.hull = 80;
+            newShip.maxShield = 60;
+            newShip.currentShield = 60;
+            newShip.weapons = 20;
+            newShip.repairAmount = 0;
         } else if (shipType == "Interceptor") {
             newShip.hull = 90;
             newShip.maxShield = 60;
@@ -1575,7 +1613,7 @@ private:
             journal.addEntry("Solar Revolution", "Harnessing the power of the sun, new solar panels provide an abundant energy source, fueling the expansion of your empire.");
         } else if (effectName == "unlock_capital_ships") {
             cout << "Capital Ship Initiative research completed! You can now build one powerful capital ship at a time." << endl;
-            journal.addEntry("Capital Ship Initiative", "A colossal leap in naval engineering, capital ships now stand as behemoths of war, their presence a deterrent to would-be aggressors.");
+            journal.addEntry("Capital Ship Initiative", "A colossal leap in naval engineering, capital ships now stand as behemoths of war, their presence a deterrent to would‐be aggressors.");
         } else if (effectName == "unlock_capital_frigates") {
             cout << "Auxiliary Frigate Development research completed! You can now build smaller capital ship variants without limits." << endl;
             journal.addEntry("Frigate Development", "Streamlined designs allow for the rapid deployment of frigates, versatile vessels that combine speed and firepower.");
