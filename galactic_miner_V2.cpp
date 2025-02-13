@@ -210,10 +210,8 @@ static map<string, CraftingRecipe> CRAFTING_RECIPES = {
     {"Protector Frigate", { {{"Titanium Bar", 5}, {"Advanced Engine Parts", 2},
                              {"Crystal", 3}},
                            10.0, 15.0, "Shipyard" }},
-    // --- New Ship Recipe: Sunflare Sloop ---
     {"Sunflare Sloop", { {{"Titanium Bar", 3}, {"Advanced Engine Parts", 1}},
                          5.0, 15.0, "Shipyard" }},
-    // --- New Capital Ship: Eclipse Monolith ---
     {"Eclipse Monolith", { {{"Fusion Reactor", 1}, {"Titanium Bar", 15},
                             {"Advanced Engine Parts", 10}, {"Crystal", 5}},
                            30.0, 50.0, "Flagship Dock" }}
