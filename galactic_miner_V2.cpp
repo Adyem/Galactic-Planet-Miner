@@ -53,10 +53,8 @@
 using json = nlohmann::json;
 using namespace std;
 
-// Bonus energy rate for each docked solar panel ship (Sunflare Sloop)
 static constexpr double SOLAR_SHIP_BONUS_RATE = 5.0;
 
-// New constant: shield regeneration provided by a docked Sunflare Sloop per turn
 static constexpr int SUNFLARE_SHIELD_REGEN = 10;
 
 static const vector<string> resourceLore = {
@@ -150,24 +148,20 @@ static vector<ResearchDef> RESEARCH_DATA = {
     {"Auxiliary Frigate Development",
      {{"Engine Parts", 20}, {"Advanced Engine Parts", 5}, {"Mithril Bar", 10}},
      "Unlock smaller versions of capital ships (frigates) that are less powerful but can be built without limits.", "unlock_capital_frigates"},
-    // --- New Research: Escape Pod Lifeline upgrade ---
     {"Escape Pod Lifeline", {{"Advanced Engine Parts", 5}, {"Titanium Bar", 3}},
          "Allows repair drones and Sunflare Sloops to detach upon ship destruction with a 50% chance to survive.", "escape_pod_lifeline"},
-    // --- New Research: Weapons upgrades (3 tiers) ---
     {"Armament Enhancement I", {{"Engine Parts", 10}, {"Titanium Bar", 5}},
          "Increase all ships' weapons by 10%.", "weapons_upgrade_1"},
     {"Armament Enhancement II", {{"Engine Parts", 20}, {"Titanium Bar", 10}},
          "Increase all ships' weapons by an additional 10%. Requires previous tier.", "weapons_upgrade_2"},
     {"Armament Enhancement III", {{"Engine Parts", 30}, {"Titanium Bar", 15}},
          "Increase all ships' weapons by an additional 10%. Requires previous tier.", "weapons_upgrade_3"},
-    // --- New Research: Shield upgrades (3 tiers) ---
     {"Defensive Fortification I", {{"Copper Bar", 10}, {"Mithril Bar", 5}},
          "Increase all ships' shields by 10%.", "shield_upgrade_1"},
     {"Defensive Fortification II", {{"Copper Bar", 20}, {"Mithril Bar", 10}},
          "Increase all ships' shields by an additional 10%. Requires previous tier.", "shield_upgrade_2"},
     {"Defensive Fortification III", {{"Copper Bar", 30}, {"Mithril Bar", 15}},
          "Increase all ships' shields by an additional 10%. Requires previous tier.", "shield_upgrade_3"},
-    // --- New Research: Hull upgrades (3 tiers) ---
     {"Structural Reinforcement I", {{"Iron Bar", 10}, {"Coal", 10}},
          "Increase all ships' hull by 10%.", "hull_upgrade_1"},
     {"Structural Reinforcement II", {{"Iron Bar", 20}, {"Coal", 20}},
@@ -246,7 +240,6 @@ static map<string, BuildingRecipe> BUILDING_RECIPES = {
     {"Tritium Extractor", { {{"Mithril Bar", 2}, {"Advanced Engine Parts", 1}}, 4.0, 8.0, 1 }},
     {"Defense Turret", { {{"Iron Bar", 3}, {"Engine Parts", 1}}, 3.0, 5.0, 1 }},
     {"Flagship Dock", { {{"Iron Bar", 10}, {"Engine Parts", 5}, {"Titanium Bar", 5}}, 10.0, 30.0, 2 }},
-    // --- New Building: Helios Beacon ---
     {"Helios Beacon", { {{"Crystal", 5}, {"Advanced Engine Parts", 2}}, 6.0, 10.0, 1 }}
 };
 
@@ -257,17 +250,12 @@ struct Ship {
     int currentShield;
     int weapons;
     int repairAmount;
-    // Base stats for upgrade recalculation:
     int baseHull;
     int baseMaxShield;
     int baseWeapons;
-    // Field to indicate a docked support ship ("Repair Drone" or "Sunflare Sloop")
     string dockedSupport;
 };
 
-//
-// Journal
-//
 class Journal {
 public:
     Journal() : nextId(1) {}
@@ -310,9 +298,6 @@ private:
 
 Journal journal;
 
-//
-// Planet
-//
 class Planet {
 public:
     Planet(const string &name, const map<string, double> &production, bool unlocked)
@@ -451,9 +436,6 @@ private:
     static constexpr double TRITIUM_EXTRACTION_RATE = 0.05;
 };
 
-//
-// Planet Manager
-//
 class PlanetManager {
 public:
     PlanetManager(const vector<PlanetDef> &data) {
@@ -481,9 +463,6 @@ private:
     vector<Planet> planets_;
 };
 
-//
-// Research
-//
 class Research {
 public:
     Research(const string &name, const map<string, int> &cost, const string &description, const string &effectName)
@@ -513,16 +492,12 @@ private:
     bool completed_;
 };
 
-//
-// Daily Quest
-//
 class DailyQuest {
 public:
     DailyQuest(const string &desc, const string &objectiveRes, int objectiveAmt, const map<string, int> &reward)
         : description_(desc), objectiveResource_(objectiveRes), objectiveAmount_(objectiveAmt), reward_(reward),
           completed_(false), isRaiderAttack_(false), targetPlanet_(""), combatStartTime_(0), turnsElapsed_(0),
           isStoryQuest_(false), isFinalConfrontation_(false) {}
-    // NEW: checkCompletion method for resource quests.
     void checkCompletion(Planet *central) {
         if (!completed_ && !objectiveResource_.empty() && central->getStored(objectiveResource_) >= objectiveAmount_) {
             completed_ = true;
@@ -540,7 +515,6 @@ public:
             }
         }
     }
-    // Process raider attack combat. (Escape pod logic is handled below.)
     bool processRaiderAttack(PlanetManager &pm, vector<Ship> &fleet, bool realTime, bool escapePodActive) {
         if (completed_ || !isRaiderAttack_)
             return false;
@@ -565,21 +539,18 @@ public:
                 cout << "Waiting 60 seconds for next combat turn..." << endl;
                 this_thread::sleep_for(chrono::seconds(60));
             }
-            // Attempt to dock free Sunflare Sloops to eligible host ships:
             for (auto &host : fleet) {
                 if (host.type != "Repair Drone" && host.type != "Sunflare Sloop" && host.dockedSupport.empty()) {
                     for (auto it = fleet.begin(); it != fleet.end(); ++it) {
                         if (it->type == "Sunflare Sloop" && it->dockedSupport.empty() && (&(*it) != &host)) {
                             host.dockedSupport = "Sunflare Sloop";
                             cout << "Sunflare Sloop docked to " << host.type << "." << endl;
-                            // Mark the support ship as docked (empty its type so it doesn’t act separately)
                             it->type = "";
                             break;
                         }
                     }
                 }
             }
-            // Apply shield regeneration from docked Sunflare Sloops:
             for (auto &ship : fleet) {
                 if (!ship.dockedSupport.empty() && ship.dockedSupport == "Sunflare Sloop") {
                     int oldShield = ship.currentShield;
@@ -657,7 +628,6 @@ public:
                     }
                 }
             }
-            // Process repair drones as before:
             vector<Ship *> repairDrones;
             for (auto &ship : fleet)
                 if (ship.type == "Repair Drone")
@@ -679,7 +649,6 @@ public:
                     targetShip->hull = min(targetShip->hull + 10, (targetShip->type == "Shield Ship") ? 120 : 100);
                 }
             }
-            // Check for destroyed ships and process docked supports:
             vector<int> destroyedIndices;
             for (size_t i = 0; i < fleet.size(); i++) {
                 if (fleet[i].hull <= 0) {
@@ -745,9 +714,6 @@ private:
     bool isFinalConfrontation_;
 };
 
-//
-// Quest Manager
-//
 class QuestManager {
 public:
     QuestManager() : currentQuest_(nullptr), lastQuestDate_(""), storyStage_(0) {}
@@ -961,9 +927,6 @@ private:
     }
 };
 
-//
-// Research Manager
-//
 class ResearchManager {
 public:
     ResearchManager(const vector<ResearchDef> &data) {
@@ -982,9 +945,6 @@ private:
     vector<Research> researches_;
 };
 
-//
-// Crafting Manager
-//
 class CraftingManager {
 public:
     CraftingManager(const map<string, CraftingRecipe> &recipes) : recipes_(recipes) {}
@@ -1023,9 +983,6 @@ private:
     map<string, CraftingRecipe> recipes_;
 };
 
-//
-// Player
-//
 class Player {
 public:
     Player()
@@ -1061,7 +1018,6 @@ public:
     void setPrecisionToolsEnabled(bool val) { precisionToolsEnabled_ = val; }
     void setEnergyConservationEnabled(bool val) { energyConservationEnabled_ = val; }
     void setQuantumCommunicationEnabled(bool val) { quantumCommunicationEnabled_ = val; }
-    // Produce resources on all planets; also add bonus energy to planets with Helios Beacon via docked Sunflare Sloops.
     void produceResources() {
         time_t now = time(nullptr);
         double diff = difftime(now, lastUpdateTime_);
@@ -1101,7 +1057,6 @@ public:
         if (!planet) { cout << "Planet " << planetName << " not found." << endl; return; }
         craftingManager_.craft(itemName, planet, fasterCraftingMultiplier_, craftingCostMultiplier_, precisionToolsEnabled_);
     }
-    // Craft ship including support for "Sunflare Sloop" and "Eclipse Monolith". Upgrade multipliers are applied.
     void craftShip(const string &shipType, const string &planetName = "Terra") {
         Planet *planet = planetManager_.getPlanetByName(planetName);
         if (!planet) { cout << "Planet " << planetName << " not found." << endl; return; }
@@ -1269,7 +1224,6 @@ public:
         else
             cout << "No Radar installed on " << planetName << ". Raider activity unknown." << endl;
     }
-    // Update daily quest. Pass the current status of the Escape Pod Lifeline upgrade.
     void updateDailyQuest() {
         Planet *terra = planetManager_.getPlanetByName("Terra");
         if (!terra) return;
@@ -1323,7 +1277,6 @@ public:
                     escapePodLifelineActive_ = true;
             }
         }
-        // Update all ships with new multipliers while preserving shield ratios.
         for (auto &ship : fleet_) {
             double shieldRatio = (ship.maxShield > 0) ? (double)ship.currentShield / ship.maxShield : 0;
             ship.maxShield = round(ship.baseMaxShield * shieldUpgradeMultiplier_);
@@ -1423,9 +1376,6 @@ private:
     }
 };
 
-//
-// Save and Load Game
-//
 void saveGame(const Player &player) {
     json j;
     {
@@ -1516,7 +1466,7 @@ void showHelp() {
          << "  fleet                          - Show your fleet\n"
          << "  research                       - List research options\n"
          << "  do_research <name>             - Perform research\n"
-         << "  craft [<item> [on <planet>]]     - Craft an item\n"
+         << "  craft [<item> [on <planet>]]   - Craft an item\n"
          << "  build <building> on <planet>   - Build a building\n"
          << "  upgrade_plots <planet>         - Upgrade building plots\n"
          << "  install <facility> on <planet> - Install a facility\n"
@@ -1529,9 +1479,6 @@ void showHelp() {
          << "  quit                           - Save and quit\n";
 }
 
-//
-// Main function
-//
 int main() {
     Player player;
     loadGame(player);
