@@ -90,11 +90,13 @@ int main()
     int ship_c = game.create_ship(2, SHIP_SHIELD);
     FT_ASSERT(ship_c != ship_a);
     FT_ASSERT(ship_c != ship_b);
-    game.set_fleet_location_travel(2, PLANET_MARS, PLANET_VULCAN);
+    game.set_fleet_location_travel(2, PLANET_MARS, PLANET_VULCAN, 5.0);
     ft_location loc2 = game.get_fleet_location(2);
     FT_ASSERT_EQ(LOCATION_TRAVEL, loc2.type);
     FT_ASSERT_EQ(PLANET_MARS, loc2.from);
     FT_ASSERT_EQ(PLANET_VULCAN, loc2.to);
+    double travel_time = game.get_fleet_travel_time(2);
+    FT_ASSERT(travel_time > 4.9 && travel_time < 5.1);
 
     game.set_fleet_location_misc(1, MISC_OUTPOST_NEBULA_X);
     ft_location loc3 = game.get_fleet_location(1);
@@ -105,8 +107,18 @@ int main()
     FT_ASSERT_EQ(0, game.get_ship_hp(1, ship_b));
     FT_ASSERT_EQ(0, game.add_ship_hp(1, ship_b, 10));
 
+    game.transfer_ship(1, 2, ship_a);
+    FT_ASSERT_EQ(0, game.get_ship_hp(1, ship_a));
+    FT_ASSERT_EQ(90, game.get_ship_hp(2, ship_a));
+
     game.set_ore(PLANET_TERRA, ORE_COPPER, 0);
-    game.tick(4.0);
+    game.tick(2.0);
+    FT_ASSERT_EQ(1, game.get_ore(PLANET_TERRA, ORE_COPPER));
+    ft_location loc2a = game.get_fleet_location(2);
+    FT_ASSERT_EQ(LOCATION_TRAVEL, loc2a.type);
+    travel_time = game.get_fleet_travel_time(2);
+    FT_ASSERT(travel_time > 2.9 && travel_time < 3.1);
+    game.tick(3.0);
     FT_ASSERT_EQ(2, game.get_ore(PLANET_TERRA, ORE_COPPER));
     ft_location loc4 = game.get_fleet_location(2);
     FT_ASSERT_EQ(LOCATION_PLANET, loc4.type);
@@ -115,10 +127,32 @@ int main()
     game.create_fleet(3);
     int ship_d = game.create_ship(3, SHIP_SHIELD);
     FT_ASSERT(ship_d != 0);
-    game.remove_fleet(3);
+    game.set_ship_hp(3, ship_d, 42);
+    game.remove_fleet(3, 2);
+    FT_ASSERT_EQ(42, game.get_ship_hp(2, ship_d));
+    FT_ASSERT_EQ(0, game.get_ship_hp(3, ship_d));
     FT_ASSERT_EQ(0, game.create_ship(3, SHIP_SHIELD));
     ft_location loc5 = game.get_fleet_location(3);
     FT_ASSERT_EQ(PLANET_TERRA, loc5.from);
+
+    game.create_fleet(4);
+    int ship_e = game.create_ship(4, SHIP_SHIELD);
+    FT_ASSERT(ship_e != 0);
+    game.set_ship_hp(4, ship_e, 37);
+    game.remove_fleet(4, -1, PLANET_MARS);
+    FT_ASSERT_EQ(0, game.get_ship_hp(4, ship_e));
+    FT_ASSERT_EQ(37, game.get_planet_fleet_ship_hp(PLANET_MARS, ship_e));
+    ft_location mars_garrison = game.get_planet_fleet_location(PLANET_MARS);
+    FT_ASSERT_EQ(LOCATION_PLANET, mars_garrison.type);
+    FT_ASSERT_EQ(PLANET_MARS, mars_garrison.from);
+
+    game.create_fleet(5);
+    int ship_f = game.create_ship(5, SHIP_SHIELD);
+    FT_ASSERT(ship_f != 0);
+    game.set_ship_hp(5, ship_f, 18);
+    game.remove_fleet(5, -1, PLANET_MARS);
+    FT_ASSERT_EQ(37, game.get_planet_fleet_ship_hp(PLANET_MARS, ship_e));
+    FT_ASSERT_EQ(18, game.get_planet_fleet_ship_hp(PLANET_MARS, ship_f));
 
     server_thread.join();
     return 0;

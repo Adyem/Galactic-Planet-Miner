@@ -60,9 +60,7 @@ void Game::tick(double seconds)
     for (size_t i = 0; i < count; ++i)
     {
         ft_sharedptr<ft_fleet> fleet = entries[i].value;
-        ft_location loc = fleet->get_location();
-        if (loc.type == LOCATION_TRAVEL)
-            fleet->set_location_planet(loc.to);
+        fleet->tick(seconds);
     }
 }
 
@@ -93,6 +91,29 @@ ft_sharedptr<ft_fleet> Game::get_fleet(int id)
 ft_sharedptr<const ft_fleet> Game::get_fleet(int id) const
 {
     const Pair<int, ft_sharedptr<ft_fleet> > *entry = this->_fleets.find(id);
+    if (entry == ft_nullptr)
+        return ft_sharedptr<const ft_fleet>();
+    return entry->value;
+}
+
+ft_sharedptr<ft_fleet> Game::get_planet_fleet(int id)
+{
+    Pair<int, ft_sharedptr<ft_fleet> > *entry = this->_planet_fleets.find(id);
+    if (entry != ft_nullptr)
+        return entry->value;
+    ft_sharedptr<ft_planet> planet = this->get_planet(id);
+    if (!planet)
+        return ft_sharedptr<ft_fleet>();
+    ft_sharedptr<ft_fleet> garrison(new ft_fleet(-id));
+    garrison->set_location_planet(id);
+    this->_state.add_character(garrison);
+    this->_planet_fleets.insert(id, garrison);
+    return garrison;
+}
+
+ft_sharedptr<const ft_fleet> Game::get_planet_fleet(int id) const
+{
+    const Pair<int, ft_sharedptr<ft_fleet> > *entry = this->_planet_fleets.find(id);
     if (entry == ft_nullptr)
         return ft_sharedptr<const ft_fleet>();
     return entry->value;
@@ -196,8 +217,23 @@ void Game::create_fleet(int fleet_id)
     this->_fleets.insert(fleet_id, fleet);
 }
 
-void Game::remove_fleet(int fleet_id)
+void Game::remove_fleet(int fleet_id, int target_fleet_id, int target_planet_id)
 {
+    ft_sharedptr<ft_fleet> fleet = this->get_fleet(fleet_id);
+    if (!fleet)
+        return ;
+    if (target_fleet_id >= 0)
+    {
+        ft_sharedptr<ft_fleet> target = this->get_fleet(target_fleet_id);
+        if (target)
+            fleet->move_ships_to(*target);
+    }
+    else if (target_planet_id >= 0)
+    {
+        ft_sharedptr<ft_fleet> target = this->get_planet_fleet(target_planet_id);
+        if (target)
+            fleet->move_ships_to(*target);
+    }
     this->_fleets.remove(fleet_id);
 }
 
@@ -215,6 +251,17 @@ void Game::remove_ship(int fleet_id, int ship_uid)
     if (!fleet)
         return ;
     fleet->remove_ship(ship_uid);
+}
+
+bool Game::transfer_ship(int from_fleet_id, int to_fleet_id, int ship_uid)
+{
+    ft_sharedptr<ft_fleet> from = this->get_fleet(from_fleet_id);
+    if (!from)
+        return false;
+    ft_sharedptr<ft_fleet> to = this->get_fleet(to_fleet_id);
+    if (!to)
+        return false;
+    return from->move_ship_to(*to, ship_uid);
 }
 
 void Game::set_ship_armor(int fleet_id, int ship_uid, int value)
@@ -321,12 +368,12 @@ void Game::set_fleet_location_planet(int fleet_id, int planet_id)
     fleet->set_location_planet(planet_id);
 }
 
-void Game::set_fleet_location_travel(int fleet_id, int from, int to)
+void Game::set_fleet_location_travel(int fleet_id, int from, int to, double time)
 {
     ft_sharedptr<ft_fleet> fleet = this->get_fleet(fleet_id);
     if (!fleet)
         return ;
-    fleet->set_location_travel(from, to);
+    fleet->set_location_travel(from, to, time);
 }
 
 void Game::set_fleet_location_misc(int fleet_id, int misc_id)
@@ -340,6 +387,30 @@ void Game::set_fleet_location_misc(int fleet_id, int misc_id)
 ft_location Game::get_fleet_location(int fleet_id) const
 {
     ft_sharedptr<const ft_fleet> fleet = this->get_fleet(fleet_id);
+    if (!fleet)
+        return ft_location();
+    return fleet->get_location();
+}
+
+double Game::get_fleet_travel_time(int fleet_id) const
+{
+    ft_sharedptr<const ft_fleet> fleet = this->get_fleet(fleet_id);
+    if (!fleet)
+        return 0.0;
+    return fleet->get_travel_time();
+}
+
+int Game::get_planet_fleet_ship_hp(int planet_id, int ship_uid) const
+{
+    ft_sharedptr<const ft_fleet> fleet = this->get_planet_fleet(planet_id);
+    if (!fleet)
+        return 0;
+    return fleet->get_ship_hp(ship_uid);
+}
+
+ft_location Game::get_planet_fleet_location(int planet_id) const
+{
+    ft_sharedptr<const ft_fleet> fleet = this->get_planet_fleet(planet_id);
     if (!fleet)
         return ft_location();
     return fleet->get_location();

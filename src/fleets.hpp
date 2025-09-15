@@ -55,18 +55,22 @@ private:
     int                    _id;
     ft_map<int, ft_ship>   _ships;
     ft_location            _loc;
+    double                 _travel_time;
     static int             _next_ship_id;
 
     ft_ship *find_ship(int ship_uid) noexcept;
     const ft_ship *find_ship(int ship_uid) const noexcept;
 
 public:
+    ft_fleet() noexcept;
     explicit ft_fleet(int id) noexcept;
 
     int get_id() const noexcept;
 
     int create_ship(int ship_type) noexcept;
     void remove_ship(int ship_uid) noexcept;
+    bool move_ship_to(ft_fleet &target, int ship_uid) noexcept;
+    void move_ships_to(ft_fleet &target) noexcept;
 
     void set_ship_armor(int ship_uid, int value) noexcept;
     int get_ship_armor(int ship_uid) const noexcept;
@@ -84,9 +88,11 @@ public:
     int sub_ship_shield(int ship_uid, int amount) noexcept;
 
     void set_location_planet(int planet_id) noexcept;
-    void set_location_travel(int from, int to) noexcept;
+    void set_location_travel(int from, int to, double time) noexcept;
     void set_location_misc(int misc_id) noexcept;
     ft_location get_location() const noexcept;
+    double get_travel_time() const noexcept;
+    void tick(double seconds) noexcept;
 };
 
 #endif
