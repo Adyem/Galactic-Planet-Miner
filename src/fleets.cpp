@@ -2,7 +2,12 @@
 
 int ft_fleet::_next_ship_id = 1;
 
-ft_fleet::ft_fleet(int id) noexcept : _id(id)
+ft_fleet::ft_fleet() noexcept : _id(0), _travel_time(0)
+{
+    return ;
+}
+
+ft_fleet::ft_fleet(int id) noexcept : _id(id), _travel_time(0)
 {
     return ;
 }
@@ -39,6 +44,27 @@ int ft_fleet::create_ship(int ship_type) noexcept
 void ft_fleet::remove_ship(int ship_uid) noexcept
 {
     this->_ships.remove(ship_uid);
+}
+
+bool ft_fleet::move_ship_to(ft_fleet &target, int ship_uid) noexcept
+{
+    ft_ship *ship = this->find_ship(ship_uid);
+    if (ship == ft_nullptr)
+        return false;
+    target._ships.insert(ship_uid, *ship);
+    this->_ships.remove(ship_uid);
+    return true;
+}
+
+void ft_fleet::move_ships_to(ft_fleet &target) noexcept
+{
+    while (this->_ships.size() > 0)
+    {
+        Pair<int, ft_ship> *entry = this->_ships.end();
+        entry -= 1;
+        target._ships.insert(entry->key, entry->value);
+        this->_ships.remove(entry->key);
+    }
 }
 
 void ft_fleet::set_ship_armor(int ship_uid, int value) noexcept
@@ -155,14 +181,16 @@ void ft_fleet::set_location_planet(int planet_id) noexcept
     this->_loc.from = planet_id;
     this->_loc.to = planet_id;
     this->_loc.misc = 0;
+    this->_travel_time = 0;
 }
 
-void ft_fleet::set_location_travel(int from, int to) noexcept
+void ft_fleet::set_location_travel(int from, int to, double time) noexcept
 {
     this->_loc.type = LOCATION_TRAVEL;
     this->_loc.from = from;
     this->_loc.to = to;
     this->_loc.misc = 0;
+    this->_travel_time = time;
 }
 
 void ft_fleet::set_location_misc(int misc_id) noexcept
@@ -171,10 +199,29 @@ void ft_fleet::set_location_misc(int misc_id) noexcept
     this->_loc.from = 0;
     this->_loc.to = 0;
     this->_loc.misc = misc_id;
+    this->_travel_time = 0;
 }
 
 ft_location ft_fleet::get_location() const noexcept
 {
     return this->_loc;
+}
+
+double ft_fleet::get_travel_time() const noexcept
+{
+    return this->_travel_time;
+}
+
+void ft_fleet::tick(double seconds) noexcept
+{
+    if (this->_loc.type == LOCATION_TRAVEL)
+    {
+        if (this->_travel_time > seconds)
+            this->_travel_time -= seconds;
+        else
+        {
+            this->set_location_planet(this->_loc.to);
+        }
+    }
 }
 

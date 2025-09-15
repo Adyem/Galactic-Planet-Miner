@@ -13,12 +13,15 @@ private:
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
     ft_map<int, ft_sharedptr<ft_fleet> >          _fleets;
+    ft_map<int, ft_sharedptr<ft_fleet> >          _planet_fleets;
     BackendClient                                _backend;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
     ft_sharedptr<ft_fleet> get_fleet(int id);
     ft_sharedptr<const ft_fleet> get_fleet(int id) const;
+    ft_sharedptr<ft_fleet> get_planet_fleet(int id);
+    ft_sharedptr<const ft_fleet> get_planet_fleet(int id) const;
     void send_state(int planet_id, int ore_id);
 
 public:
@@ -37,9 +40,10 @@ public:
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
 
     void create_fleet(int fleet_id);
-    void remove_fleet(int fleet_id);
+    void remove_fleet(int fleet_id, int target_fleet_id = -1, int target_planet_id = -1);
     int create_ship(int fleet_id, int ship_type);
     void remove_ship(int fleet_id, int ship_uid);
+    bool transfer_ship(int from_fleet_id, int to_fleet_id, int ship_uid);
 
     void set_ship_armor(int fleet_id, int ship_uid, int value);
     int get_ship_armor(int fleet_id, int ship_uid) const;
@@ -57,9 +61,12 @@ public:
     int sub_ship_shield(int fleet_id, int ship_uid, int amount);
 
     void set_fleet_location_planet(int fleet_id, int planet_id);
-    void set_fleet_location_travel(int fleet_id, int from, int to);
+    void set_fleet_location_travel(int fleet_id, int from, int to, double time);
     void set_fleet_location_misc(int fleet_id, int misc_id);
     ft_location get_fleet_location(int fleet_id) const;
+    double get_fleet_travel_time(int fleet_id) const;
+    int get_planet_fleet_ship_hp(int planet_id, int ship_uid) const;
+    ft_location get_planet_fleet_location(int planet_id) const;
 };
 
 #endif
