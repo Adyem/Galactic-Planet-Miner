@@ -51,6 +51,21 @@ void Game::produce(double seconds)
     }
 }
 
+void Game::tick(double seconds)
+{
+    this->produce(seconds);
+    size_t count = this->_fleets.size();
+    Pair<int, ft_sharedptr<ft_fleet> > *entries = this->_fleets.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        ft_sharedptr<ft_fleet> fleet = entries[i].value;
+        ft_location loc = fleet->get_location();
+        if (loc.type == LOCATION_TRAVEL)
+            fleet->set_location_planet(loc.to);
+    }
+}
+
 ft_sharedptr<ft_planet> Game::get_planet(int id)
 {
     Pair<int, ft_sharedptr<ft_planet> > *entry = this->_planets.find(id);
@@ -179,6 +194,11 @@ void Game::create_fleet(int fleet_id)
     fleet->set_location_planet(PLANET_TERRA);
     this->_state.add_character(fleet);
     this->_fleets.insert(fleet_id, fleet);
+}
+
+void Game::remove_fleet(int fleet_id)
+{
+    this->_fleets.remove(fleet_id);
 }
 
 int Game::create_ship(int fleet_id, int ship_type)

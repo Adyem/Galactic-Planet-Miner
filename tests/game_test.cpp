@@ -55,6 +55,13 @@ int main()
     FT_ASSERT_EQ(6, game.get_ore(PLANET_TERRA, ORE_COPPER));
     FT_ASSERT_EQ(4, game.get_ore(PLANET_MARS, ORE_COPPER));
 
+    game.set_ore(PLANET_TERRA, ORE_IRON, 3);
+    game.set_ore(PLANET_MARS, ORE_IRON, 0);
+    int over = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ORE_IRON, 10);
+    FT_ASSERT_EQ(3, over);
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_TERRA, ORE_IRON));
+    FT_ASSERT_EQ(3, game.get_ore(PLANET_MARS, ORE_IRON));
+
     game.create_fleet(1);
     int ship_a = game.create_ship(1, SHIP_SHIELD);
     int ship_b = game.create_ship(1, SHIP_SHIELD);
@@ -65,11 +72,15 @@ int main()
     FT_ASSERT_EQ(100, game.get_ship_hp(1, ship_a));
     FT_ASSERT_EQ(50, game.get_ship_shield(1, ship_a));
     FT_ASSERT_EQ(25, game.get_ship_armor(1, ship_a));
+    FT_ASSERT_EQ(0, game.sub_ship_armor(1, ship_a, 30));
+    FT_ASSERT_EQ(70, game.add_ship_shield(1, ship_a, 20));
+    FT_ASSERT_EQ(0, game.sub_ship_shield(1, ship_a, 100));
     game.sub_ship_hp(1, ship_a, 40);
     FT_ASSERT_EQ(60, game.get_ship_hp(1, ship_a));
+    FT_ASSERT_EQ(90, game.add_ship_hp(1, ship_a, 30));
     game.set_ship_hp(1, ship_b, 80);
     FT_ASSERT_EQ(80, game.get_ship_hp(1, ship_b));
-    FT_ASSERT_EQ(60, game.get_ship_hp(1, ship_a));
+    FT_ASSERT_EQ(90, game.get_ship_hp(1, ship_a));
     game.set_fleet_location_planet(1, PLANET_TERRA);
     ft_location loc1 = game.get_fleet_location(1);
     FT_ASSERT_EQ(LOCATION_PLANET, loc1.type);
@@ -93,6 +104,21 @@ int main()
     game.remove_ship(1, ship_b);
     FT_ASSERT_EQ(0, game.get_ship_hp(1, ship_b));
     FT_ASSERT_EQ(0, game.add_ship_hp(1, ship_b, 10));
+
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 0);
+    game.tick(4.0);
+    FT_ASSERT_EQ(2, game.get_ore(PLANET_TERRA, ORE_COPPER));
+    ft_location loc4 = game.get_fleet_location(2);
+    FT_ASSERT_EQ(LOCATION_PLANET, loc4.type);
+    FT_ASSERT_EQ(PLANET_VULCAN, loc4.from);
+
+    game.create_fleet(3);
+    int ship_d = game.create_ship(3, SHIP_SHIELD);
+    FT_ASSERT(ship_d != 0);
+    game.remove_fleet(3);
+    FT_ASSERT_EQ(0, game.create_ship(3, SHIP_SHIELD));
+    ft_location loc5 = game.get_fleet_location(3);
+    FT_ASSERT_EQ(PLANET_TERRA, loc5.from);
 
     server_thread.join();
     return 0;
