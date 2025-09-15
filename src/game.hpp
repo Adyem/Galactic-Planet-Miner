@@ -26,6 +26,7 @@ public:
     ~Game();
 
     void produce(double seconds);
+    void tick(double seconds);
 
     int add_ore(int planet_id, int ore_id, int amount);
     int sub_ore(int planet_id, int ore_id, int amount);
@@ -36,6 +37,7 @@ public:
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
 
     void create_fleet(int fleet_id);
+    void remove_fleet(int fleet_id);
     int create_ship(int fleet_id, int ship_type);
     void remove_ship(int fleet_id, int ship_uid);
 
