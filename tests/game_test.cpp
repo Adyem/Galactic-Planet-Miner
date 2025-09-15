@@ -45,6 +45,9 @@ int main()
     double mithril_rate = game.get_rate(PLANET_MARS, ORE_MITHRIL);
     FT_ASSERT(mithril_rate > 0.049 && mithril_rate < 0.051);
 
+    game.produce(10.0);
+    FT_ASSERT_EQ(12, game.get_ore(PLANET_TERRA, ORE_IRON));
+
     game.create_fleet(1);
     int ship_a = game.create_ship(1, SHIP_SHIELD);
     int ship_b = game.create_ship(1, SHIP_SHIELD);

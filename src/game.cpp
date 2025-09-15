@@ -29,6 +29,28 @@ Game::~Game()
     return ;
 }
 
+void Game::produce(double seconds)
+{
+    int planet_ids[] = {
+        PLANET_TERRA,
+        PLANET_MARS,
+        PLANET_ZALTHOR,
+        PLANET_VULCAN,
+        PLANET_NOCTARIS_PRIME
+    };
+    size_t count = sizeof(planet_ids) / sizeof(planet_ids[0]);
+    for (size_t i = 0; i < count; ++i)
+    {
+        int planet_id = planet_ids[i];
+        ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+        if (!planet)
+            continue;
+        ft_vector<Pair<int, int> > produced = planet->produce(seconds);
+        for (size_t j = 0; j < produced.size(); ++j)
+            this->send_state(planet_id, produced[j].key);
+    }
+}
+
 ft_sharedptr<ft_planet> Game::get_planet(int id)
 {
     Pair<int, ft_sharedptr<ft_planet> > *entry = this->_planets.find(id);
