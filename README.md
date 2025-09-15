@@ -51,7 +51,7 @@ Basic components are also enumerated for future crafting systems:
 - `ITEM_MITHRIL_BAR` (1003)
 - `ITEM_ENGINE_PART` (1004)
 
-Use the helper methods in `Game` to add, subtract, set, and query ore amounts
+Use the helper methods in `Game` to add, subtract, set, transfer, and query ore amounts
 by planet ID (`PLANET_TERRA` etc.) and ore ID, and to read mining rates with
 `get_rate` or list all resources for a planet with `get_planet_resources`.
 

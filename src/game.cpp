@@ -136,6 +136,24 @@ void Game::set_ore(int planet_id, int ore_id, int amount)
     this->send_state(planet_id, ore_id);
 }
 
+int Game::transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amount)
+{
+    ft_sharedptr<ft_planet> from = this->get_planet(from_planet_id);
+    ft_sharedptr<ft_planet> to = this->get_planet(to_planet_id);
+    if (!from || !to)
+        return 0;
+    int available = from->get_resource(ore_id);
+    if (amount > available)
+        amount = available;
+    if (amount <= 0)
+        return 0;
+    from->sub_resource(ore_id, amount);
+    to->add_resource(ore_id, amount);
+    this->send_state(from_planet_id, ore_id);
+    this->send_state(to_planet_id, ore_id);
+    return amount;
+}
+
 double Game::get_rate(int planet_id, int ore_id) const
 {
     ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);

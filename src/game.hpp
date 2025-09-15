@@ -31,6 +31,7 @@ public:
     int sub_ore(int planet_id, int ore_id, int amount);
     int get_ore(int planet_id, int ore_id) const;
     void set_ore(int planet_id, int ore_id, int amount);
+    int transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amount);
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
 
