@@ -48,6 +48,13 @@ int main()
     game.produce(10.0);
     FT_ASSERT_EQ(12, game.get_ore(PLANET_TERRA, ORE_IRON));
 
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 10);
+    game.set_ore(PLANET_MARS, ORE_COPPER, 0);
+    int moved = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ORE_COPPER, 4);
+    FT_ASSERT_EQ(4, moved);
+    FT_ASSERT_EQ(6, game.get_ore(PLANET_TERRA, ORE_COPPER));
+    FT_ASSERT_EQ(4, game.get_ore(PLANET_MARS, ORE_COPPER));
+
     game.create_fleet(1);
     int ship_a = game.create_ship(1, SHIP_SHIELD);
     int ship_b = game.create_ship(1, SHIP_SHIELD);
