@@ -97,3 +97,23 @@ const ft_vector<Pair<int, double> > &ft_planet::get_resources() const noexcept
     return this->_rates;
 }
 
+ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
+{
+    ft_vector<Pair<int, int> > produced;
+    for (size_t i = 0; i < this->_rates.size(); ++i)
+    {
+        int ore_id = this->_rates[i].key;
+        double rate = this->_rates[i].value;
+        int amount = static_cast<int>(rate * seconds);
+        if (amount > 0)
+        {
+            this->add_resource(ore_id, amount);
+            Pair<int, int> entry;
+            entry.key = ore_id;
+            entry.value = amount;
+            produced.push_back(entry);
+        }
+    }
+    return produced;
+}
+

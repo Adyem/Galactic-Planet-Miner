@@ -25,6 +25,8 @@ public:
     Game(const ft_string &host, const ft_string &path);
     ~Game();
 
+    void produce(double seconds);
+
     int add_ore(int planet_id, int ore_id, int amount);
     int sub_ore(int planet_id, int ore_id, int amount);
     int get_ore(int planet_id, int ore_id) const;

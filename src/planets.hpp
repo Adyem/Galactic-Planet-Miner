@@ -61,6 +61,7 @@ public:
     void set_resource(int ore_id, int amount) noexcept;
     double get_rate(int ore_id) const noexcept;
     const ft_vector<Pair<int, double> > &get_resources() const noexcept;
+    ft_vector<Pair<int, int> > produce(double seconds) noexcept;
 };
 
 class ft_planet_terra : public ft_planet
