@@ -4,17 +4,28 @@
 #include "backend_client.hpp"
 #include "planets.hpp"
 #include "fleets.hpp"
+#include "research.hpp"
+#include "quests.hpp"
+#include "combat.hpp"
+#include "buildings.hpp"
 #include "../libft/Game/game_state.hpp"
 #include "../libft/Template/map.hpp"
+#include "../libft/Template/vector.hpp"
 
 class Game
 {
 private:
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
+    ft_map<int, ft_sharedptr<ft_planet> >         _locked_planets;
     ft_map<int, ft_sharedptr<ft_fleet> >          _fleets;
     ft_map<int, ft_sharedptr<ft_fleet> >          _planet_fleets;
     BackendClient                                _backend;
+    ResearchManager                              _research;
+    QuestManager                                 _quests;
+    CombatManager                                _combat;
+    BuildingManager                              _buildings;
+    ft_vector<ft_string>                         _lore_log;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -23,6 +34,11 @@ private:
     ft_sharedptr<ft_fleet> get_planet_fleet(int id);
     ft_sharedptr<const ft_fleet> get_planet_fleet(int id) const;
     void send_state(int planet_id, int ore_id);
+    void unlock_planet(int planet_id);
+    bool can_pay_research_cost(const ft_vector<Pair<int, int> > &costs) const;
+    void pay_research_cost(const ft_vector<Pair<int, int> > &costs);
+    void handle_research_completion(int research_id);
+    void build_quest_context(ft_quest_context &context) const;
 
 public:
     Game(const ft_string &host, const ft_string &path);
@@ -30,6 +46,42 @@ public:
 
     void produce(double seconds);
     void tick(double seconds);
+
+    bool is_planet_unlocked(int planet_id) const;
+
+    bool can_place_building(int planet_id, int building_id, int x, int y) const;
+    int place_building(int planet_id, int building_id, int x, int y);
+    bool remove_building(int planet_id, int instance_id);
+    int get_building_instance(int planet_id, int x, int y) const;
+    int get_building_count(int planet_id, int building_id) const;
+    int get_planet_plot_capacity(int planet_id) const;
+    int get_planet_plot_usage(int planet_id) const;
+    int get_planet_logistic_capacity(int planet_id) const;
+    int get_planet_logistic_usage(int planet_id) const;
+    double get_planet_energy_generation(int planet_id) const;
+    double get_planet_energy_consumption(int planet_id) const;
+    double get_planet_mine_multiplier(int planet_id) const;
+    void ensure_planet_item_slot(int planet_id, int resource_id);
+
+    bool can_start_research(int research_id) const;
+    bool start_research(int research_id);
+    int get_research_status(int research_id) const;
+    double get_research_time_remaining(int research_id) const;
+
+    int get_active_quest() const;
+    int get_quest_status(int quest_id) const;
+    double get_quest_time_remaining(int quest_id) const;
+    bool resolve_quest_choice(int quest_id, int choice_id);
+    int get_quest_choice(int quest_id) const;
+
+    bool start_raider_assault(int planet_id, double difficulty);
+    bool assign_fleet_to_assault(int planet_id, int fleet_id);
+    bool set_assault_support(int planet_id, bool sunflare_docked,
+                             bool repair_drones_active, bool shield_generator_online);
+    bool is_assault_active(int planet_id) const;
+    double get_assault_raider_shield(int planet_id) const;
+    double get_assault_raider_hull(int planet_id) const;
+    const ft_vector<ft_string> &get_lore_log() const;
 
     int add_ore(int planet_id, int ore_id, int amount);
     int sub_ore(int planet_id, int ore_id, int amount);

@@ -52,6 +52,7 @@ protected:
 
 public:
     explicit ft_planet(int id) noexcept;
+    void ensure_item_slot(int item_id) noexcept;
     void register_resource(int ore_id, double rate) noexcept;
 
     int get_id() const noexcept;

@@ -5,18 +5,34 @@ ft_planet::ft_planet(int id) noexcept : _id(id)
     this->_inventory.resize(10);
 }
 
-void ft_planet::register_resource(int ore_id, double rate) noexcept
+void ft_planet::ensure_item_slot(int item_id) noexcept
 {
-    ft_sharedptr<ft_item> item(new ft_item());
-    item->set_item_id(ore_id);
-    item->set_max_stack(1000000);
-    item->set_stack_size(0);
-    this->_inventory.add_item(item);
+    ft_sharedptr<ft_item> item = this->find_item(item_id);
+    if (item)
+        return ;
+    ft_sharedptr<ft_item> new_item(new ft_item());
+    new_item->set_item_id(item_id);
+    new_item->set_max_stack(1000000);
+    new_item->set_stack_size(0);
+    this->_inventory.add_item(new_item);
 
     Pair<int, ft_sharedptr<ft_item> > pair_item;
-    pair_item.key = ore_id;
-    pair_item.value = item;
+    pair_item.key = item_id;
+    pair_item.value = new_item;
     this->_items.push_back(pair_item);
+}
+
+void ft_planet::register_resource(int ore_id, double rate) noexcept
+{
+    this->ensure_item_slot(ore_id);
+    for (size_t i = 0; i < this->_rates.size(); ++i)
+    {
+        if (this->_rates[i].key == ore_id)
+        {
+            this->_rates[i].value = rate;
+            return ;
+        }
+    }
 
     Pair<int, double> pair_rate;
     pair_rate.key = ore_id;
