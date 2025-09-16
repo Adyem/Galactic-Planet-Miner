@@ -6,7 +6,7 @@
 #include "../libft/Template/vector.hpp"
 #include "../libft/Template/pair.hpp"
 #include "../libft/Template/shared_ptr.hpp"
-#include "../libft/Libft/ft_string.hpp"
+#include "../libft/CPP_class/class_string_class.hpp"
 
 class Game;
 
