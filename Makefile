@@ -14,6 +14,10 @@ SRC_COMMON  = \
     $(SRC_DIR)/backend_client.cpp \
     $(SRC_DIR)/planets.cpp \
     $(SRC_DIR)/fleets.cpp \
+    $(SRC_DIR)/buildings.cpp \
+    $(SRC_DIR)/combat.cpp \
+    $(SRC_DIR)/quests.cpp \
+    $(SRC_DIR)/research.cpp \
     $(SRC_DIR)/game.cpp
 SRC_MAIN    = $(SRC_DIR)/main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)

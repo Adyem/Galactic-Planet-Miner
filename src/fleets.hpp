@@ -66,6 +66,10 @@ public:
     explicit ft_fleet(int id) noexcept;
 
     int get_id() const noexcept;
+    int get_ship_count() const noexcept;
+    int get_total_ship_hp() const noexcept;
+    int get_total_ship_shield() const noexcept;
+    double get_attack_power() const noexcept;
 
     int create_ship(int ship_type) noexcept;
     void remove_ship(int ship_uid) noexcept;
@@ -86,6 +90,10 @@ public:
     int get_ship_shield(int ship_uid) const noexcept;
     int add_ship_shield(int ship_uid, int amount) noexcept;
     int sub_ship_shield(int ship_uid, int amount) noexcept;
+
+    double absorb_damage(double damage) noexcept;
+    void apply_support(int shield_amount, int repair_amount) noexcept;
+    bool has_operational_ships() const noexcept;
 
     void set_location_planet(int planet_id) noexcept;
     void set_location_travel(int from, int to, double time) noexcept;
