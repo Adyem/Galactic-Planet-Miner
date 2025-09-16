@@ -406,52 +406,50 @@ void BuildingManager::initialize_planet(Game &game, int planet_id)
 {
     if (this->_planets.find(planet_id) != ft_nullptr)
         return ;
-    ft_planet_build_state state;
-    state.planet_id = planet_id;
-    state.base_logistic = 1;
-    state.base_energy_generation = 0.0;
-    if (planet_id == PLANET_TERRA)
-    {
-        state.width = 4;
-        state.height = 4;
-    }
-    else if (planet_id == PLANET_MARS)
-    {
-        state.width = 3;
-        state.height = 3;
-    }
-    else if (planet_id == PLANET_ZALTHOR)
-    {
-        state.width = 3;
-        state.height = 4;
-    }
-    else if (planet_id == PLANET_VULCAN)
-    {
-        state.width = 4;
-        state.height = 4;
-    }
-    else
-    {
-        state.width = 4;
-        state.height = 5;
-    }
-    state.grid.resize(state.width * state.height);
-    for (size_t i = 0; i < state.grid.size(); ++i)
-        state.grid[i] = 0;
-    state.used_plots = 0;
-    state.next_instance_id = 1;
-    this->_planets.insert(planet_id, state);
+    this->_planets.insert(planet_id, ft_planet_build_state());
     Pair<int, ft_planet_build_state> *entry = this->_planets.find(planet_id);
     if (entry == ft_nullptr)
         return ;
     ft_planet_build_state &stored = entry->value;
-    stored.grid = state.grid;
-    stored.width = state.width;
-    stored.height = state.height;
-    stored.base_logistic = state.base_logistic;
-    stored.base_energy_generation = state.base_energy_generation;
+    stored.planet_id = planet_id;
+    stored.base_logistic = 1;
+    stored.base_energy_generation = 0.0;
+    if (planet_id == PLANET_TERRA)
+    {
+        stored.width = 4;
+        stored.height = 4;
+    }
+    else if (planet_id == PLANET_MARS)
+    {
+        stored.width = 3;
+        stored.height = 3;
+    }
+    else if (planet_id == PLANET_ZALTHOR)
+    {
+        stored.width = 3;
+        stored.height = 4;
+    }
+    else if (planet_id == PLANET_VULCAN)
+    {
+        stored.width = 4;
+        stored.height = 4;
+    }
+    else
+    {
+        stored.width = 4;
+        stored.height = 5;
+    }
+    stored.grid.clear();
+    stored.grid.resize(static_cast<size_t>(stored.width * stored.height), 0);
     stored.used_plots = 0;
+    stored.logistic_capacity = 0;
+    stored.logistic_usage = 0;
+    stored.energy_generation = 0.0;
+    stored.energy_consumption = 0.0;
+    stored.support_energy = 0.0;
+    stored.mine_multiplier = 1.0;
     stored.next_instance_id = 1;
+    stored.instances.clear();
     const ft_building_definition *mine = this->get_definition(BUILDING_MINE_CORE);
     if (mine != ft_nullptr)
     {
