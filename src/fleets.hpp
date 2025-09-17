@@ -6,6 +6,7 @@
 #include "../libft/Template/map.hpp"
 #include "../libft/Template/pair.hpp"
 #include "../libft/Template/shared_ptr.hpp"
+#include "../libft/Template/vector.hpp"
 #include "../libft/CPP_class/class_nullptr.hpp"
 
 enum e_ship_id
@@ -29,6 +30,24 @@ enum e_location_type
     LOCATION_MISC
 };
 
+enum e_ship_role
+{
+    SHIP_ROLE_LINE = 1,
+    SHIP_ROLE_SUPPORT,
+    SHIP_ROLE_TRANSPORT
+};
+
+enum e_ship_behavior_mode
+{
+    SHIP_BEHAVIOR_LINE_HOLD = 1,
+    SHIP_BEHAVIOR_FLANK_SWEEP,
+    SHIP_BEHAVIOR_SCREEN_SUPPORT,
+    SHIP_BEHAVIOR_CHARGE,
+    SHIP_BEHAVIOR_RETREAT,
+    SHIP_BEHAVIOR_WITHDRAW_SUPPORT,
+    SHIP_BEHAVIOR_LAST_STAND
+};
+
 struct ft_location
 {
     int type;
@@ -45,8 +64,32 @@ struct ft_ship
     int armor;
     int hp;
     int shield;
-    ft_ship() : id(0), type(0), armor(0), hp(0), shield(0) {}
-    ft_ship(int i, int t) : id(i), type(t), armor(0), hp(0), shield(0) {}
+    int max_hp;
+    int max_shield;
+    double max_speed;
+    double acceleration;
+    double turn_speed;
+    int combat_behavior;
+    int outnumbered_behavior;
+    int unescorted_behavior;
+    int low_hp_behavior;
+    int role;
+    ft_ship()
+        : id(0), type(0), armor(0), hp(0), shield(0), max_hp(0),
+          max_shield(0), max_speed(18.0), acceleration(4.0),
+          turn_speed(60.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+          outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
+          unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
+          low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
+    {}
+    ft_ship(int i, int t)
+        : id(i), type(t), armor(0), hp(0), shield(0), max_hp(0),
+          max_shield(0), max_speed(18.0), acceleration(4.0),
+          turn_speed(60.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+          outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
+          unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
+          low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
+    {}
 };
 
 class ft_fleet : public ft_character
@@ -90,6 +133,10 @@ public:
     int get_ship_shield(int ship_uid) const noexcept;
     int add_ship_shield(int ship_uid, int amount) noexcept;
     int sub_ship_shield(int ship_uid, int amount) noexcept;
+
+    void get_ship_ids(ft_vector<int> &out) const noexcept;
+    int get_ship_type(int ship_uid) const noexcept;
+    const ft_ship *get_ship(int ship_uid) const noexcept;
 
     double absorb_damage(double damage, double shield_multiplier, double hull_multiplier) noexcept;
     void apply_support(int shield_amount, int repair_amount) noexcept;

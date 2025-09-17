@@ -69,6 +69,7 @@ struct ft_planet_build_state
     double                      energy_consumption;
     double                      support_energy;
     double                      mine_multiplier;
+    double                      energy_deficit_pressure;
     int                         next_instance_id;
     ft_vector<int>              grid;
     ft_map<int, ft_building_instance> instances;
@@ -121,6 +122,7 @@ public:
     double get_planet_energy_generation(int planet_id) const;
     double get_planet_energy_consumption(int planet_id) const;
     double get_mine_multiplier(int planet_id) const;
+    double get_planet_energy_pressure(int planet_id) const;
 
     void tick(Game &game, double seconds);
 };

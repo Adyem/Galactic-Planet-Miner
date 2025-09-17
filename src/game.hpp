@@ -81,6 +81,7 @@ public:
     double get_planet_energy_generation(int planet_id) const;
     double get_planet_energy_consumption(int planet_id) const;
     double get_planet_mine_multiplier(int planet_id) const;
+    double get_planet_energy_pressure(int planet_id) const;
     void ensure_planet_item_slot(int planet_id, int resource_id);
 
     bool can_start_research(int research_id) const;
@@ -94,13 +95,19 @@ public:
     bool resolve_quest_choice(int quest_id, int choice_id);
     int get_quest_choice(int quest_id) const;
 
-    bool start_raider_assault(int planet_id, double difficulty);
+    bool start_raider_assault(int planet_id, double difficulty, int control_mode = ASSAULT_CONTROL_AUTO);
     bool assign_fleet_to_assault(int planet_id, int fleet_id);
     bool set_assault_support(int planet_id, bool sunflare_docked,
                              bool repair_drones_active, bool shield_generator_online);
+    bool set_assault_control_mode(int planet_id, int control_mode);
+    bool set_assault_aggression(int planet_id, double aggression);
+    bool trigger_assault_focus_fire(int planet_id);
+    bool request_assault_tactical_pause(int planet_id);
     bool is_assault_active(int planet_id) const;
     double get_assault_raider_shield(int planet_id) const;
     double get_assault_raider_hull(int planet_id) const;
+    bool get_assault_raider_positions(int planet_id, ft_vector<ft_ship_spatial_state> &out) const;
+    bool get_assault_defender_positions(int planet_id, ft_vector<ft_ship_spatial_state> &out) const;
     const ft_vector<ft_string> &get_lore_log() const;
 
     int add_ore(int planet_id, int ore_id, int amount);
