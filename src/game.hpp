@@ -11,6 +11,7 @@
 #include "../libft/Game/game_state.hpp"
 #include "../libft/Template/map.hpp"
 #include "../libft/Template/vector.hpp"
+#include "../libft/Template/pair.hpp"
 
 #define GAME_DIFFICULTY_EASY 1
 #define GAME_DIFFICULTY_STANDARD 2
@@ -38,6 +39,50 @@ private:
     double                                       _ship_weapon_multiplier;
     double                                       _ship_shield_multiplier;
     double                                       _ship_hull_multiplier;
+    int                                          _capital_ship_limit;
+    bool                                         _repair_drones_unlocked;
+    bool                                         _shield_support_unlocked;
+    bool                                         _escape_pod_protocol;
+    ft_map<int, bool>                            _escape_pod_rescued;
+    struct ft_supply_route
+    {
+        int     id;
+        int     origin_planet_id;
+        int     destination_planet_id;
+        double  base_travel_time;
+        int     escort_requirement;
+        double  base_raid_risk;
+        ft_supply_route()
+            : id(0), origin_planet_id(0), destination_planet_id(0),
+              base_travel_time(30.0), escort_requirement(0), base_raid_risk(0.02)
+        {}
+    };
+    struct ft_supply_convoy
+    {
+        int     id;
+        int     route_id;
+        int     origin_planet_id;
+        int     destination_planet_id;
+        int     resource_id;
+        int     amount;
+        double  remaining_time;
+        double  raid_meter;
+        int     origin_escort;
+        int     destination_escort;
+        bool    raided;
+        bool    destroyed;
+        ft_supply_convoy()
+            : id(0), route_id(0), origin_planet_id(0), destination_planet_id(0),
+              resource_id(0), amount(0), remaining_time(0.0), raid_meter(0.0),
+              origin_escort(0), destination_escort(0), raided(false),
+              destroyed(false)
+        {}
+    };
+    ft_map<int, ft_supply_route>                 _supply_routes;
+    ft_map<int, int>                             _route_lookup;
+    ft_map<int, ft_supply_convoy>                _active_convoys;
+    int                                          _next_route_id;
+    int                                          _next_convoy_id;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -57,6 +102,23 @@ private:
     void handle_quest_choice_resolution(int quest_id, int choice_id);
     void configure_difficulty(int difficulty);
     void update_combat_modifiers();
+    int count_capital_ships_in_collection(const ft_map<int, ft_sharedptr<ft_fleet> > &collection) const;
+    int count_capital_ships() const;
+    void clear_escape_pod_records(const ft_fleet &fleet);
+    bool is_ship_type_available(int ship_type) const;
+    int compose_route_key(int origin, int destination) const;
+    ft_supply_route *ensure_supply_route(int origin, int destination);
+    const ft_supply_route *get_route_by_id(int route_id) const;
+    double estimate_route_travel_time(int origin, int destination) const;
+    int estimate_route_escort_requirement(int origin, int destination) const;
+    double estimate_route_raid_risk(int origin, int destination) const;
+    int calculate_planet_escort_rating(int planet_id) const;
+    int calculate_fleet_escort_rating(const ft_fleet &fleet) const;
+    double calculate_convoy_travel_time(const ft_supply_route &route, int origin_escort, int destination_escort) const;
+    double calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack) const;
+    void handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack);
+    void finalize_convoy(const ft_supply_convoy &convoy);
+    void advance_convoys(double seconds);
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -117,6 +179,7 @@ public:
     int transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amount);
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
+    int get_active_convoy_count() const;
 
     double get_ship_weapon_multiplier() const { return this->_ship_weapon_multiplier; }
     double get_ship_shield_multiplier() const { return this->_ship_shield_multiplier; }

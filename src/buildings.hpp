@@ -20,7 +20,18 @@ enum e_building_id
     BUILDING_TRANSFER_NODE,
     BUILDING_POWER_GENERATOR,
     BUILDING_SOLAR_ARRAY,
-    BUILDING_UPGRADE_STATION
+    BUILDING_UPGRADE_STATION,
+    BUILDING_FACILITY_WORKSHOP,
+    BUILDING_SHIPYARD,
+    BUILDING_PROXIMITY_RADAR,
+    BUILDING_MOBILE_RADAR,
+    BUILDING_SHIELD_GENERATOR,
+    BUILDING_TRITIUM_EXTRACTOR,
+    BUILDING_DEFENSE_TURRET,
+    BUILDING_PLASMA_TURRET,
+    BUILDING_RAILGUN_TURRET,
+    BUILDING_FLAGSHIP_DOCK,
+    BUILDING_HELIOS_BEACON
 };
 
 struct ft_building_definition
@@ -82,11 +93,15 @@ class BuildingManager
 private:
     ft_map<int, ft_sharedptr<ft_building_definition> > _definitions;
     ft_map<int, ft_planet_build_state>                  _planets;
-    bool                                               _solar_panels_unlocked;
+    ft_map<int, bool>                                   _building_unlocks;
     double                                             _crafting_energy_multiplier;
+    double                                             _crafting_speed_multiplier;
+    double                                             _global_energy_multiplier;
 
     void register_definition(const ft_sharedptr<ft_building_definition> &definition);
     const ft_building_definition *get_definition(int building_id) const;
+    void set_building_unlocked(int building_id, bool unlocked);
+    bool is_building_unlocked(int building_id) const;
     bool is_area_free(const ft_planet_build_state &state, int x, int y, int width, int height) const;
     void occupy_area(ft_planet_build_state &state, int instance_id, int x, int y, int width, int height);
     void clear_area(ft_planet_build_state &state, int instance_id);
@@ -105,8 +120,10 @@ public:
 
     void initialize_planet(Game &game, int planet_id);
     void add_planet_logistic_bonus(int planet_id, int amount);
-    void unlock_solar_panels();
+    void apply_research_unlock(int research_id);
     void set_crafting_energy_multiplier(double multiplier);
+    void set_crafting_speed_multiplier(double multiplier);
+    void set_global_energy_multiplier(double multiplier);
 
     int place_building(Game &game, int planet_id, int building_id, int x, int y);
     bool remove_building(Game &game, int planet_id, int instance_id);

@@ -2,7 +2,7 @@
 
 ft_planet::ft_planet(int id) noexcept : _id(id)
 {
-    this->_inventory.resize(10);
+    this->_inventory.resize(32);
 }
 
 void ft_planet::ensure_item_slot(int item_id) noexcept

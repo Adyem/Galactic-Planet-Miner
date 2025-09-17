@@ -14,7 +14,17 @@ enum e_ship_id
     SHIP_SHIELD = 1,
     SHIP_RADAR,
     SHIP_SALVAGE,
-    SHIP_CAPITAL
+    SHIP_CAPITAL,
+    SHIP_TRANSPORT,
+    SHIP_CORVETTE,
+    SHIP_INTERCEPTOR,
+    SHIP_REPAIR_DRONE,
+    SHIP_SUNFLARE_SLOOP,
+    SHIP_FRIGATE_ESCORT,
+    SHIP_FRIGATE_SUPPORT,
+    SHIP_CAPITAL_CARRIER,
+    SHIP_CAPITAL_DREADNOUGHT,
+    SHIP_CAPITAL_BATTLESHIP = SHIP_CAPITAL
 };
 
 enum e_misc_location_id
@@ -149,5 +159,8 @@ public:
     double get_travel_time() const noexcept;
     void tick(double seconds) noexcept;
 };
+
+bool is_capital_ship_type(int ship_type) noexcept;
+
 
 #endif

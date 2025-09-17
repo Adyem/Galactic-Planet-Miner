@@ -14,7 +14,8 @@ enum e_planet_id
     PLANET_MARS,
     PLANET_ZALTHOR,
     PLANET_VULCAN,
-    PLANET_NOCTARIS_PRIME
+    PLANET_NOCTARIS_PRIME,
+    PLANET_LUNA
 };
 
 enum e_ore_id
@@ -29,7 +30,8 @@ enum e_ore_id
     ORE_TITANIUM,
     ORE_OBSIDIAN,
     ORE_CRYSTAL,
-    ORE_NANOMATERIAL
+    ORE_NANOMATERIAL,
+    ORE_TRITIUM
 };
 
 enum e_component_id
@@ -37,7 +39,11 @@ enum e_component_id
     ITEM_IRON_BAR = 1001,
     ITEM_COPPER_BAR,
     ITEM_MITHRIL_BAR,
-    ITEM_ENGINE_PART
+    ITEM_ENGINE_PART,
+    ITEM_TITANIUM_BAR,
+    ITEM_ADVANCED_ENGINE_PART,
+    ITEM_FUSION_REACTOR,
+    ITEM_ACCUMULATOR
 };
 
 class ft_planet : public ft_character
@@ -118,6 +124,17 @@ public:
         this->register_resource(ORE_OBSIDIAN, 0.1);
         this->register_resource(ORE_CRYSTAL, 0.05);
         this->register_resource(ORE_NANOMATERIAL, 0.02);
+    }
+};
+
+class ft_planet_luna : public ft_planet
+{
+public:
+    ft_planet_luna() noexcept : ft_planet(PLANET_LUNA)
+    {
+        this->register_resource(ORE_IRON, 0.12);
+        this->register_resource(ORE_TITANIUM, 0.04);
+        this->register_resource(ORE_CRYSTAL, 0.02);
     }
 };
 

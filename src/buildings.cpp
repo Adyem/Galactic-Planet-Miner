@@ -1,5 +1,6 @@
 #include "buildings.hpp"
 #include "game.hpp"
+#include "research.hpp"
 #include "../libft/Libft/libft.hpp"
 
 ft_planet_build_state::ft_planet_build_state()
@@ -13,8 +14,10 @@ ft_planet_build_state::ft_planet_build_state()
 BuildingManager::BuildingManager()
     : _definitions(),
       _planets(),
-      _solar_panels_unlocked(false),
-      _crafting_energy_multiplier(1.0)
+      _building_unlocks(),
+      _crafting_energy_multiplier(1.0),
+      _crafting_speed_multiplier(1.0),
+      _global_energy_multiplier(1.0)
 {
     ft_sharedptr<ft_building_definition> mine(new ft_building_definition());
     mine->id = BUILDING_MINE_CORE;
@@ -256,11 +259,384 @@ BuildingManager::BuildingManager()
     upgrade->occupies_grid = true;
     upgrade->removable = true;
     this->register_definition(upgrade);
+
+    ft_sharedptr<ft_building_definition> workshop(new ft_building_definition());
+    workshop->id = BUILDING_FACILITY_WORKSHOP;
+    workshop->name = ft_string("Facility Workshop");
+    workshop->width = 3;
+    workshop->height = 3;
+    workshop->logistic_cost = 3;
+    workshop->logistic_gain = 0;
+    workshop->energy_cost = 5.0;
+    workshop->energy_gain = 0.0;
+    workshop->cycle_time = 12.0;
+    workshop->inputs.clear();
+    recipe.key = ITEM_IRON_BAR;
+    recipe.value = 3;
+    workshop->inputs.push_back(recipe);
+    recipe.key = ITEM_COPPER_BAR;
+    recipe.value = 2;
+    workshop->inputs.push_back(recipe);
+    recipe.key = ITEM_MITHRIL_BAR;
+    recipe.value = 1;
+    workshop->inputs.push_back(recipe);
+    workshop->outputs.clear();
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 1;
+    workshop->outputs.push_back(recipe);
+    workshop->build_costs.clear();
+    recipe.key = ITEM_IRON_BAR;
+    recipe.value = 12;
+    workshop->build_costs.push_back(recipe);
+    recipe.key = ITEM_COPPER_BAR;
+    recipe.value = 8;
+    workshop->build_costs.push_back(recipe);
+    recipe.key = ITEM_ENGINE_PART;
+    recipe.value = 4;
+    workshop->build_costs.push_back(recipe);
+    workshop->mine_bonus = 0.0;
+    workshop->unique = false;
+    workshop->occupies_grid = true;
+    workshop->removable = true;
+    this->register_definition(workshop);
+
+    ft_sharedptr<ft_building_definition> shipyard(new ft_building_definition());
+    shipyard->id = BUILDING_SHIPYARD;
+    shipyard->name = ft_string("Orbital Shipyard");
+    shipyard->width = 4;
+    shipyard->height = 3;
+    shipyard->logistic_cost = 4;
+    shipyard->logistic_gain = 0;
+    shipyard->energy_cost = 8.0;
+    shipyard->energy_gain = 0.0;
+    shipyard->cycle_time = 18.0;
+    shipyard->inputs.clear();
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 2;
+    shipyard->inputs.push_back(recipe);
+    recipe.key = ITEM_TITANIUM_BAR;
+    recipe.value = 3;
+    shipyard->inputs.push_back(recipe);
+    recipe.key = ITEM_ACCUMULATOR;
+    recipe.value = 1;
+    shipyard->inputs.push_back(recipe);
+    shipyard->outputs.clear();
+    recipe.key = ITEM_FUSION_REACTOR;
+    recipe.value = 1;
+    shipyard->outputs.push_back(recipe);
+    shipyard->build_costs.clear();
+    recipe.key = ITEM_TITANIUM_BAR;
+    recipe.value = 10;
+    shipyard->build_costs.push_back(recipe);
+    recipe.key = ORE_GOLD;
+    recipe.value = 6;
+    shipyard->build_costs.push_back(recipe);
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 4;
+    shipyard->build_costs.push_back(recipe);
+    shipyard->mine_bonus = 0.0;
+    shipyard->unique = false;
+    shipyard->occupies_grid = true;
+    shipyard->removable = true;
+    this->register_definition(shipyard);
+
+    ft_sharedptr<ft_building_definition> proximity_radar(new ft_building_definition());
+    proximity_radar->id = BUILDING_PROXIMITY_RADAR;
+    proximity_radar->name = ft_string("Proximity Radar Array");
+    proximity_radar->width = 2;
+    proximity_radar->height = 2;
+    proximity_radar->logistic_cost = 0;
+    proximity_radar->logistic_gain = 1;
+    proximity_radar->energy_cost = 1.0;
+    proximity_radar->energy_gain = 0.0;
+    proximity_radar->cycle_time = 0.0;
+    proximity_radar->inputs.clear();
+    proximity_radar->outputs.clear();
+    proximity_radar->build_costs.clear();
+    recipe.key = ITEM_IRON_BAR;
+    recipe.value = 6;
+    proximity_radar->build_costs.push_back(recipe);
+    recipe.key = ITEM_COPPER_BAR;
+    recipe.value = 6;
+    proximity_radar->build_costs.push_back(recipe);
+    proximity_radar->mine_bonus = 0.0;
+    proximity_radar->unique = false;
+    proximity_radar->occupies_grid = true;
+    proximity_radar->removable = true;
+    this->register_definition(proximity_radar);
+
+    ft_sharedptr<ft_building_definition> mobile_radar(new ft_building_definition());
+    mobile_radar->id = BUILDING_MOBILE_RADAR;
+    mobile_radar->name = ft_string("Mobile Defense Radar");
+    mobile_radar->width = 2;
+    mobile_radar->height = 2;
+    mobile_radar->logistic_cost = 0;
+    mobile_radar->logistic_gain = 2;
+    mobile_radar->energy_cost = 1.5;
+    mobile_radar->energy_gain = 0.0;
+    mobile_radar->cycle_time = 0.0;
+    mobile_radar->inputs.clear();
+    mobile_radar->outputs.clear();
+    mobile_radar->build_costs.clear();
+    recipe.key = ITEM_COPPER_BAR;
+    recipe.value = 10;
+    mobile_radar->build_costs.push_back(recipe);
+    recipe.key = ITEM_MITHRIL_BAR;
+    recipe.value = 4;
+    mobile_radar->build_costs.push_back(recipe);
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 2;
+    mobile_radar->build_costs.push_back(recipe);
+    mobile_radar->mine_bonus = 0.0;
+    mobile_radar->unique = false;
+    mobile_radar->occupies_grid = true;
+    mobile_radar->removable = true;
+    this->register_definition(mobile_radar);
+
+    ft_sharedptr<ft_building_definition> shield_generator(new ft_building_definition());
+    shield_generator->id = BUILDING_SHIELD_GENERATOR;
+    shield_generator->name = ft_string("Shield Generator");
+    shield_generator->width = 3;
+    shield_generator->height = 3;
+    shield_generator->logistic_cost = 0;
+    shield_generator->logistic_gain = 0;
+    shield_generator->energy_cost = 6.0;
+    shield_generator->energy_gain = 0.0;
+    shield_generator->cycle_time = 0.0;
+    shield_generator->inputs.clear();
+    shield_generator->outputs.clear();
+    shield_generator->build_costs.clear();
+    recipe.key = ITEM_TITANIUM_BAR;
+    recipe.value = 8;
+    shield_generator->build_costs.push_back(recipe);
+    recipe.key = ITEM_ACCUMULATOR;
+    recipe.value = 4;
+    shield_generator->build_costs.push_back(recipe);
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 2;
+    shield_generator->build_costs.push_back(recipe);
+    shield_generator->mine_bonus = 0.0;
+    shield_generator->unique = false;
+    shield_generator->occupies_grid = true;
+    shield_generator->removable = true;
+    this->register_definition(shield_generator);
+
+    ft_sharedptr<ft_building_definition> tritium_extractor(new ft_building_definition());
+    tritium_extractor->id = BUILDING_TRITIUM_EXTRACTOR;
+    tritium_extractor->name = ft_string("Tritium Extractor");
+    tritium_extractor->width = 2;
+    tritium_extractor->height = 2;
+    tritium_extractor->logistic_cost = 2;
+    tritium_extractor->logistic_gain = 0;
+    tritium_extractor->energy_cost = 4.0;
+    tritium_extractor->energy_gain = 0.0;
+    tritium_extractor->cycle_time = 10.0;
+    tritium_extractor->inputs.clear();
+    recipe.key = ORE_OBSIDIAN;
+    recipe.value = 2;
+    tritium_extractor->inputs.push_back(recipe);
+    recipe.key = ORE_CRYSTAL;
+    recipe.value = 1;
+    tritium_extractor->inputs.push_back(recipe);
+    tritium_extractor->outputs.clear();
+    recipe.key = ORE_TRITIUM;
+    recipe.value = 1;
+    tritium_extractor->outputs.push_back(recipe);
+    tritium_extractor->build_costs.clear();
+    recipe.key = ORE_OBSIDIAN;
+    recipe.value = 8;
+    tritium_extractor->build_costs.push_back(recipe);
+    recipe.key = ORE_CRYSTAL;
+    recipe.value = 6;
+    tritium_extractor->build_costs.push_back(recipe);
+    recipe.key = ITEM_ACCUMULATOR;
+    recipe.value = 2;
+    tritium_extractor->build_costs.push_back(recipe);
+    tritium_extractor->mine_bonus = 0.0;
+    tritium_extractor->unique = false;
+    tritium_extractor->occupies_grid = true;
+    tritium_extractor->removable = true;
+    this->register_definition(tritium_extractor);
+
+    ft_sharedptr<ft_building_definition> defense_turret(new ft_building_definition());
+    defense_turret->id = BUILDING_DEFENSE_TURRET;
+    defense_turret->name = ft_string("Defense Turret");
+    defense_turret->width = 1;
+    defense_turret->height = 1;
+    defense_turret->logistic_cost = 0;
+    defense_turret->logistic_gain = 0;
+    defense_turret->energy_cost = 1.5;
+    defense_turret->energy_gain = 0.0;
+    defense_turret->cycle_time = 0.0;
+    defense_turret->inputs.clear();
+    defense_turret->outputs.clear();
+    defense_turret->build_costs.clear();
+    recipe.key = ITEM_IRON_BAR;
+    recipe.value = 5;
+    defense_turret->build_costs.push_back(recipe);
+    recipe.key = ITEM_ENGINE_PART;
+    recipe.value = 2;
+    defense_turret->build_costs.push_back(recipe);
+    defense_turret->mine_bonus = 0.0;
+    defense_turret->unique = false;
+    defense_turret->occupies_grid = true;
+    defense_turret->removable = true;
+    this->register_definition(defense_turret);
+
+    ft_sharedptr<ft_building_definition> plasma_turret(new ft_building_definition());
+    plasma_turret->id = BUILDING_PLASMA_TURRET;
+    plasma_turret->name = ft_string("Plasma Turret");
+    plasma_turret->width = 2;
+    plasma_turret->height = 1;
+    plasma_turret->logistic_cost = 0;
+    plasma_turret->logistic_gain = 0;
+    plasma_turret->energy_cost = 3.0;
+    plasma_turret->energy_gain = 0.0;
+    plasma_turret->cycle_time = 0.0;
+    plasma_turret->inputs.clear();
+    plasma_turret->outputs.clear();
+    plasma_turret->build_costs.clear();
+    recipe.key = ITEM_MITHRIL_BAR;
+    recipe.value = 6;
+    plasma_turret->build_costs.push_back(recipe);
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 2;
+    plasma_turret->build_costs.push_back(recipe);
+    recipe.key = ITEM_ACCUMULATOR;
+    recipe.value = 1;
+    plasma_turret->build_costs.push_back(recipe);
+    plasma_turret->mine_bonus = 0.0;
+    plasma_turret->unique = false;
+    plasma_turret->occupies_grid = true;
+    plasma_turret->removable = true;
+    this->register_definition(plasma_turret);
+
+    ft_sharedptr<ft_building_definition> railgun_turret(new ft_building_definition());
+    railgun_turret->id = BUILDING_RAILGUN_TURRET;
+    railgun_turret->name = ft_string("Railgun Turret");
+    railgun_turret->width = 2;
+    railgun_turret->height = 2;
+    railgun_turret->logistic_cost = 0;
+    railgun_turret->logistic_gain = 0;
+    railgun_turret->energy_cost = 4.5;
+    railgun_turret->energy_gain = 0.0;
+    railgun_turret->cycle_time = 0.0;
+    railgun_turret->inputs.clear();
+    railgun_turret->outputs.clear();
+    railgun_turret->build_costs.clear();
+    recipe.key = ITEM_TITANIUM_BAR;
+    recipe.value = 8;
+    railgun_turret->build_costs.push_back(recipe);
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 3;
+    railgun_turret->build_costs.push_back(recipe);
+    recipe.key = ITEM_FUSION_REACTOR;
+    recipe.value = 1;
+    railgun_turret->build_costs.push_back(recipe);
+    railgun_turret->mine_bonus = 0.0;
+    railgun_turret->unique = false;
+    railgun_turret->occupies_grid = true;
+    railgun_turret->removable = true;
+    this->register_definition(railgun_turret);
+
+    ft_sharedptr<ft_building_definition> flagship_dock(new ft_building_definition());
+    flagship_dock->id = BUILDING_FLAGSHIP_DOCK;
+    flagship_dock->name = ft_string("Flagship Dock");
+    flagship_dock->width = 4;
+    flagship_dock->height = 4;
+    flagship_dock->logistic_cost = 0;
+    flagship_dock->logistic_gain = 2;
+    flagship_dock->energy_cost = 5.0;
+    flagship_dock->energy_gain = 0.0;
+    flagship_dock->cycle_time = 0.0;
+    flagship_dock->inputs.clear();
+    flagship_dock->outputs.clear();
+    flagship_dock->build_costs.clear();
+    recipe.key = ITEM_TITANIUM_BAR;
+    recipe.value = 12;
+    flagship_dock->build_costs.push_back(recipe);
+    recipe.key = ORE_NANOMATERIAL;
+    recipe.value = 6;
+    flagship_dock->build_costs.push_back(recipe);
+    recipe.key = ITEM_FUSION_REACTOR;
+    recipe.value = 1;
+    flagship_dock->build_costs.push_back(recipe);
+    flagship_dock->mine_bonus = 0.0;
+    flagship_dock->unique = true;
+    flagship_dock->occupies_grid = true;
+    flagship_dock->removable = true;
+    this->register_definition(flagship_dock);
+
+    ft_sharedptr<ft_building_definition> helios_beacon(new ft_building_definition());
+    helios_beacon->id = BUILDING_HELIOS_BEACON;
+    helios_beacon->name = ft_string("Helios Beacon");
+    helios_beacon->width = 2;
+    helios_beacon->height = 3;
+    helios_beacon->logistic_cost = 0;
+    helios_beacon->logistic_gain = 3;
+    helios_beacon->energy_cost = 4.0;
+    helios_beacon->energy_gain = 2.0;
+    helios_beacon->cycle_time = 0.0;
+    helios_beacon->inputs.clear();
+    helios_beacon->outputs.clear();
+    helios_beacon->build_costs.clear();
+    recipe.key = ITEM_FUSION_REACTOR;
+    recipe.value = 1;
+    helios_beacon->build_costs.push_back(recipe);
+    recipe.key = ORE_CRYSTAL;
+    recipe.value = 10;
+    helios_beacon->build_costs.push_back(recipe);
+    recipe.key = ORE_TRITIUM;
+    recipe.value = 6;
+    helios_beacon->build_costs.push_back(recipe);
+    helios_beacon->mine_bonus = 0.0;
+    helios_beacon->unique = true;
+    helios_beacon->occupies_grid = true;
+    helios_beacon->removable = true;
+    this->register_definition(helios_beacon);
+
+    this->set_building_unlocked(BUILDING_MINE_CORE, true);
+    this->set_building_unlocked(BUILDING_SMELTER, true);
+    this->set_building_unlocked(BUILDING_PROCESSOR, true);
+    this->set_building_unlocked(BUILDING_CRAFTING_BAY, true);
+    this->set_building_unlocked(BUILDING_CONVEYOR, true);
+    this->set_building_unlocked(BUILDING_TRANSFER_NODE, true);
+    this->set_building_unlocked(BUILDING_POWER_GENERATOR, true);
+    this->set_building_unlocked(BUILDING_SOLAR_ARRAY, false);
+    this->set_building_unlocked(BUILDING_UPGRADE_STATION, true);
+    this->set_building_unlocked(BUILDING_FACILITY_WORKSHOP, false);
+    this->set_building_unlocked(BUILDING_SHIPYARD, false);
+    this->set_building_unlocked(BUILDING_PROXIMITY_RADAR, false);
+    this->set_building_unlocked(BUILDING_MOBILE_RADAR, false);
+    this->set_building_unlocked(BUILDING_SHIELD_GENERATOR, false);
+    this->set_building_unlocked(BUILDING_TRITIUM_EXTRACTOR, false);
+    this->set_building_unlocked(BUILDING_DEFENSE_TURRET, false);
+    this->set_building_unlocked(BUILDING_PLASMA_TURRET, false);
+    this->set_building_unlocked(BUILDING_RAILGUN_TURRET, false);
+    this->set_building_unlocked(BUILDING_FLAGSHIP_DOCK, false);
+    this->set_building_unlocked(BUILDING_HELIOS_BEACON, false);
 }
 
 void BuildingManager::register_definition(const ft_sharedptr<ft_building_definition> &definition)
 {
     this->_definitions.insert(definition->id, definition);
+}
+
+void BuildingManager::set_building_unlocked(int building_id, bool unlocked)
+{
+    Pair<int, bool> *entry = this->_building_unlocks.find(building_id);
+    if (entry == ft_nullptr)
+        this->_building_unlocks.insert(building_id, unlocked);
+    else
+        entry->value = unlocked;
+}
+
+bool BuildingManager::is_building_unlocked(int building_id) const
+{
+    const Pair<int, bool> *entry = this->_building_unlocks.find(building_id);
+    if (entry == ft_nullptr)
+        return true;
+    return entry->value;
 }
 
 const ft_building_definition *BuildingManager::get_definition(int building_id) const
@@ -500,6 +876,11 @@ void BuildingManager::initialize_planet(Game &game, int planet_id)
     game.ensure_planet_item_slot(planet_id, ITEM_COPPER_BAR);
     game.ensure_planet_item_slot(planet_id, ITEM_MITHRIL_BAR);
     game.ensure_planet_item_slot(planet_id, ITEM_ENGINE_PART);
+    game.ensure_planet_item_slot(planet_id, ITEM_TITANIUM_BAR);
+    game.ensure_planet_item_slot(planet_id, ITEM_ADVANCED_ENGINE_PART);
+    game.ensure_planet_item_slot(planet_id, ITEM_FUSION_REACTOR);
+    game.ensure_planet_item_slot(planet_id, ITEM_ACCUMULATOR);
+    game.ensure_planet_item_slot(planet_id, ORE_TRITIUM);
 }
 
 void BuildingManager::add_planet_logistic_bonus(int planet_id, int amount)
@@ -515,9 +896,34 @@ void BuildingManager::add_planet_logistic_bonus(int planet_id, int amount)
     recalculate_planet_statistics(*state);
 }
 
-void BuildingManager::unlock_solar_panels()
+void BuildingManager::apply_research_unlock(int research_id)
 {
-    this->_solar_panels_unlocked = true;
+    if (research_id == RESEARCH_SOLAR_PANELS)
+        this->set_building_unlocked(BUILDING_SOLAR_ARRAY, true);
+    else if (research_id == RESEARCH_CRAFTING_MASTERY)
+    {
+        this->set_building_unlocked(BUILDING_FACILITY_WORKSHOP, true);
+        this->set_building_unlocked(BUILDING_SHIPYARD, true);
+    }
+    else if (research_id == RESEARCH_DEFENSIVE_FORTIFICATION_I)
+    {
+        this->set_building_unlocked(BUILDING_PROXIMITY_RADAR, true);
+        this->set_building_unlocked(BUILDING_DEFENSE_TURRET, true);
+    }
+    else if (research_id == RESEARCH_DEFENSIVE_FORTIFICATION_II)
+        this->set_building_unlocked(BUILDING_MOBILE_RADAR, true);
+    else if (research_id == RESEARCH_DEFENSIVE_FORTIFICATION_III)
+        this->set_building_unlocked(BUILDING_HELIOS_BEACON, true);
+    else if (research_id == RESEARCH_ARMAMENT_ENHANCEMENT_I)
+        this->set_building_unlocked(BUILDING_PLASMA_TURRET, true);
+    else if (research_id == RESEARCH_ARMAMENT_ENHANCEMENT_III)
+        this->set_building_unlocked(BUILDING_RAILGUN_TURRET, true);
+    else if (research_id == RESEARCH_SHIELD_TECHNOLOGY)
+        this->set_building_unlocked(BUILDING_SHIELD_GENERATOR, true);
+    else if (research_id == RESEARCH_TRITIUM_EXTRACTION)
+        this->set_building_unlocked(BUILDING_TRITIUM_EXTRACTOR, true);
+    else if (research_id == RESEARCH_CAPITAL_SHIP_INITIATIVE)
+        this->set_building_unlocked(BUILDING_FLAGSHIP_DOCK, true);
 }
 
 void BuildingManager::set_crafting_energy_multiplier(double multiplier)
@@ -525,6 +931,20 @@ void BuildingManager::set_crafting_energy_multiplier(double multiplier)
     if (multiplier <= 0.0)
         multiplier = 1.0;
     this->_crafting_energy_multiplier = multiplier;
+}
+
+void BuildingManager::set_crafting_speed_multiplier(double multiplier)
+{
+    if (multiplier <= 0.0)
+        multiplier = 1.0;
+    this->_crafting_speed_multiplier = multiplier;
+}
+
+void BuildingManager::set_global_energy_multiplier(double multiplier)
+{
+    if (multiplier <= 0.0)
+        multiplier = 1.0;
+    this->_global_energy_multiplier = multiplier;
 }
 
 int BuildingManager::place_building(Game &game, int planet_id, int building_id, int x, int y)
@@ -535,7 +955,7 @@ int BuildingManager::place_building(Game &game, int planet_id, int building_id, 
     const ft_building_definition *definition = this->get_definition(building_id);
     if (definition == ft_nullptr)
         return 0;
-    if (building_id == BUILDING_SOLAR_ARRAY && !this->_solar_panels_unlocked)
+    if (!this->is_building_unlocked(building_id))
         return 0;
     if (definition->unique && this->get_building_count(planet_id, building_id) > 0)
         return 0;
@@ -587,7 +1007,7 @@ bool BuildingManager::can_place_building(const Game &game, int planet_id, int bu
     const ft_building_definition *definition = this->get_definition(building_id);
     if (definition == ft_nullptr)
         return false;
-    if (building_id == BUILDING_SOLAR_ARRAY && !this->_solar_panels_unlocked)
+    if (!this->is_building_unlocked(building_id))
         return false;
     if (definition->unique && this->get_building_count(planet_id, building_id) > 0)
         return false;
@@ -723,7 +1143,7 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
             if (state.logistic_usage + definition->logistic_cost > state.logistic_capacity)
                 can_run = false;
         }
-        double energy_cost = definition->energy_cost;
+        double energy_cost = definition->energy_cost * this->_global_energy_multiplier;
         if (definition->cycle_time > 0.0 && definition->outputs.size() > 0)
             energy_cost *= this->_crafting_energy_multiplier;
         if (energy_cost > 0.0)
@@ -760,7 +1180,10 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
             continue;
         if (!instance.active)
             continue;
-        instance.progress += seconds;
+        double elapsed = seconds;
+        if (definition->cycle_time > 0.0 && definition->outputs.size() > 0)
+            elapsed *= this->_crafting_speed_multiplier;
+        instance.progress += elapsed;
         while (instance.progress >= definition->cycle_time)
         {
             if (!this->consume_inputs(game, state.planet_id, definition->inputs))
