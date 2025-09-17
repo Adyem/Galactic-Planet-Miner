@@ -94,6 +94,13 @@ int validate_initial_campaign_flow(Game &game)
     double mithril_rate = game.get_rate(PLANET_MARS, ORE_MITHRIL);
     FT_ASSERT(mithril_rate > 0.049 && mithril_rate < 0.051);
 
+    game.set_ore(PLANET_MARS, ORE_IRON, 0);
+    game.set_ore(PLANET_MARS, ORE_COPPER, 0);
+    game.set_ore(PLANET_MARS, ORE_MITHRIL, 0);
+    game.set_ore(PLANET_MARS, ORE_COAL, 0);
+    game.produce(40.0);
+    FT_ASSERT(game.get_ore(PLANET_MARS, ORE_MITHRIL) >= 2);
+
     FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_UNLOCK_LUNA));
     game.set_ore(PLANET_TERRA, ORE_IRON, 70);
     game.set_ore(PLANET_TERRA, ORE_COPPER, 50);
