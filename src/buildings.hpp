@@ -19,6 +19,7 @@ enum e_building_id
     BUILDING_CONVEYOR,
     BUILDING_TRANSFER_NODE,
     BUILDING_POWER_GENERATOR,
+    BUILDING_SOLAR_ARRAY,
     BUILDING_UPGRADE_STATION
 };
 
@@ -59,6 +60,7 @@ struct ft_planet_build_state
     int                         width;
     int                         height;
     int                         base_logistic;
+    int                         research_logistic_bonus;
     int                         used_plots;
     int                         logistic_capacity;
     int                         logistic_usage;
@@ -79,6 +81,8 @@ class BuildingManager
 private:
     ft_map<int, ft_sharedptr<ft_building_definition> > _definitions;
     ft_map<int, ft_planet_build_state>                  _planets;
+    bool                                               _solar_panels_unlocked;
+    double                                             _crafting_energy_multiplier;
 
     void register_definition(const ft_sharedptr<ft_building_definition> &definition);
     const ft_building_definition *get_definition(int building_id) const;
@@ -99,6 +103,9 @@ public:
     BuildingManager();
 
     void initialize_planet(Game &game, int planet_id);
+    void add_planet_logistic_bonus(int planet_id, int amount);
+    void unlock_solar_panels();
+    void set_crafting_energy_multiplier(double multiplier);
 
     int place_building(Game &game, int planet_id, int building_id, int x, int y);
     bool remove_building(Game &game, int planet_id, int instance_id);

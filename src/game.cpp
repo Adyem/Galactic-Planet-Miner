@@ -2,8 +2,16 @@
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
 
-Game::Game(const ft_string &host, const ft_string &path)
-    : _backend(host, path)
+Game::Game(const ft_string &host, const ft_string &path, int difficulty)
+    : _backend(host, path),
+      _difficulty(GAME_DIFFICULTY_STANDARD),
+      _resource_multiplier(1.0),
+      _quest_time_scale(1.0),
+      _research_duration_scale(1.0),
+      _assault_difficulty_multiplier(1.0),
+      _ship_weapon_multiplier(1.0),
+      _ship_shield_multiplier(1.0),
+      _ship_hull_multiplier(1.0)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -19,6 +27,8 @@ Game::Game(const ft_string &host, const ft_string &path)
     this->_locked_planets.insert(PLANET_ZALTHOR, zalthor);
     this->_locked_planets.insert(PLANET_VULCAN, vulcan);
     this->_locked_planets.insert(PLANET_NOCTARIS_PRIME, noctaris);
+
+    this->configure_difficulty(difficulty);
 }
 
 Game::~Game()
@@ -46,15 +56,43 @@ void Game::produce(double seconds)
         double mine_multiplier = this->_buildings.get_mine_multiplier(planet_id);
         for (size_t j = 0; j < produced.size(); ++j)
         {
-            this->send_state(planet_id, produced[j].key);
-            if (mine_multiplier > 1.0)
+            int ore_id = produced[j].key;
+            int base_amount = produced[j].value;
+            int final_amount = base_amount;
+            if (base_amount > 0)
             {
-                double bonus_amount = (mine_multiplier - 1.0) * static_cast<double>(produced[j].value);
+                double multiplier_delta = this->_resource_multiplier - 1.0;
+                if (multiplier_delta < 0.0)
+                    multiplier_delta = -multiplier_delta;
+                if (multiplier_delta > 0.000001)
+                {
+                    double scaled_amount = static_cast<double>(base_amount) * this->_resource_multiplier;
+                    int target = static_cast<int>(scaled_amount);
+                    if (this->_resource_multiplier > 1.0)
+                    {
+                        double fractional = scaled_amount - static_cast<double>(target);
+                        if (fractional > 0.000001)
+                            target += 1;
+                    }
+                    if (target < 0)
+                        target = 0;
+                    final_amount = target;
+                    int diff = final_amount - base_amount;
+                    if (diff > 0)
+                        planet->add_resource(ore_id, diff);
+                    else if (diff < 0)
+                        planet->sub_resource(ore_id, -diff);
+                }
+            }
+            this->send_state(planet_id, ore_id);
+            if (mine_multiplier > 1.0 && final_amount > 0)
+            {
+                double bonus_amount = (mine_multiplier - 1.0) * static_cast<double>(final_amount);
                 int bonus = static_cast<int>(bonus_amount);
                 if (bonus > 0)
                 {
-                    planet->add_resource(produced[j].key, bonus);
-                    this->send_state(planet_id, produced[j].key);
+                    planet->add_resource(ore_id, bonus);
+                    this->send_state(planet_id, ore_id);
                 }
             }
         }
@@ -84,9 +122,12 @@ void Game::tick(double seconds)
     ft_vector<int> quest_failed;
     ft_vector<int> quest_choices;
     this->_quests.update(seconds, quest_context, quest_completed, quest_failed, quest_choices);
-    (void)quest_completed;
-    (void)quest_failed;
-    (void)quest_choices;
+    for (size_t i = 0; i < quest_completed.size(); ++i)
+        this->handle_quest_completion(quest_completed[i]);
+    for (size_t i = 0; i < quest_failed.size(); ++i)
+        this->handle_quest_failure(quest_failed[i]);
+    for (size_t i = 0; i < quest_choices.size(); ++i)
+        this->handle_quest_choice_prompt(quest_choices[i]);
 
     ft_vector<int> assault_completed;
     ft_vector<int> assault_failed;
@@ -272,8 +313,42 @@ void Game::handle_research_completion(int research_id)
     const ft_research_definition *definition = this->_research.get_definition(research_id);
     if (definition == ft_nullptr)
         return ;
+    bool update_modifiers = false;
     for (size_t i = 0; i < definition->unlock_planets.size(); ++i)
         this->unlock_planet(definition->unlock_planets[i]);
+    if (research_id == RESEARCH_URBAN_PLANNING_TERRA)
+        this->_buildings.add_planet_logistic_bonus(PLANET_TERRA, 4);
+    else if (research_id == RESEARCH_URBAN_PLANNING_MARS)
+        this->_buildings.add_planet_logistic_bonus(PLANET_MARS, 4);
+    else if (research_id == RESEARCH_URBAN_PLANNING_ZALTHOR)
+        this->_buildings.add_planet_logistic_bonus(PLANET_ZALTHOR, 4);
+    else if (research_id == RESEARCH_SOLAR_PANELS)
+        this->_buildings.unlock_solar_panels();
+    else if (research_id == RESEARCH_CRAFTING_MASTERY)
+        this->_buildings.set_crafting_energy_multiplier(0.8);
+    else if (research_id == RESEARCH_STRUCTURAL_REINFORCEMENT_I
+        || research_id == RESEARCH_STRUCTURAL_REINFORCEMENT_II
+        || research_id == RESEARCH_STRUCTURAL_REINFORCEMENT_III)
+    {
+        this->_ship_hull_multiplier += 0.1;
+        update_modifiers = true;
+    }
+    else if (research_id == RESEARCH_DEFENSIVE_FORTIFICATION_I
+        || research_id == RESEARCH_DEFENSIVE_FORTIFICATION_II
+        || research_id == RESEARCH_DEFENSIVE_FORTIFICATION_III)
+    {
+        this->_ship_shield_multiplier += 0.1;
+        update_modifiers = true;
+    }
+    else if (research_id == RESEARCH_ARMAMENT_ENHANCEMENT_I
+        || research_id == RESEARCH_ARMAMENT_ENHANCEMENT_II
+        || research_id == RESEARCH_ARMAMENT_ENHANCEMENT_III)
+    {
+        this->_ship_weapon_multiplier += 0.1;
+        update_modifiers = true;
+    }
+    if (update_modifiers)
+        this->update_combat_modifiers();
 }
 
 void Game::build_quest_context(ft_quest_context &context) const
@@ -301,6 +376,8 @@ void Game::build_quest_context(ft_quest_context &context) const
     context.research_status.insert(RESEARCH_UNLOCK_ZALTHOR, this->_research.is_completed(RESEARCH_UNLOCK_ZALTHOR) ? 1 : 0);
     context.research_status.insert(RESEARCH_UNLOCK_VULCAN, this->_research.is_completed(RESEARCH_UNLOCK_VULCAN) ? 1 : 0);
     context.research_status.insert(RESEARCH_UNLOCK_NOCTARIS, this->_research.is_completed(RESEARCH_UNLOCK_NOCTARIS) ? 1 : 0);
+    context.research_status.insert(RESEARCH_SOLAR_PANELS, this->_research.is_completed(RESEARCH_SOLAR_PANELS) ? 1 : 0);
+    context.research_status.insert(RESEARCH_CRAFTING_MASTERY, this->_research.is_completed(RESEARCH_CRAFTING_MASTERY) ? 1 : 0);
 
     size_t fleet_count = this->_fleets.size();
     const Pair<int, ft_sharedptr<ft_fleet> > *fleet_entries = this->_fleets.end();
@@ -320,6 +397,139 @@ void Game::build_quest_context(ft_quest_context &context) const
         context.total_ship_count += fleet->get_ship_count();
         context.total_ship_hp += fleet->get_total_ship_hp();
     }
+}
+
+void Game::handle_quest_completion(int quest_id)
+{
+    ft_string entry;
+    if (quest_id == QUEST_INITIAL_SKIRMISHES)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ITEM_ENGINE_PART);
+        this->add_ore(PLANET_TERRA, ITEM_ENGINE_PART, 2);
+        entry = ft_string("Old Miner Joe cheers as Terra's convoys return with salvaged engine parts.");
+    }
+    else if (quest_id == QUEST_DEFENSE_OF_TERRA)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ORE_COAL);
+        this->add_ore(PLANET_TERRA, ORE_COAL, 6);
+        entry = ft_string("Professor Lumen catalogs the victory over Terra: new coal shipments fuel the forges.");
+    }
+    else if (quest_id == QUEST_INVESTIGATE_RAIDERS)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ORE_MITHRIL);
+        this->add_ore(PLANET_TERRA, ORE_MITHRIL, 4);
+        entry = ft_string("Farmer Daisy archives decoded mithril caches that hint at raider supply routes.");
+    }
+    else if (quest_id == QUEST_CLIMACTIC_BATTLE)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ORE_TITANIUM);
+        this->add_ore(PLANET_TERRA, ORE_TITANIUM, 3);
+        entry = ft_string("Old Scout Finn records the climactic stand: captured titanium plating is repurposed.");
+    }
+    else if (quest_id == QUEST_ORDER_UPRISING)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ITEM_ENGINE_PART);
+        this->add_ore(PLANET_TERRA, ITEM_ENGINE_PART, 3);
+        entry = ft_string("Farmer Daisy distributes engine parts to keep loyalist transports operational.");
+    }
+    else if (quest_id == QUEST_REBELLION_FLEET)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ORE_OBSIDIAN);
+        this->add_ore(PLANET_TERRA, ORE_OBSIDIAN, 2);
+        entry = ft_string("Professor Lumen preserves obsidian shards from allied rebels as evidence of hope.");
+    }
+    if (entry.size() > 0)
+        this->_lore_log.push_back(entry);
+}
+
+void Game::handle_quest_failure(int quest_id)
+{
+    ft_string entry;
+    if (quest_id == QUEST_DEFENSE_OF_TERRA)
+    {
+        this->sub_ore(PLANET_TERRA, ITEM_ENGINE_PART, 1);
+        entry = ft_string("Professor Lumen warns that Terra's defenses falter and precious engine parts are lost.");
+    }
+    else if (quest_id == QUEST_ORDER_UPRISING)
+    {
+        this->sub_ore(PLANET_TERRA, ORE_COAL, 4);
+        entry = ft_string("Old Miner Joe laments that unrest drains coal reserves meant for the foundries.");
+    }
+    else if (quest_id == QUEST_REBELLION_FLEET)
+    {
+        this->sub_ore(PLANET_TERRA, ORE_MITHRIL, 2);
+        entry = ft_string("Farmer Daisy notes that promised mithril reinforcements never arrive for the rebellion.");
+    }
+    if (entry.size() > 0)
+        this->_lore_log.push_back(entry);
+}
+
+void Game::handle_quest_choice_prompt(int quest_id)
+{
+    if (quest_id != QUEST_CRITICAL_DECISION)
+        return ;
+    ft_string entry("Navigator Zara's sacrifice forces a reckoning over Captain Blackthorne's fate.");
+    this->_lore_log.push_back(entry);
+}
+
+void Game::handle_quest_choice_resolution(int quest_id, int choice_id)
+{
+    if (quest_id != QUEST_CRITICAL_DECISION)
+        return ;
+    ft_string entry;
+    if (choice_id == QUEST_CHOICE_EXECUTE_BLACKTHORNE)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ORE_COAL);
+        this->add_ore(PLANET_TERRA, ORE_COAL, 5);
+        entry = ft_string("Captain Blackthorne's execution steels Terra's loyalists; coal stockpiles surge for the war effort.");
+    }
+    else if (choice_id == QUEST_CHOICE_SPARE_BLACKTHORNE)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ORE_CRYSTAL);
+        this->add_ore(PLANET_TERRA, ORE_CRYSTAL, 3);
+        entry = ft_string("Sparing Blackthorne yields encoded crystal data that Professor Lumen studies for hidden conspiracies.");
+    }
+    if (entry.size() > 0)
+        this->_lore_log.push_back(entry);
+}
+
+void Game::configure_difficulty(int difficulty)
+{
+    int selected = difficulty;
+    if (selected != GAME_DIFFICULTY_EASY && selected != GAME_DIFFICULTY_HARD)
+        selected = GAME_DIFFICULTY_STANDARD;
+    this->_difficulty = selected;
+    if (selected == GAME_DIFFICULTY_EASY)
+    {
+        this->_resource_multiplier = 1.25;
+        this->_quest_time_scale = 1.25;
+        this->_research_duration_scale = 0.85;
+        this->_assault_difficulty_multiplier = 0.85;
+    }
+    else if (selected == GAME_DIFFICULTY_HARD)
+    {
+        this->_resource_multiplier = 0.85;
+        this->_quest_time_scale = 0.75;
+        this->_research_duration_scale = 1.2;
+        this->_assault_difficulty_multiplier = 1.25;
+    }
+    else
+    {
+        this->_resource_multiplier = 1.0;
+        this->_quest_time_scale = 1.0;
+        this->_research_duration_scale = 1.0;
+        this->_assault_difficulty_multiplier = 1.0;
+    }
+    this->_research.set_duration_scale(this->_research_duration_scale);
+    this->_quests.set_time_scale(this->_quest_time_scale);
+    this->update_combat_modifiers();
+}
+
+void Game::update_combat_modifiers()
+{
+    this->_combat.set_player_weapon_multiplier(this->_ship_weapon_multiplier);
+    this->_combat.set_player_shield_multiplier(this->_ship_shield_multiplier);
+    this->_combat.set_player_hull_multiplier(this->_ship_hull_multiplier);
 }
 
 bool Game::is_planet_unlocked(int planet_id) const
@@ -483,6 +693,7 @@ bool Game::resolve_quest_choice(int quest_id, int choice_id)
     (void)quest_completed;
     (void)quest_failed;
     (void)quest_choices;
+    this->handle_quest_choice_resolution(quest_id, choice_id);
     return true;
 }
 
@@ -776,7 +987,10 @@ bool Game::start_raider_assault(int planet_id, double difficulty)
 {
     if (!this->is_planet_unlocked(planet_id))
         return false;
-    if (!this->_combat.start_raider_assault(planet_id, difficulty))
+    double scaled = difficulty * this->_assault_difficulty_multiplier;
+    if (scaled <= 0.0)
+        scaled = difficulty;
+    if (!this->_combat.start_raider_assault(planet_id, scaled))
         return false;
     this->get_planet_fleet(planet_id);
     ft_string entry("Navigator Zara signals a raider incursion on planet ");

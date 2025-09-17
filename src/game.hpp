@@ -12,6 +12,10 @@
 #include "../libft/Template/map.hpp"
 #include "../libft/Template/vector.hpp"
 
+#define GAME_DIFFICULTY_EASY 1
+#define GAME_DIFFICULTY_STANDARD 2
+#define GAME_DIFFICULTY_HARD 3
+
 class Game
 {
 private:
@@ -26,6 +30,14 @@ private:
     CombatManager                                _combat;
     BuildingManager                              _buildings;
     ft_vector<ft_string>                         _lore_log;
+    int                                          _difficulty;
+    double                                       _resource_multiplier;
+    double                                       _quest_time_scale;
+    double                                       _research_duration_scale;
+    double                                       _assault_difficulty_multiplier;
+    double                                       _ship_weapon_multiplier;
+    double                                       _ship_shield_multiplier;
+    double                                       _ship_hull_multiplier;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -39,13 +51,21 @@ private:
     void pay_research_cost(const ft_vector<Pair<int, int> > &costs);
     void handle_research_completion(int research_id);
     void build_quest_context(ft_quest_context &context) const;
+    void handle_quest_completion(int quest_id);
+    void handle_quest_failure(int quest_id);
+    void handle_quest_choice_prompt(int quest_id);
+    void handle_quest_choice_resolution(int quest_id, int choice_id);
+    void configure_difficulty(int difficulty);
+    void update_combat_modifiers();
 
 public:
-    Game(const ft_string &host, const ft_string &path);
+    Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
     ~Game();
 
     void produce(double seconds);
     void tick(double seconds);
+
+    int get_difficulty() const { return this->_difficulty; }
 
     bool is_planet_unlocked(int planet_id) const;
 
@@ -90,6 +110,10 @@ public:
     int transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amount);
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
+
+    double get_ship_weapon_multiplier() const { return this->_ship_weapon_multiplier; }
+    double get_ship_shield_multiplier() const { return this->_ship_shield_multiplier; }
+    double get_ship_hull_multiplier() const { return this->_ship_hull_multiplier; }
 
     void create_fleet(int fleet_id);
     void remove_fleet(int fleet_id, int target_fleet_id = -1, int target_planet_id = -1);
