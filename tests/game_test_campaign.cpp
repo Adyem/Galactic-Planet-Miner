@@ -662,3 +662,31 @@ int evaluate_ship_upgrade_research(Game &game)
     FT_ASSERT(game.get_ship_weapon_multiplier() > 1.29 && game.get_ship_weapon_multiplier() < 1.31);
     return 1;
 }
+
+int verify_multiple_convoy_raids()
+{
+    Game convoy_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    convoy_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    convoy_game.ensure_planet_item_slot(PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR);
+    convoy_game.set_ore(PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR, 0);
+    size_t lore_before = convoy_game.get_lore_log().size();
+    int transferred = convoy_game.transfer_ore(PLANET_TERRA, PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR, 120);
+    FT_ASSERT(transferred >= 120);
+    FT_ASSERT_EQ(1, convoy_game.get_active_convoy_count());
+
+    convoy_game.tick(300.0);
+
+    const ft_vector<ft_string> &log = convoy_game.get_lore_log();
+    size_t raid_entries = 0;
+    bool destroyed_recorded = false;
+    for (size_t idx = lore_before; idx < log.size(); ++idx)
+    {
+        const char *entry = log[idx].c_str();
+        if (ft_strstr(entry, "Raiders ambushed") != ft_nullptr)
+            raid_entries += 1;
+        if (ft_strstr(entry, "wiped out") != ft_nullptr || ft_strstr(entry, "failed to arrive") != ft_nullptr)
+            destroyed_recorded = true;
+    }
+    FT_ASSERT(raid_entries >= 2 || destroyed_recorded);
+    return 1;
+}

@@ -348,12 +348,21 @@ void Game::advance_convoys(double seconds)
             convoy.raid_meter += risk * seconds;
             if (convoy.raid_meter >= 1.0)
             {
-                this->handle_convoy_raid(convoy, origin_under_attack, destination_under_attack);
-                if (convoy.destroyed)
+                while (convoy.raid_meter >= 1.0 && !convoy.destroyed)
                 {
-                    completed.push_back(entries[i].key);
-                    continue;
+                    double remainder = convoy.raid_meter - 1.0;
+                    if (remainder < 0.0)
+                        remainder = 0.0;
+                    this->handle_convoy_raid(convoy, origin_under_attack, destination_under_attack);
+                    if (convoy.destroyed)
+                    {
+                        completed.push_back(entries[i].key);
+                        break;
+                    }
+                    convoy.raid_meter = remainder;
                 }
+                if (convoy.destroyed)
+                    continue;
             }
         }
         convoy.remaining_time -= seconds;

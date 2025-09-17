@@ -39,6 +39,8 @@ int main()
         return 0;
     if (!evaluate_ship_upgrade_research(game))
         return 0;
+    if (!verify_multiple_convoy_raids())
+        return 0;
 
 
     if (!compare_energy_pressure_scenarios())
