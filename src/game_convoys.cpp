@@ -41,6 +41,80 @@ const Game::ft_supply_route *Game::get_route_by_id(int route_id) const
     return &entry->value;
 }
 
+bool Game::has_active_convoy_for_contract(int contract_id) const
+{
+    if (contract_id <= 0)
+        return false;
+    size_t count = this->_active_convoys.size();
+    if (count == 0)
+        return false;
+    const Pair<int, ft_supply_convoy> *entries = this->_active_convoys.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const ft_supply_convoy &convoy = entries[i].value;
+        if (convoy.contract_id == contract_id)
+            return true;
+    }
+    return false;
+}
+
+void Game::accelerate_contract(int contract_id, double fraction)
+{
+    if (contract_id <= 0 || fraction <= 0.0)
+        return ;
+    Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract_id);
+    if (entry == ft_nullptr)
+        return ;
+    ft_supply_contract &contract = entry->value;
+    if (contract.interval_seconds <= 0.0)
+        return ;
+    double bonus = contract.interval_seconds * fraction;
+    if (bonus < 0.0)
+        bonus = 0.0;
+    contract.elapsed_seconds += bonus;
+    if (contract.elapsed_seconds > contract.interval_seconds)
+        contract.elapsed_seconds = contract.interval_seconds;
+    if (contract.elapsed_seconds < 0.0)
+        contract.elapsed_seconds = 0.0;
+}
+
+int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
+                          int destination_planet_id, int resource_id,
+                          int amount, int contract_id)
+{
+    if (amount <= 0)
+        return 0;
+    ft_supply_convoy convoy;
+    convoy.id = this->_next_convoy_id++;
+    convoy.route_id = route.id;
+    convoy.contract_id = contract_id;
+    convoy.origin_planet_id = origin_planet_id;
+    convoy.destination_planet_id = destination_planet_id;
+    convoy.resource_id = resource_id;
+    convoy.amount = amount;
+    convoy.origin_escort = this->calculate_planet_escort_rating(origin_planet_id);
+    convoy.destination_escort = this->calculate_planet_escort_rating(destination_planet_id);
+    convoy.remaining_time = this->calculate_convoy_travel_time(route, convoy.origin_escort, convoy.destination_escort);
+    this->_active_convoys.insert(convoy.id, convoy);
+    ft_string entry("Quartermaster Nia dispatches a convoy from ");
+    entry.append(ft_to_string(origin_planet_id));
+    entry.append(ft_string(" to "));
+    entry.append(ft_to_string(destination_planet_id));
+    entry.append(ft_string(" carrying "));
+    entry.append(ft_to_string(amount));
+    entry.append(ft_string(" units"));
+    if (contract_id > 0)
+    {
+        entry.append(ft_string(" (Contract #"));
+        entry.append(ft_to_string(contract_id));
+        entry.append(ft_string(")"));
+    }
+    entry.append(ft_string("."));
+    this->_lore_log.push_back(entry);
+    return amount;
+}
+
 double Game::estimate_route_travel_time(int origin, int destination) const
 {
     if (origin == destination)
@@ -290,6 +364,7 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
     else
         entry.append(ft_string(", but escorts salvaged part of the cargo."));
     this->_lore_log.push_back(entry);
+    this->accelerate_contract(convoy.contract_id, 0.5);
 }
 
 void Game::finalize_convoy(const ft_supply_convoy &convoy)
@@ -319,6 +394,108 @@ void Game::finalize_convoy(const ft_supply_convoy &convoy)
         entry.append(ft_to_string(convoy.destination_planet_id));
         entry.append(ft_string(" failed to arrive."));
         this->_lore_log.push_back(entry);
+    }
+    this->handle_contract_completion(convoy);
+}
+
+void Game::handle_contract_completion(const ft_supply_convoy &convoy)
+{
+    if (convoy.contract_id <= 0)
+        return ;
+    if (convoy.destroyed)
+    {
+        this->accelerate_contract(convoy.contract_id, 1.0);
+        return ;
+    }
+    if (convoy.raided)
+        this->accelerate_contract(convoy.contract_id, 0.25);
+}
+
+void Game::process_supply_contracts(double seconds)
+{
+    if (seconds <= 0.0)
+        return ;
+    size_t contract_count = this->_supply_contracts.size();
+    if (contract_count == 0)
+        return ;
+    Pair<int, ft_supply_contract> *entries = this->_supply_contracts.end();
+    entries -= contract_count;
+    for (size_t i = 0; i < contract_count; ++i)
+    {
+        ft_supply_contract &contract = entries[i].value;
+        if (contract.interval_seconds <= 0.0)
+            continue;
+        contract.elapsed_seconds += seconds;
+        if (contract.elapsed_seconds < 0.0)
+            contract.elapsed_seconds = 0.0;
+        bool dispatched = false;
+        while (contract.elapsed_seconds >= contract.interval_seconds)
+        {
+            if (this->has_active_convoy_for_contract(contract.id))
+            {
+                contract.elapsed_seconds = contract.interval_seconds;
+                break;
+            }
+            ft_sharedptr<ft_planet> origin = this->get_planet(contract.origin_planet_id);
+            ft_sharedptr<ft_planet> destination = this->get_planet(contract.destination_planet_id);
+            if (!origin || !destination)
+            {
+                contract.elapsed_seconds = contract.interval_seconds;
+                break;
+            }
+            if (contract.has_minimum_stock)
+            {
+                int destination_stock = destination->get_resource(contract.resource_id);
+                if (destination_stock >= contract.minimum_stock)
+                {
+                    contract.elapsed_seconds = contract.interval_seconds;
+                    break;
+                }
+            }
+            int available = origin->get_resource(contract.resource_id);
+            if (available <= 0)
+            {
+                contract.elapsed_seconds = contract.interval_seconds;
+                break;
+            }
+            int shipment = contract.shipment_size;
+            if (shipment <= 0)
+            {
+                contract.elapsed_seconds = 0.0;
+                break;
+            }
+            if (shipment > available)
+                shipment = available;
+            ft_supply_route *route = this->ensure_supply_route(contract.origin_planet_id, contract.destination_planet_id);
+            if (!route)
+            {
+                contract.elapsed_seconds = contract.interval_seconds;
+                break;
+            }
+            origin->sub_resource(contract.resource_id, shipment);
+            this->send_state(contract.origin_planet_id, contract.resource_id);
+            this->ensure_planet_item_slot(contract.destination_planet_id, contract.resource_id);
+            int dispatched_amount = this->dispatch_convoy(*route, contract.origin_planet_id,
+                                                          contract.destination_planet_id,
+                                                          contract.resource_id, shipment,
+                                                          contract.id);
+            if (dispatched_amount <= 0)
+            {
+                origin->add_resource(contract.resource_id, shipment);
+                this->send_state(contract.origin_planet_id, contract.resource_id);
+                contract.elapsed_seconds = contract.interval_seconds;
+                break;
+            }
+            dispatched = true;
+            contract.elapsed_seconds -= contract.interval_seconds;
+            if (contract.elapsed_seconds < 0.0)
+                contract.elapsed_seconds = 0.0;
+            if (contract.elapsed_seconds > contract.interval_seconds)
+                contract.elapsed_seconds = contract.interval_seconds;
+            break;
+        }
+        if (!dispatched && contract.elapsed_seconds > contract.interval_seconds)
+            contract.elapsed_seconds = contract.interval_seconds;
     }
 }
 
@@ -379,6 +556,111 @@ void Game::advance_convoys(double seconds)
     }
 }
 
+int Game::create_supply_contract(int origin_planet_id, int destination_planet_id,
+                                 int resource_id, int shipment_size,
+                                 double interval_seconds,
+                                 int minimum_destination_stock)
+{
+    if (origin_planet_id == destination_planet_id)
+        return 0;
+    if (shipment_size <= 0)
+        return 0;
+    if (interval_seconds <= 0.0)
+        return 0;
+    ft_sharedptr<ft_planet> origin = this->get_planet(origin_planet_id);
+    ft_sharedptr<ft_planet> destination = this->get_planet(destination_planet_id);
+    if (!origin || !destination)
+        return 0;
+    ft_supply_route *route = this->ensure_supply_route(origin_planet_id, destination_planet_id);
+    if (!route)
+        return 0;
+    this->ensure_planet_item_slot(destination_planet_id, resource_id);
+    ft_supply_contract contract;
+    contract.id = this->_next_contract_id++;
+    contract.origin_planet_id = origin_planet_id;
+    contract.destination_planet_id = destination_planet_id;
+    contract.resource_id = resource_id;
+    contract.shipment_size = shipment_size;
+    contract.interval_seconds = interval_seconds;
+    contract.elapsed_seconds = 0.0;
+    if (minimum_destination_stock >= 0)
+    {
+        contract.has_minimum_stock = true;
+        contract.minimum_stock = minimum_destination_stock;
+    }
+    else
+    {
+        contract.has_minimum_stock = false;
+        contract.minimum_stock = 0;
+    }
+    this->_supply_contracts.insert(contract.id, contract);
+    Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract.id);
+    if (entry == ft_nullptr)
+        return 0;
+    return contract.id;
+}
+
+bool Game::cancel_supply_contract(int contract_id)
+{
+    Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract_id);
+    if (entry == ft_nullptr)
+        return false;
+    this->_supply_contracts.remove(contract_id);
+    return true;
+}
+
+bool Game::update_supply_contract(int contract_id, int shipment_size,
+                                  double interval_seconds,
+                                  int minimum_destination_stock)
+{
+    if (shipment_size <= 0)
+        return false;
+    if (interval_seconds <= 0.0)
+        return false;
+    Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract_id);
+    if (entry == ft_nullptr)
+        return false;
+    ft_supply_contract &contract = entry->value;
+    contract.shipment_size = shipment_size;
+    contract.interval_seconds = interval_seconds;
+    if (minimum_destination_stock >= 0)
+    {
+        contract.has_minimum_stock = true;
+        contract.minimum_stock = minimum_destination_stock;
+    }
+    else
+    {
+        contract.has_minimum_stock = false;
+        contract.minimum_stock = 0;
+    }
+    if (contract.elapsed_seconds > contract.interval_seconds)
+        contract.elapsed_seconds = contract.interval_seconds;
+    if (contract.elapsed_seconds < 0.0)
+        contract.elapsed_seconds = 0.0;
+    return true;
+}
+
+void Game::get_supply_contract_ids(ft_vector<int> &out) const
+{
+    out.clear();
+    size_t count = this->_supply_contracts.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_supply_contract> *entries = this->_supply_contracts.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+        out.push_back(entries[i].key);
+}
+
+bool Game::get_supply_contract(int contract_id, ft_supply_contract &out) const
+{
+    const Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract_id);
+    if (entry == ft_nullptr)
+        return false;
+    out = entry->value;
+    return true;
+}
+
 int Game::get_active_convoy_count() const
 {
     return static_cast<int>(this->_active_convoys.size());
@@ -403,25 +685,14 @@ int Game::transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amo
     from->sub_resource(ore_id, amount);
     this->send_state(from_planet_id, ore_id);
     this->ensure_planet_item_slot(to_planet_id, ore_id);
-    ft_supply_convoy convoy;
-    convoy.id = this->_next_convoy_id++;
-    convoy.route_id = route->id;
-    convoy.origin_planet_id = from_planet_id;
-    convoy.destination_planet_id = to_planet_id;
-    convoy.resource_id = ore_id;
-    convoy.amount = amount;
-    convoy.origin_escort = this->calculate_planet_escort_rating(from_planet_id);
-    convoy.destination_escort = this->calculate_planet_escort_rating(to_planet_id);
-    convoy.remaining_time = this->calculate_convoy_travel_time(*route, convoy.origin_escort, convoy.destination_escort);
-    this->_active_convoys.insert(convoy.id, convoy);
-    ft_string entry("Quartermaster Nia dispatches a convoy from ");
-    entry.append(ft_to_string(from_planet_id));
-    entry.append(ft_string(" to "));
-    entry.append(ft_to_string(to_planet_id));
-    entry.append(ft_string(" carrying "));
-    entry.append(ft_to_string(amount));
-    entry.append(ft_string(" units."));
-    this->_lore_log.push_back(entry);
-    return amount;
+    int dispatched = this->dispatch_convoy(*route, from_planet_id, to_planet_id,
+                                          ore_id, amount, 0);
+    if (dispatched <= 0)
+    {
+        from->add_resource(ore_id, amount);
+        this->send_state(from_planet_id, ore_id);
+        return 0;
+    }
+    return dispatched;
 }
 

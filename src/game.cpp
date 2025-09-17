@@ -20,9 +20,11 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _supply_routes(),
       _route_lookup(),
       _active_convoys(),
+      _supply_contracts(),
       _resource_deficits(),
       _next_route_id(1),
-      _next_convoy_id(1)
+      _next_convoy_id(1),
+      _next_contract_id(1)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -150,6 +152,7 @@ void Game::produce(double seconds)
 void Game::tick(double seconds)
 {
     this->produce(seconds);
+    this->process_supply_contracts(seconds);
     this->advance_convoys(seconds);
     this->_buildings.tick(*this, seconds);
     size_t count = this->_fleets.size();

@@ -19,6 +19,27 @@
 
 class Game
 {
+public:
+    struct ft_supply_contract
+    {
+        int     id;
+        int     origin_planet_id;
+        int     destination_planet_id;
+        int     resource_id;
+        int     shipment_size;
+        double  interval_seconds;
+        double  elapsed_seconds;
+        bool    has_minimum_stock;
+        int     minimum_stock;
+
+        ft_supply_contract()
+            : id(0), origin_planet_id(0), destination_planet_id(0),
+              resource_id(0), shipment_size(0), interval_seconds(0.0),
+              elapsed_seconds(0.0), has_minimum_stock(false),
+              minimum_stock(0)
+        {}
+    };
+
 private:
     struct RouteKey
     {
@@ -77,6 +98,7 @@ private:
     {
         int     id;
         int     route_id;
+        int     contract_id;
         int     origin_planet_id;
         int     destination_planet_id;
         int     resource_id;
@@ -88,18 +110,20 @@ private:
         bool    raided;
         bool    destroyed;
         ft_supply_convoy()
-            : id(0), route_id(0), origin_planet_id(0), destination_planet_id(0),
-              resource_id(0), amount(0), remaining_time(0.0), raid_meter(0.0),
-              origin_escort(0), destination_escort(0), raided(false),
-              destroyed(false)
+            : id(0), route_id(0), contract_id(0), origin_planet_id(0),
+              destination_planet_id(0), resource_id(0), amount(0),
+              remaining_time(0.0), raid_meter(0.0), origin_escort(0),
+              destination_escort(0), raided(false), destroyed(false)
         {}
     };
     ft_map<RouteKey, ft_supply_route>            _supply_routes;
     ft_map<int, RouteKey>                        _route_lookup;
     ft_map<int, ft_supply_convoy>                _active_convoys;
+    ft_map<int, ft_supply_contract>              _supply_contracts;
     ft_map<int, ft_map<int, double> >            _resource_deficits;
     int                                          _next_route_id;
     int                                          _next_convoy_id;
+    int                                          _next_contract_id;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -135,6 +159,13 @@ private:
     double calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack) const;
     void handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack);
     void finalize_convoy(const ft_supply_convoy &convoy);
+    void handle_contract_completion(const ft_supply_convoy &convoy);
+    void accelerate_contract(int contract_id, double fraction);
+    bool has_active_convoy_for_contract(int contract_id) const;
+    int dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
+                        int destination_planet_id, int resource_id, int amount,
+                        int contract_id);
+    void process_supply_contracts(double seconds);
     void advance_convoys(double seconds);
 
 public:
@@ -197,6 +228,17 @@ public:
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
     int get_active_convoy_count() const;
+
+    int create_supply_contract(int origin_planet_id, int destination_planet_id,
+                               int resource_id, int shipment_size,
+                               double interval_seconds,
+                               int minimum_destination_stock = -1);
+    bool cancel_supply_contract(int contract_id);
+    bool update_supply_contract(int contract_id, int shipment_size,
+                                double interval_seconds,
+                                int minimum_destination_stock = -1);
+    void get_supply_contract_ids(ft_vector<int> &out) const;
+    bool get_supply_contract(int contract_id, ft_supply_contract &out) const;
 
     double get_ship_weapon_multiplier() const { return this->_ship_weapon_multiplier; }
     double get_ship_shield_multiplier() const { return this->_ship_shield_multiplier; }
