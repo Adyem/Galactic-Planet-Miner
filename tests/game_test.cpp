@@ -39,6 +39,7 @@ int main()
     FT_ASSERT(!game.is_planet_unlocked(PLANET_ZALTHOR));
     FT_ASSERT(!game.is_planet_unlocked(PLANET_VULCAN));
     FT_ASSERT(!game.is_planet_unlocked(PLANET_NOCTARIS_PRIME));
+    FT_ASSERT(!game.is_planet_unlocked(PLANET_LUNA));
 
     FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_UNLOCK_MARS));
     FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_UNLOCK_ZALTHOR));
@@ -46,6 +47,7 @@ int main()
     FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_UNLOCK_NOCTARIS));
     FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_SOLAR_PANELS));
     FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_CRAFTING_MASTERY));
+    FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_UNLOCK_LUNA));
     FT_ASSERT(!game.can_start_research(RESEARCH_UNLOCK_MARS));
     FT_ASSERT(!game.can_start_research(RESEARCH_UNLOCK_ZALTHOR));
 
@@ -114,6 +116,17 @@ int main()
     FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_CRAFTING_MASTERY));
     double mithril_rate = game.get_rate(PLANET_MARS, ORE_MITHRIL);
     FT_ASSERT(mithril_rate > 0.049 && mithril_rate < 0.051);
+
+    FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_UNLOCK_LUNA));
+    game.set_ore(PLANET_TERRA, ORE_IRON, 70);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 50);
+    game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 12);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_LUNA));
+    game.tick(40.0);
+    FT_ASSERT(game.is_planet_unlocked(PLANET_LUNA));
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_LUNA));
+    double luna_titanium = game.get_rate(PLANET_LUNA, ORE_TITANIUM);
+    FT_ASSERT(luna_titanium > 0.039 && luna_titanium < 0.041);
 
     game.set_ore(PLANET_TERRA, ORE_COAL, 3);
     game.set_ore(PLANET_MARS, ORE_COAL, 4);
@@ -197,11 +210,157 @@ int main()
     FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_REBELLION_FLEET));
     FT_ASSERT_EQ(0, game.get_active_quest());
 
+    game.create_fleet(98);
+    FT_ASSERT_EQ(0, game.create_ship(98, SHIP_CAPITAL));
+    game.remove_fleet(98);
+
+    game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    game.set_ore(PLANET_TERRA, ITEM_COPPER_BAR, 200);
+    game.set_ore(PLANET_TERRA, ITEM_MITHRIL_BAR, 200);
+    game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 100);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 120);
+    game.set_ore(PLANET_TERRA, ITEM_TITANIUM_BAR, 120);
+    game.set_ore(PLANET_TERRA, ITEM_ACCUMULATOR, 60);
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 10);
+    game.set_ore(PLANET_TERRA, ORE_COAL, 120);
+    game.set_ore(PLANET_NOCTARIS_PRIME, ORE_OBSIDIAN, 80);
+    game.set_ore(PLANET_NOCTARIS_PRIME, ORE_CRYSTAL, 80);
+    game.set_ore(PLANET_NOCTARIS_PRIME, ORE_TRITIUM, 60);
+
+    FT_ASSERT(game.start_research(RESEARCH_SOLAR_PANELS));
+    game.tick(35.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_SOLAR_PANELS));
+    FT_ASSERT(game.start_research(RESEARCH_CRAFTING_MASTERY));
+    game.tick(45.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_CRAFTING_MASTERY));
+
+    FT_ASSERT(game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_I));
+    game.tick(40.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_DEFENSIVE_FORTIFICATION_I));
+    FT_ASSERT(game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_II));
+    game.tick(45.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_DEFENSIVE_FORTIFICATION_II));
+    FT_ASSERT(game.start_research(RESEARCH_SHIELD_TECHNOLOGY));
+    game.tick(40.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_SHIELD_TECHNOLOGY));
+    FT_ASSERT(game.start_research(RESEARCH_REPAIR_DRONE_TECHNOLOGY));
+    game.tick(50.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_REPAIR_DRONE_TECHNOLOGY));
+    FT_ASSERT(game.start_research(RESEARCH_ARMAMENT_ENHANCEMENT_I));
+    game.tick(40.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_ARMAMENT_ENHANCEMENT_I));
+    FT_ASSERT(game.start_research(RESEARCH_ARMAMENT_ENHANCEMENT_II));
+    game.tick(50.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_ARMAMENT_ENHANCEMENT_II));
+    FT_ASSERT(game.start_research(RESEARCH_CAPITAL_SHIP_INITIATIVE));
+    game.tick(60.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_CAPITAL_SHIP_INITIATIVE));
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 260);
+    game.set_ore(PLANET_TERRA, ITEM_TITANIUM_BAR, 260);
+    game.set_ore(PLANET_TERRA, ORE_TRITIUM, 40);
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 6);
+    FT_ASSERT(game.start_research(RESEARCH_AUXILIARY_FRIGATE_DEVELOPMENT));
+    game.tick(60.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_AUXILIARY_FRIGATE_DEVELOPMENT));
+    FT_ASSERT(game.start_research(RESEARCH_ESCAPE_POD_LIFELINE));
+    game.tick(50.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_ESCAPE_POD_LIFELINE));
+    FT_ASSERT(game.start_research(RESEARCH_EMERGENCY_ENERGY_CONSERVATION));
+    game.tick(35.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_EMERGENCY_ENERGY_CONSERVATION));
+    FT_ASSERT(game.start_research(RESEARCH_FASTER_CRAFTING));
+    game.tick(45.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_FASTER_CRAFTING));
+    FT_ASSERT(game.start_research(RESEARCH_TRITIUM_EXTRACTION));
+    game.tick(55.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_TRITIUM_EXTRACTION));
+
+    Game roster_locked(ft_string("127.0.0.1:8080"), ft_string("/"));
+    roster_locked.create_fleet(1);
+    FT_ASSERT_EQ(0, roster_locked.create_ship(1, SHIP_TRANSPORT));
+    FT_ASSERT_EQ(0, roster_locked.create_ship(1, SHIP_CORVETTE));
+    FT_ASSERT_EQ(0, roster_locked.create_ship(1, SHIP_INTERCEPTOR));
+    FT_ASSERT_EQ(0, roster_locked.create_ship(1, SHIP_REPAIR_DRONE));
+    FT_ASSERT_EQ(0, roster_locked.create_ship(1, SHIP_FRIGATE_ESCORT));
+    FT_ASSERT_EQ(0, roster_locked.create_ship(1, SHIP_SUNFLARE_SLOOP));
+
+    game.create_fleet(11);
+    int unlocked_transport = game.create_ship(11, SHIP_TRANSPORT);
+    FT_ASSERT(unlocked_transport != 0);
+    FT_ASSERT_EQ(190, game.get_ship_hp(11, unlocked_transport));
+    FT_ASSERT_EQ(60, game.get_ship_shield(11, unlocked_transport));
+    int unlocked_corvette = game.create_ship(11, SHIP_CORVETTE);
+    FT_ASSERT(unlocked_corvette != 0);
+    FT_ASSERT_EQ(220, game.get_ship_hp(11, unlocked_corvette));
+    FT_ASSERT_EQ(90, game.get_ship_shield(11, unlocked_corvette));
+    int unlocked_interceptor = game.create_ship(11, SHIP_INTERCEPTOR);
+    FT_ASSERT(unlocked_interceptor != 0);
+    FT_ASSERT_EQ(170, game.get_ship_hp(11, unlocked_interceptor));
+    FT_ASSERT_EQ(80, game.get_ship_shield(11, unlocked_interceptor));
+    int unlocked_drone = game.create_ship(11, SHIP_REPAIR_DRONE);
+    FT_ASSERT(unlocked_drone != 0);
+    FT_ASSERT_EQ(110, game.get_ship_hp(11, unlocked_drone));
+    FT_ASSERT_EQ(90, game.get_ship_shield(11, unlocked_drone));
+    int unlocked_sloop = game.create_ship(11, SHIP_SUNFLARE_SLOOP);
+    FT_ASSERT(unlocked_sloop != 0);
+    FT_ASSERT_EQ(240, game.get_ship_hp(11, unlocked_sloop));
+    FT_ASSERT_EQ(200, game.get_ship_shield(11, unlocked_sloop));
+    int unlocked_escort = game.create_ship(11, SHIP_FRIGATE_ESCORT);
+    FT_ASSERT(unlocked_escort != 0);
+    FT_ASSERT_EQ(280, game.get_ship_hp(11, unlocked_escort));
+    FT_ASSERT_EQ(130, game.get_ship_shield(11, unlocked_escort));
+    int unlocked_support = game.create_ship(11, SHIP_FRIGATE_SUPPORT);
+    FT_ASSERT(unlocked_support != 0);
+    FT_ASSERT_EQ(260, game.get_ship_hp(11, unlocked_support));
+    FT_ASSERT_EQ(150, game.get_ship_shield(11, unlocked_support));
+    int unlocked_battleship = game.create_ship(11, SHIP_CAPITAL);
+    FT_ASSERT(unlocked_battleship != 0);
+    int unlocked_carrier = game.create_ship(11, SHIP_CAPITAL_CARRIER);
+    FT_ASSERT(unlocked_carrier != 0);
+    FT_ASSERT_EQ(0, game.create_ship(11, SHIP_CAPITAL_DREADNOUGHT));
+    game.remove_fleet(11);
+
+    game.create_fleet(12);
+    int support_corvette = game.create_ship(12, SHIP_CORVETTE);
+    game.set_ship_hp(12, support_corvette, 150);
+    game.set_ship_shield(12, support_corvette, 30);
+    int support_sloop = game.create_ship(12, SHIP_SUNFLARE_SLOOP);
+    int support_drone = game.create_ship(12, SHIP_REPAIR_DRONE);
+    game.set_ship_hp(12, support_drone, 60);
+    FT_ASSERT(game.start_raider_assault(PLANET_TERRA, 1.0, ASSAULT_CONTROL_ACTIVE));
+    FT_ASSERT(game.assign_fleet_to_assault(PLANET_TERRA, 12));
+    FT_ASSERT(game.set_assault_support(PLANET_TERRA, true, true, true));
+    int initial_support_shield = game.get_ship_shield(12, support_corvette);
+    int initial_support_hp = game.get_ship_hp(12, support_corvette);
+    game.tick(2.0);
+    int post_support_shield = game.get_ship_shield(12, support_corvette);
+    int post_support_hp = game.get_ship_hp(12, support_corvette);
+    FT_ASSERT(post_support_shield > initial_support_shield);
+    FT_ASSERT(post_support_hp > initial_support_hp);
+    while (game.is_assault_active(PLANET_TERRA))
+        game.tick(2.0);
+    game.remove_fleet(12);
+
+    game.create_fleet(97);
+    int rescue_ship = game.create_ship(97, SHIP_SHIELD);
+    game.set_ship_hp(97, rescue_ship, 15);
+    FT_ASSERT_EQ(10, game.sub_ship_hp(97, rescue_ship, 20));
+    FT_ASSERT_EQ(10, game.get_ship_hp(97, rescue_ship));
+    FT_ASSERT_EQ(0, game.sub_ship_hp(97, rescue_ship, 15));
+    game.remove_fleet(97);
+
     game.set_ore(PLANET_TERRA, ORE_COPPER, 10);
     game.set_ore(PLANET_MARS, ORE_COPPER, 0);
     int moved = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ORE_COPPER, 4);
     FT_ASSERT_EQ(4, moved);
     FT_ASSERT_EQ(6, game.get_ore(PLANET_TERRA, ORE_COPPER));
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_MARS, ORE_COPPER));
+    FT_ASSERT_EQ(1, game.get_active_convoy_count());
+    game.tick(12.0);
+    FT_ASSERT_EQ(1, game.get_active_convoy_count());
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_MARS, ORE_COPPER));
+    game.tick(18.0);
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
     FT_ASSERT_EQ(4, game.get_ore(PLANET_MARS, ORE_COPPER));
 
     game.set_ore(PLANET_TERRA, ORE_IRON, 3);
@@ -209,7 +368,24 @@ int main()
     int over = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ORE_IRON, 10);
     FT_ASSERT_EQ(3, over);
     FT_ASSERT_EQ(0, game.get_ore(PLANET_TERRA, ORE_IRON));
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_MARS, ORE_IRON));
+    FT_ASSERT_EQ(1, game.get_active_convoy_count());
+    game.tick(30.0);
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
     FT_ASSERT_EQ(3, game.get_ore(PLANET_MARS, ORE_IRON));
+
+    game.set_ore(PLANET_TERRA, ORE_COAL, 9);
+    game.set_ore(PLANET_MARS, ORE_COAL, 0);
+    FT_ASSERT(game.start_raider_assault(PLANET_MARS, 1.0));
+    int contested = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ORE_COAL, 5);
+    FT_ASSERT_EQ(5, contested);
+    FT_ASSERT_EQ(4, game.get_ore(PLANET_TERRA, ORE_COAL));
+    FT_ASSERT_EQ(1, game.get_active_convoy_count());
+    game.tick(12.0);
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
+    FT_ASSERT(game.get_ore(PLANET_MARS, ORE_COAL) < contested);
+    while (game.is_assault_active(PLANET_MARS))
+        game.tick(4.0);
 
     game.create_fleet(1);
     int ship_a = game.create_ship(1, SHIP_SHIELD);
@@ -412,9 +588,19 @@ int main()
     int moved_copper = game.transfer_ore(PLANET_TERRA, PLANET_VULCAN, ITEM_COPPER_BAR, 2);
     FT_ASSERT(moved_iron >= 4);
     FT_ASSERT(moved_copper >= 2);
+    FT_ASSERT(game.get_active_convoy_count() >= 2);
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_VULCAN, ITEM_IRON_BAR));
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_VULCAN, ITEM_COPPER_BAR));
 
     double vulcan_energy = game.get_planet_energy_generation(PLANET_VULCAN);
     FT_ASSERT(vulcan_energy > 5.9 && vulcan_energy < 6.1);
+    game.tick(30.0);
+    FT_ASSERT(game.get_active_convoy_count() >= 1);
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_VULCAN, ITEM_IRON_BAR));
+    game.tick(20.0);
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
+    FT_ASSERT(game.get_ore(PLANET_VULCAN, ITEM_IRON_BAR) >= 4);
+    FT_ASSERT(game.get_ore(PLANET_VULCAN, ITEM_COPPER_BAR) >= 2);
     game.tick(16.0);
     FT_ASSERT(game.get_planet_logistic_usage(PLANET_VULCAN) >= 2);
     double vulcan_use = game.get_planet_energy_consumption(PLANET_VULCAN);
@@ -463,6 +649,7 @@ int main()
     FT_ASSERT_EQ(RESEARCH_STATUS_LOCKED, game.get_research_status(RESEARCH_CRAFTING_MASTERY));
     game.set_ore(PLANET_TERRA, ORE_IRON, 240);
     game.set_ore(PLANET_TERRA, ORE_COPPER, 240);
+    game.set_ore(PLANET_TERRA, ITEM_ACCUMULATOR, 6);
     FT_ASSERT(game.can_start_research(RESEARCH_SOLAR_PANELS));
     FT_ASSERT(game.start_research(RESEARCH_SOLAR_PANELS));
     double solar_remaining = game.get_research_time_remaining(RESEARCH_SOLAR_PANELS);
@@ -476,8 +663,9 @@ int main()
     double terra_energy_with_solar = game.get_planet_energy_generation(PLANET_TERRA);
     FT_ASSERT(terra_energy_with_solar > 8.9 && terra_energy_with_solar < 9.1);
 
-    game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 260);
-    game.set_ore(PLANET_TERRA, ORE_TITANIUM, 260);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 260);
+    game.set_ore(PLANET_TERRA, ITEM_TITANIUM_BAR, 260);
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 6);
     FT_ASSERT(game.can_start_research(RESEARCH_CRAFTING_MASTERY));
     FT_ASSERT(game.start_research(RESEARCH_CRAFTING_MASTERY));
     double mastery_remaining = game.get_research_time_remaining(RESEARCH_CRAFTING_MASTERY);
@@ -564,10 +752,14 @@ int main()
     FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_DEFENSIVE_FORTIFICATION_III));
     FT_ASSERT(game.get_ship_shield_multiplier() > 1.29 && game.get_ship_shield_multiplier() < 1.31);
 
-    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_ENGINE_PART);
-    game.ensure_planet_item_slot(PLANET_TERRA, ORE_TITANIUM);
-    game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 220);
-    game.set_ore(PLANET_TERRA, ORE_TITANIUM, 220);
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART);
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_TITANIUM_BAR);
+    game.ensure_planet_item_slot(PLANET_TERRA, ORE_TRITIUM);
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_FUSION_REACTOR);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 220);
+    game.set_ore(PLANET_TERRA, ITEM_TITANIUM_BAR, 220);
+    game.set_ore(PLANET_TERRA, ORE_TRITIUM, 15);
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 6);
     FT_ASSERT(game.can_start_research(RESEARCH_ARMAMENT_ENHANCEMENT_I));
     FT_ASSERT(game.start_research(RESEARCH_ARMAMENT_ENHANCEMENT_I));
     double armament_one = game.get_research_time_remaining(RESEARCH_ARMAMENT_ENHANCEMENT_I);
@@ -576,8 +768,9 @@ int main()
     FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_ARMAMENT_ENHANCEMENT_I));
     FT_ASSERT(game.get_ship_weapon_multiplier() > 1.09 && game.get_ship_weapon_multiplier() < 1.11);
     FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_ARMAMENT_ENHANCEMENT_II));
-    game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 260);
-    game.set_ore(PLANET_TERRA, ORE_TITANIUM, 260);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 260);
+    game.set_ore(PLANET_TERRA, ITEM_TITANIUM_BAR, 260);
+    game.set_ore(PLANET_TERRA, ORE_TRITIUM, 20);
     FT_ASSERT(game.can_start_research(RESEARCH_ARMAMENT_ENHANCEMENT_II));
     FT_ASSERT(game.start_research(RESEARCH_ARMAMENT_ENHANCEMENT_II));
     double armament_two = game.get_research_time_remaining(RESEARCH_ARMAMENT_ENHANCEMENT_II);
@@ -586,8 +779,9 @@ int main()
     FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_ARMAMENT_ENHANCEMENT_II));
     FT_ASSERT(game.get_ship_weapon_multiplier() > 1.19 && game.get_ship_weapon_multiplier() < 1.21);
     FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_ARMAMENT_ENHANCEMENT_III));
-    game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 320);
-    game.set_ore(PLANET_TERRA, ORE_TITANIUM, 320);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 320);
+    game.set_ore(PLANET_TERRA, ITEM_TITANIUM_BAR, 320);
+    game.set_ore(PLANET_TERRA, ORE_TRITIUM, 30);
     FT_ASSERT(game.can_start_research(RESEARCH_ARMAMENT_ENHANCEMENT_III));
     FT_ASSERT(game.start_research(RESEARCH_ARMAMENT_ENHANCEMENT_III));
     double armament_three = game.get_research_time_remaining(RESEARCH_ARMAMENT_ENHANCEMENT_III);

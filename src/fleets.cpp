@@ -3,61 +3,204 @@
 
 namespace
 {
-    void assign_ship_defaults(ft_ship &ship)
+    struct ship_profile
     {
-        ship.max_speed = 18.0;
-        ship.acceleration = 4.0;
-        ship.turn_speed = 60.0;
-        ship.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-        ship.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
-        ship.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-        ship.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
-        ship.role = SHIP_ROLE_LINE;
-        switch (ship.type)
+        int     armor;
+        int     hp;
+        int     shield;
+        double  max_speed;
+        double  acceleration;
+        double  turn_speed;
+        int     combat_behavior;
+        int     outnumbered_behavior;
+        int     unescorted_behavior;
+        int     low_hp_behavior;
+        int     role;
+
+        ship_profile()
+            : armor(18), hp(180), shield(60), max_speed(18.0), acceleration(4.0),
+              turn_speed(60.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+              outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
+              unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
+              low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
+        {}
+    };
+
+    ship_profile get_ship_profile(int type)
+    {
+        ship_profile profile;
+        switch (type)
         {
         case SHIP_SHIELD:
-            ship.max_speed = 21.0;
-            ship.acceleration = 5.5;
-            ship.turn_speed = 95.0;
-            ship.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
-            ship.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
-            ship.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            ship.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
-            ship.role = SHIP_ROLE_LINE;
+            profile.armor = 35;
+            profile.hp = 180;
+            profile.shield = 180;
+            profile.max_speed = 21.0;
+            profile.acceleration = 5.5;
+            profile.turn_speed = 95.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             break;
         case SHIP_RADAR:
-            ship.max_speed = 26.0;
-            ship.acceleration = 6.5;
-            ship.turn_speed = 110.0;
-            ship.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
-            ship.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
-            ship.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            ship.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            ship.role = SHIP_ROLE_SUPPORT;
+            profile.armor = 10;
+            profile.hp = 120;
+            profile.shield = 70;
+            profile.max_speed = 26.0;
+            profile.acceleration = 6.5;
+            profile.turn_speed = 110.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.role = SHIP_ROLE_SUPPORT;
             break;
         case SHIP_SALVAGE:
-            ship.max_speed = 16.0;
-            ship.acceleration = 3.5;
-            ship.turn_speed = 70.0;
-            ship.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            ship.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            ship.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            ship.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
-            ship.role = SHIP_ROLE_TRANSPORT;
+            profile.armor = 22;
+            profile.hp = 200;
+            profile.shield = 50;
+            profile.max_speed = 16.0;
+            profile.acceleration = 3.5;
+            profile.turn_speed = 70.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.role = SHIP_ROLE_TRANSPORT;
             break;
         case SHIP_CAPITAL:
-            ship.max_speed = 18.5;
-            ship.acceleration = 3.2;
-            ship.turn_speed = 48.0;
-            ship.combat_behavior = SHIP_BEHAVIOR_CHARGE;
-            ship.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            ship.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            ship.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
-            ship.role = SHIP_ROLE_LINE;
+            profile.armor = 65;
+            profile.hp = 360;
+            profile.shield = 200;
+            profile.max_speed = 18.5;
+            profile.acceleration = 3.2;
+            profile.turn_speed = 48.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            break;
+        case SHIP_TRANSPORT:
+            profile.armor = 18;
+            profile.hp = 190;
+            profile.shield = 60;
+            profile.max_speed = 19.0;
+            profile.acceleration = 4.2;
+            profile.turn_speed = 72.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.role = SHIP_ROLE_TRANSPORT;
+            break;
+        case SHIP_CORVETTE:
+            profile.armor = 28;
+            profile.hp = 220;
+            profile.shield = 90;
+            profile.max_speed = 23.0;
+            profile.acceleration = 5.8;
+            profile.turn_speed = 95.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            break;
+        case SHIP_INTERCEPTOR:
+            profile.armor = 20;
+            profile.hp = 170;
+            profile.shield = 80;
+            profile.max_speed = 30.0;
+            profile.acceleration = 7.2;
+            profile.turn_speed = 130.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            break;
+        case SHIP_REPAIR_DRONE:
+            profile.armor = 8;
+            profile.hp = 110;
+            profile.shield = 90;
+            profile.max_speed = 22.0;
+            profile.acceleration = 6.8;
+            profile.turn_speed = 140.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.role = SHIP_ROLE_SUPPORT;
+            break;
+        case SHIP_SUNFLARE_SLOOP:
+            profile.armor = 32;
+            profile.hp = 240;
+            profile.shield = 200;
+            profile.max_speed = 21.0;
+            profile.acceleration = 5.2;
+            profile.turn_speed = 110.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.role = SHIP_ROLE_SUPPORT;
+            break;
+        case SHIP_FRIGATE_ESCORT:
+            profile.armor = 42;
+            profile.hp = 280;
+            profile.shield = 130;
+            profile.max_speed = 20.0;
+            profile.acceleration = 4.6;
+            profile.turn_speed = 85.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            break;
+        case SHIP_FRIGATE_SUPPORT:
+            profile.armor = 38;
+            profile.hp = 260;
+            profile.shield = 150;
+            profile.max_speed = 19.0;
+            profile.acceleration = 4.3;
+            profile.turn_speed = 80.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            profile.role = SHIP_ROLE_SUPPORT;
+            break;
+        case SHIP_CAPITAL_CARRIER:
+            profile.armor = 60;
+            profile.hp = 340;
+            profile.shield = 240;
+            profile.max_speed = 18.0;
+            profile.acceleration = 3.0;
+            profile.turn_speed = 46.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            break;
+        case SHIP_CAPITAL_DREADNOUGHT:
+            profile.armor = 75;
+            profile.hp = 400;
+            profile.shield = 180;
+            profile.max_speed = 17.5;
+            profile.acceleration = 2.6;
+            profile.turn_speed = 42.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
             break;
         default:
             break;
         }
+        return profile;
+    }
+
+    void assign_ship_defaults(ft_ship &ship)
+    {
+        ship_profile profile = get_ship_profile(ship.type);
+        ship.armor = profile.armor;
+        ship.hp = profile.hp;
+        ship.max_hp = profile.hp;
+        ship.shield = profile.shield;
+        ship.max_shield = profile.shield;
+        ship.max_speed = profile.max_speed;
+        ship.acceleration = profile.acceleration;
+        ship.turn_speed = profile.turn_speed;
+        ship.combat_behavior = profile.combat_behavior;
+        ship.outnumbered_behavior = profile.outnumbered_behavior;
+        ship.unescorted_behavior = profile.unescorted_behavior;
+        ship.low_hp_behavior = profile.low_hp_behavior;
+        ship.role = profile.role;
     }
 }
 
@@ -139,14 +282,50 @@ double ft_fleet::get_attack_power() const noexcept
         if (ship.hp <= 0)
             continue;
         double base = 4.0;
-        if (ship.type == SHIP_SHIELD)
-            base = 5.0;
-        else if (ship.type == SHIP_RADAR)
-            base = 6.0;
-        else if (ship.type == SHIP_SALVAGE)
+        switch (ship.type)
+        {
+        case SHIP_SHIELD:
+            base = 5.5;
+            break;
+        case SHIP_RADAR:
+            base = 4.5;
+            break;
+        case SHIP_SALVAGE:
+            base = 4.0;
+            break;
+        case SHIP_TRANSPORT:
+            base = 3.0;
+            break;
+        case SHIP_CORVETTE:
+            base = 8.0;
+            break;
+        case SHIP_INTERCEPTOR:
             base = 9.0;
-        else if (ship.type == SHIP_CAPITAL)
+            break;
+        case SHIP_REPAIR_DRONE:
+            base = 2.5;
+            break;
+        case SHIP_SUNFLARE_SLOOP:
+            base = 4.0;
+            break;
+        case SHIP_FRIGATE_ESCORT:
+            base = 11.0;
+            break;
+        case SHIP_FRIGATE_SUPPORT:
+            base = 7.0;
+            break;
+        case SHIP_CAPITAL_CARRIER:
+            base = 13.5;
+            break;
+        case SHIP_CAPITAL_DREADNOUGHT:
+            base = 18.0;
+            break;
+        case SHIP_CAPITAL:
             base = 15.0;
+            break;
+        default:
+            break;
+        }
         double hp_value = static_cast<double>(ship.hp);
         if (hp_value > 100.0)
             hp_value = 100.0;
@@ -427,12 +606,22 @@ void ft_fleet::apply_support(int shield_amount, int repair_amount) noexcept
     for (size_t i = 0; i < shield_targets.size() && shield_remaining > 0; ++i)
     {
         ft_ship *ship = shield_targets[i];
+        if (ship->max_shield > 0 && ship->shield >= ship->max_shield)
+            continue;
         size_t remain = shield_targets.size() - i;
         int share = shield_remaining / static_cast<int>(remain);
         if (share <= 0)
             share = 1;
         if (share > shield_remaining)
             share = shield_remaining;
+        if (ship->max_shield > 0)
+        {
+            int capacity = ship->max_shield - ship->shield;
+            if (capacity <= 0)
+                continue;
+            if (share > capacity)
+                share = capacity;
+        }
         ship->shield += share;
         shield_remaining -= share;
     }
@@ -440,12 +629,22 @@ void ft_fleet::apply_support(int shield_amount, int repair_amount) noexcept
     for (size_t i = 0; i < repair_targets.size() && repair_remaining > 0; ++i)
     {
         ft_ship *ship = repair_targets[i];
+        if (ship->max_hp > 0 && ship->hp >= ship->max_hp)
+            continue;
         size_t remain = repair_targets.size() - i;
         int share = repair_remaining / static_cast<int>(remain);
         if (share <= 0)
             share = 1;
         if (share > repair_remaining)
             share = repair_remaining;
+        if (ship->max_hp > 0)
+        {
+            int capacity = ship->max_hp - ship->hp;
+            if (capacity <= 0)
+                continue;
+            if (share > capacity)
+                share = capacity;
+        }
         ship->hp += share;
         repair_remaining -= share;
     }
@@ -515,5 +714,16 @@ void ft_fleet::tick(double seconds) noexcept
             this->set_location_planet(this->_loc.to);
         }
     }
+}
+
+bool is_capital_ship_type(int ship_type) noexcept
+{
+    if (ship_type == SHIP_CAPITAL)
+        return true;
+    if (ship_type == SHIP_CAPITAL_CARRIER)
+        return true;
+    if (ship_type == SHIP_CAPITAL_DREADNOUGHT)
+        return true;
+    return false;
 }
 

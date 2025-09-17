@@ -381,12 +381,50 @@ void CombatManager::apply_support(const ft_combat_encounter &encounter,
     if ((!encounter.modifiers.sunflare_docked && !encounter.modifiers.repair_drones_active)
         || seconds <= 0.0)
         return ;
-    int shield_bonus = 0;
-    int repair_bonus = 0;
-    if (encounter.modifiers.sunflare_docked)
-        shield_bonus = static_cast<int>(seconds * 8.0 + 0.5);
-    if (encounter.modifiers.repair_drones_active)
-        repair_bonus = static_cast<int>(seconds * 10.0 + 0.5);
+    int sunflare_count = 0;
+    int drone_count = 0;
+    ft_vector<int> ship_ids;
+    size_t defender_count = defenders.size();
+    for (size_t i = 0; i < defender_count; ++i)
+    {
+        ft_sharedptr<ft_fleet> &fleet = defenders[i];
+        if (!fleet)
+            continue;
+        fleet->get_ship_ids(ship_ids);
+        for (size_t j = 0; j < ship_ids.size(); ++j)
+        {
+            int ship_uid = ship_ids[j];
+            const ft_ship *ship = fleet->get_ship(ship_uid);
+            if (ship == ft_nullptr)
+                continue;
+            if (ship->hp <= 0 && ship->shield <= 0)
+                continue;
+            if (ship->type == SHIP_SUNFLARE_SLOOP)
+                sunflare_count += 1;
+            else if (ship->type == SHIP_FRIGATE_SUPPORT)
+            {
+                sunflare_count += 1;
+                drone_count += 1;
+            }
+            else if (ship->type == SHIP_CAPITAL_CARRIER)
+            {
+                sunflare_count += 2;
+                drone_count += 1;
+            }
+            if (ship->type == SHIP_REPAIR_DRONE)
+                drone_count += 1;
+        }
+    }
+    double shield_rate = 0.0;
+    double repair_rate = 0.0;
+    if (encounter.modifiers.sunflare_docked && sunflare_count > 0)
+        shield_rate = 8.0 * static_cast<double>(sunflare_count);
+    if (encounter.modifiers.repair_drones_active && drone_count > 0)
+        repair_rate = 10.0 * static_cast<double>(drone_count);
+    if (shield_rate <= 0.0 && repair_rate <= 0.0)
+        return ;
+    int shield_bonus = static_cast<int>(shield_rate * seconds + 0.5);
+    int repair_bonus = static_cast<int>(repair_rate * seconds + 0.5);
     size_t count = defenders.size();
     for (size_t i = 0; i < count; ++i)
     {
@@ -714,7 +752,7 @@ void CombatManager::initialize_tracker(ft_ship_tracker &tracker, int ship_uid,
     tracker.heading_z = 0.0;
     if (ship.role == SHIP_ROLE_TRANSPORT)
         tracker.base_advance_bias -= 4.0;
-    if (ship.type == SHIP_CAPITAL)
+    if (is_capital_ship_type(ship.type))
     {
         tracker.base_preferred_radius = raider_side ? 18.0 : 12.0;
         tracker.base_advance_bias = raider_side ? -6.0 : 18.0;
