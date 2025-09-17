@@ -7,6 +7,7 @@ int verify_backend_roundtrip();
 int validate_initial_campaign_flow(Game &game);
 int evaluate_building_and_convoy_systems(Game &game);
 int evaluate_ship_upgrade_research(Game &game);
+int verify_supply_contract_automation();
 int verify_multiple_convoy_raids();
 int compare_energy_pressure_scenarios();
 int compare_storyline_assaults();
