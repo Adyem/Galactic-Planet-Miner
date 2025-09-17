@@ -25,19 +25,32 @@ void ft_planet::ensure_item_slot(int item_id) noexcept
 void ft_planet::register_resource(int ore_id, double rate) noexcept
 {
     this->ensure_item_slot(ore_id);
+    bool found = false;
     for (size_t i = 0; i < this->_rates.size(); ++i)
     {
         if (this->_rates[i].key == ore_id)
         {
             this->_rates[i].value = rate;
-            return ;
+            found = true;
+            break;
         }
     }
 
-    Pair<int, double> pair_rate;
-    pair_rate.key = ore_id;
-    pair_rate.value = rate;
-    this->_rates.push_back(pair_rate);
+    if (!found)
+    {
+        Pair<int, double> pair_rate;
+        pair_rate.key = ore_id;
+        pair_rate.value = rate;
+        this->_rates.push_back(pair_rate);
+    }
+
+    if (this->find_carryover(ore_id) == ft_nullptr)
+    {
+        Pair<int, double> entry;
+        entry.key = ore_id;
+        entry.value = 0.0;
+        this->_carryover.push_back(entry);
+    }
 }
 
 ft_sharedptr<ft_item> ft_planet::find_item(int ore_id) noexcept
@@ -58,6 +71,26 @@ ft_sharedptr<const ft_item> ft_planet::find_item(int ore_id) const noexcept
             return this->_items[i].value;
     }
     return ft_sharedptr<const ft_item>();
+}
+
+Pair<int, double> *ft_planet::find_carryover(int ore_id) noexcept
+{
+    for (size_t i = 0; i < this->_carryover.size(); ++i)
+    {
+        if (this->_carryover[i].key == ore_id)
+            return &this->_carryover[i];
+    }
+    return ft_nullptr;
+}
+
+const Pair<int, double> *ft_planet::find_carryover(int ore_id) const noexcept
+{
+    for (size_t i = 0; i < this->_carryover.size(); ++i)
+    {
+        if (this->_carryover[i].key == ore_id)
+            return &this->_carryover[i];
+    }
+    return ft_nullptr;
 }
 
 int ft_planet::get_id() const noexcept
@@ -116,11 +149,29 @@ const ft_vector<Pair<int, double> > &ft_planet::get_resources() const noexcept
 ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
 {
     ft_vector<Pair<int, int> > produced;
+    const double epsilon = 0.0000001;
     for (size_t i = 0; i < this->_rates.size(); ++i)
     {
         int ore_id = this->_rates[i].key;
         double rate = this->_rates[i].value;
-        int amount = static_cast<int>(rate * seconds);
+        Pair<int, double> *carry = this->find_carryover(ore_id);
+        if (carry == ft_nullptr)
+        {
+            Pair<int, double> entry;
+            entry.key = ore_id;
+            entry.value = 0.0;
+            this->_carryover.push_back(entry);
+            carry = this->find_carryover(ore_id);
+        }
+        double total = rate * seconds;
+        if (carry)
+            total += carry->value;
+        int amount = static_cast<int>(total + epsilon);
+        double remainder = total - static_cast<double>(amount);
+        if (remainder < 0.0)
+            remainder = 0.0;
+        if (carry)
+            carry->value = remainder;
         if (amount > 0)
         {
             this->add_resource(ore_id, amount);
