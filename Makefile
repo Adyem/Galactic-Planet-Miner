@@ -15,13 +15,30 @@ SRC_COMMON  = \
     $(SRC_DIR)/planets.cpp \
     $(SRC_DIR)/fleets.cpp \
     $(SRC_DIR)/buildings.cpp \
+    $(SRC_DIR)/buildings_catalog.cpp \
     $(SRC_DIR)/combat.cpp \
+    $(SRC_DIR)/combat_support.cpp \
+    $(SRC_DIR)/combat_tracks.cpp \
+    $(SRC_DIR)/combat_formations.cpp \
+    $(SRC_DIR)/combat_tick.cpp \
     $(SRC_DIR)/quests.cpp \
     $(SRC_DIR)/research.cpp \
+    $(SRC_DIR)/game_research.cpp \
+    $(SRC_DIR)/game_quests.cpp \
+    $(SRC_DIR)/game_convoys.cpp \
+    $(SRC_DIR)/game_fleets.cpp \
+    $(SRC_DIR)/game_combat_interface.cpp \
     $(SRC_DIR)/game.cpp
 SRC_MAIN    = $(SRC_DIR)/main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
-SRC_TEST    = $(SRC_COMMON) $(TEST_DIR)/game_test.cpp
+SRC_TEST    = $(SRC_COMMON) \
+    $(TEST_DIR)/game_test_main.cpp \
+    $(TEST_DIR)/game_test_backend.cpp \
+    $(TEST_DIR)/game_test_campaign.cpp \
+    $(TEST_DIR)/game_test_energy.cpp \
+    $(TEST_DIR)/game_test_control.cpp \
+    $(TEST_DIR)/game_test_support.cpp \
+    $(TEST_DIR)/game_test_difficulty.cpp
 
 CC          = g++
 
