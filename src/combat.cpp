@@ -1,8 +1,32 @@
 #include "combat.hpp"
 
 CombatManager::CombatManager()
+    : _player_weapon_multiplier(1.0),
+      _player_shield_multiplier(1.0),
+      _player_hull_multiplier(1.0)
 {
     return ;
+}
+
+void CombatManager::set_player_weapon_multiplier(double value)
+{
+    if (value < 1.0)
+        value = 1.0;
+    this->_player_weapon_multiplier = value;
+}
+
+void CombatManager::set_player_shield_multiplier(double value)
+{
+    if (value < 1.0)
+        value = 1.0;
+    this->_player_shield_multiplier = value;
+}
+
+void CombatManager::set_player_hull_multiplier(double value)
+{
+    if (value < 1.0)
+        value = 1.0;
+    this->_player_hull_multiplier = value;
 }
 
 bool CombatManager::start_raider_assault(int planet_id, double difficulty)
@@ -168,7 +192,7 @@ void CombatManager::tick(double seconds, ft_map<int, ft_sharedptr<ft_fleet> > &f
             to_remove.push_back(entries[i].key);
             continue;
         }
-        double player_damage = this->calculate_player_power(defenders) * seconds;
+        double player_damage = this->calculate_player_power(defenders) * seconds * this->_player_weapon_multiplier;
         if (player_damage > 0.0)
         {
             if (player_damage >= encounter.raider_shield)
@@ -209,7 +233,7 @@ void CombatManager::tick(double seconds, ft_map<int, ft_sharedptr<ft_fleet> > &f
                 continue;
             if (fleet->has_operational_ships())
                 defenders_operational = true;
-            leftover = fleet->absorb_damage(leftover);
+            leftover = fleet->absorb_damage(leftover, this->_player_shield_multiplier, this->_player_hull_multiplier);
         }
         if (!defenders_operational || leftover > 0.0)
         {

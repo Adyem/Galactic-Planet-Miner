@@ -40,6 +40,9 @@ private:
     };
 
     ft_map<int, ft_combat_encounter> _encounters;
+    double                           _player_weapon_multiplier;
+    double                           _player_shield_multiplier;
+    double                           _player_hull_multiplier;
 
     void gather_defenders(const ft_combat_encounter &encounter,
         ft_map<int, ft_sharedptr<ft_fleet> > &fleets,
@@ -54,6 +57,10 @@ private:
 
 public:
     CombatManager();
+
+    void set_player_weapon_multiplier(double value);
+    void set_player_shield_multiplier(double value);
+    void set_player_hull_multiplier(double value);
 
     bool start_raider_assault(int planet_id, double difficulty);
     bool add_fleet(int planet_id, int fleet_id);

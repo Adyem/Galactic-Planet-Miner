@@ -101,6 +101,7 @@ private:
     ft_map<int, ft_sharedptr<ft_quest_definition> > _definitions;
     ft_map<int, ft_quest_progress>                  _progress;
     ft_map<int, int>                                _quest_choices;
+    double                                          _time_scale;
 
     void register_quest(const ft_sharedptr<ft_quest_definition> &definition);
     void update_availability();
@@ -113,6 +114,9 @@ public:
     void update(double seconds, const ft_quest_context &context,
                 ft_vector<int> &completed, ft_vector<int> &failed,
                 ft_vector<int> &awaiting_choice);
+
+    void set_time_scale(double scale);
+    double get_time_scale() const { return this->_time_scale; }
 
     int get_active_quest_id() const;
     int get_status(int quest_id) const;

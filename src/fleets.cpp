@@ -240,10 +240,14 @@ int ft_fleet::sub_ship_shield(int ship_uid, int amount) noexcept
     return ship->shield;
 }
 
-double ft_fleet::absorb_damage(double damage) noexcept
+double ft_fleet::absorb_damage(double damage, double shield_multiplier, double hull_multiplier) noexcept
 {
     if (damage <= 0.0)
         return 0.0;
+    if (shield_multiplier < 1.0)
+        shield_multiplier = 1.0;
+    if (hull_multiplier < 1.0)
+        hull_multiplier = 1.0;
     int total_damage = static_cast<int>(damage + 0.5);
     if (total_damage <= 0)
         return 0.0;
@@ -269,23 +273,31 @@ double ft_fleet::absorb_damage(double damage) noexcept
         if (share > total_damage)
             share = total_damage;
         total_damage -= share;
-        int remaining = share;
-        if (ship->shield >= remaining)
+        double incoming = static_cast<double>(share);
+        int available_shield = ship->shield;
+        if (available_shield > 0)
         {
-            ship->shield -= remaining;
-            remaining = 0;
+            double ratio = incoming / shield_multiplier;
+            int reduction_units = static_cast<int>(ratio);
+            if (static_cast<double>(reduction_units) < ratio)
+                reduction_units += 1;
+            if (reduction_units > available_shield)
+                reduction_units = available_shield;
+            ship->shield -= reduction_units;
+            double absorbed = static_cast<double>(reduction_units) * shield_multiplier;
+            if (absorbed > incoming)
+                absorbed = incoming;
+            incoming -= absorbed;
+            if (incoming < 0.0)
+                incoming = 0.0;
         }
-        else
-        {
-            remaining -= ship->shield;
-            ship->shield = 0;
-        }
-        if (remaining <= 0)
+        if (incoming <= 0.0)
             continue;
+        double base_damage = incoming / hull_multiplier;
         double reduction = static_cast<double>(ship->armor) * 0.01;
         if (reduction > 0.6)
             reduction = 0.6;
-        double hull_damage_d = static_cast<double>(remaining) * (1.0 - reduction);
+        double hull_damage_d = base_damage * (1.0 - reduction);
         int hull_damage = static_cast<int>(hull_damage_d + 0.5);
         if (hull_damage <= 0 && ship->hp > 0)
             hull_damage = 1;

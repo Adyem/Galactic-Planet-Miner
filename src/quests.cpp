@@ -1,6 +1,7 @@
 #include "quests.hpp"
 
 QuestManager::QuestManager()
+    : _time_scale(1.0)
 {
     ft_sharedptr<ft_quest_definition> skirmish(new ft_quest_definition());
     skirmish->id = QUEST_INITIAL_SKIRMISHES;
@@ -24,7 +25,7 @@ QuestManager::QuestManager()
     defense->id = QUEST_DEFENSE_OF_TERRA;
     defense->name = ft_string("Defense of Terra");
     defense->description = ft_string("Assemble a defensive wing to repel raider assaults.");
-    defense->time_limit = 0.0;
+    defense->time_limit = 180.0;
     defense->requires_choice = false;
     defense->required_choice_quest = 0;
     defense->required_choice_value = 0;
@@ -43,7 +44,7 @@ QuestManager::QuestManager()
     investigate->id = QUEST_INVESTIGATE_RAIDERS;
     investigate->name = ft_string("Investigate Raider Motives");
     investigate->description = ft_string("Complete research to uncover the raiders' plans.");
-    investigate->time_limit = 0.0;
+    investigate->time_limit = 240.0;
     investigate->requires_choice = false;
     investigate->required_choice_quest = 0;
     investigate->required_choice_value = 0;
@@ -61,7 +62,7 @@ QuestManager::QuestManager()
     battle->id = QUEST_CLIMACTIC_BATTLE;
     battle->name = ft_string("Climactic Battle");
     battle->description = ft_string("Prepare the fleets and technology for the climactic assault.");
-    battle->time_limit = 0.0;
+    battle->time_limit = 300.0;
     battle->requires_choice = false;
     battle->required_choice_quest = 0;
     battle->required_choice_value = 0;
@@ -98,7 +99,7 @@ QuestManager::QuestManager()
     order->id = QUEST_ORDER_UPRISING;
     order->name = ft_string("Order's Last Stand");
     order->description = ft_string("Crush the uprising that rises after Blackthorne's execution.");
-    order->time_limit = 0.0;
+    order->time_limit = 360.0;
     order->requires_choice = false;
     order->required_choice_quest = QUEST_CRITICAL_DECISION;
     order->required_choice_value = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
@@ -113,7 +114,7 @@ QuestManager::QuestManager()
     rebellion->id = QUEST_REBELLION_FLEET;
     rebellion->name = ft_string("Rebellion Rising");
     rebellion->description = ft_string("Rally new allies after sparing Blackthorne.");
-    rebellion->time_limit = 0.0;
+    rebellion->time_limit = 360.0;
     rebellion->requires_choice = false;
     rebellion->required_choice_quest = QUEST_CRITICAL_DECISION;
     rebellion->required_choice_value = QUEST_CHOICE_SPARE_BLACKTHORNE;
@@ -209,7 +210,7 @@ void QuestManager::activate_next()
     progress_entry->value.status = QUEST_STATUS_ACTIVE;
     const ft_quest_definition *definition = this->get_definition(next_id);
     if (definition != ft_nullptr && definition->time_limit > 0.0)
-        progress_entry->value.time_remaining = definition->time_limit;
+        progress_entry->value.time_remaining = definition->time_limit * this->_time_scale;
     else
         progress_entry->value.time_remaining = 0.0;
 }
@@ -271,6 +272,11 @@ void QuestManager::update(double seconds, const ft_quest_context &context,
                 progress.time_remaining = 0.0;
                 progress.status = QUEST_STATUS_FAILED;
                 failed.push_back(entries[i].key);
+                if (definition->time_limit > 0.0)
+                {
+                    progress.status = QUEST_STATUS_AVAILABLE;
+                    progress.time_remaining = definition->time_limit * this->_time_scale;
+                }
                 continue;
             }
         }
@@ -292,6 +298,38 @@ void QuestManager::update(double seconds, const ft_quest_context &context,
     if (completed.size() > 0 || failed.size() > 0)
         this->update_availability();
     this->activate_next();
+}
+
+void QuestManager::set_time_scale(double scale)
+{
+    if (scale <= 0.0)
+        scale = 1.0;
+    double delta = scale - this->_time_scale;
+    if (delta < 0.0)
+        delta = -delta;
+    if (delta < 0.000001)
+        return ;
+    double ratio = scale / this->_time_scale;
+    this->_time_scale = scale;
+    size_t count = this->_progress.size();
+    Pair<int, ft_quest_progress> *entries = this->_progress.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        ft_quest_progress &progress = entries[i].value;
+        if (progress.time_remaining <= 0.0)
+            continue;
+        const ft_quest_definition *definition = this->get_definition(entries[i].key);
+        if (definition == ft_nullptr || definition->time_limit <= 0.0)
+            continue;
+        if (progress.status == QUEST_STATUS_ACTIVE || progress.status == QUEST_STATUS_AVAILABLE)
+        {
+            progress.time_remaining *= ratio;
+            double max_time = definition->time_limit * this->_time_scale;
+            if (progress.time_remaining > max_time)
+                progress.time_remaining = max_time;
+        }
+    }
 }
 
 int QuestManager::get_active_quest_id() const

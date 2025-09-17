@@ -14,7 +14,21 @@ enum e_research_id
     RESEARCH_UNLOCK_MARS = 1,
     RESEARCH_UNLOCK_ZALTHOR,
     RESEARCH_UNLOCK_VULCAN,
-    RESEARCH_UNLOCK_NOCTARIS
+    RESEARCH_UNLOCK_NOCTARIS,
+    RESEARCH_URBAN_PLANNING_TERRA,
+    RESEARCH_URBAN_PLANNING_MARS,
+    RESEARCH_URBAN_PLANNING_ZALTHOR,
+    RESEARCH_SOLAR_PANELS,
+    RESEARCH_CRAFTING_MASTERY,
+    RESEARCH_STRUCTURAL_REINFORCEMENT_I,
+    RESEARCH_STRUCTURAL_REINFORCEMENT_II,
+    RESEARCH_STRUCTURAL_REINFORCEMENT_III,
+    RESEARCH_DEFENSIVE_FORTIFICATION_I,
+    RESEARCH_DEFENSIVE_FORTIFICATION_II,
+    RESEARCH_DEFENSIVE_FORTIFICATION_III,
+    RESEARCH_ARMAMENT_ENHANCEMENT_I,
+    RESEARCH_ARMAMENT_ENHANCEMENT_II,
+    RESEARCH_ARMAMENT_ENHANCEMENT_III
 };
 
 enum e_research_status
@@ -47,6 +61,7 @@ class ResearchManager
 private:
     ft_map<int, ft_sharedptr<ft_research_definition> > _definitions;
     ft_map<int, ft_research_progress>   _progress;
+    double                              _duration_scale;
 
     void register_research(const ft_sharedptr<ft_research_definition> &definition);
     void update_availability();
@@ -55,6 +70,9 @@ public:
     ResearchManager();
 
     void tick(double seconds, ft_vector<int> &completed);
+
+    void set_duration_scale(double scale);
+    double get_duration_scale() const { return this->_duration_scale; }
 
     bool can_start(int research_id) const;
     bool start(int research_id);

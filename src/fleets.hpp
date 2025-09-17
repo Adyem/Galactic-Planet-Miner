@@ -91,7 +91,7 @@ public:
     int add_ship_shield(int ship_uid, int amount) noexcept;
     int sub_ship_shield(int ship_uid, int amount) noexcept;
 
-    double absorb_damage(double damage) noexcept;
+    double absorb_damage(double damage, double shield_multiplier, double hull_multiplier) noexcept;
     void apply_support(int shield_amount, int repair_amount) noexcept;
     bool has_operational_ships() const noexcept;
 

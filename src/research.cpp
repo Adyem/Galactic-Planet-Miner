@@ -1,6 +1,7 @@
 #include "research.hpp"
 
 ResearchManager::ResearchManager()
+    : _duration_scale(1.0)
 {
     ft_sharedptr<ft_research_definition> mars(new ft_research_definition());
     mars->id = RESEARCH_UNLOCK_MARS;
@@ -76,6 +77,229 @@ ResearchManager::ResearchManager()
     noctaris->unlock_planets.push_back(PLANET_NOCTARIS_PRIME);
     this->register_research(noctaris);
 
+    ft_sharedptr<ft_research_definition> planning_terra(new ft_research_definition());
+    planning_terra->id = RESEARCH_URBAN_PLANNING_TERRA;
+    planning_terra->name = ft_string("Urban Planning I");
+    planning_terra->duration = 20.0;
+    planning_terra->prerequisites.clear();
+    planning_terra->costs.clear();
+    cost.key = ITEM_IRON_BAR;
+    cost.value = 15;
+    planning_terra->costs.push_back(cost);
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 5;
+    planning_terra->costs.push_back(cost);
+    planning_terra->unlock_planets.clear();
+    this->register_research(planning_terra);
+
+    ft_sharedptr<ft_research_definition> planning_mars(new ft_research_definition());
+    planning_mars->id = RESEARCH_URBAN_PLANNING_MARS;
+    planning_mars->name = ft_string("Urban Planning II");
+    planning_mars->duration = 25.0;
+    planning_mars->prerequisites.clear();
+    planning_mars->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
+    planning_mars->costs.clear();
+    cost.key = ITEM_IRON_BAR;
+    cost.value = 30;
+    planning_mars->costs.push_back(cost);
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 10;
+    planning_mars->costs.push_back(cost);
+    planning_mars->unlock_planets.clear();
+    this->register_research(planning_mars);
+
+    ft_sharedptr<ft_research_definition> planning_zalthor(new ft_research_definition());
+    planning_zalthor->id = RESEARCH_URBAN_PLANNING_ZALTHOR;
+    planning_zalthor->name = ft_string("Urban Planning III");
+    planning_zalthor->duration = 30.0;
+    planning_zalthor->prerequisites.clear();
+    planning_zalthor->prerequisites.push_back(RESEARCH_UNLOCK_ZALTHOR);
+    planning_zalthor->costs.clear();
+    cost.key = ITEM_IRON_BAR;
+    cost.value = 45;
+    planning_zalthor->costs.push_back(cost);
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 15;
+    planning_zalthor->costs.push_back(cost);
+    planning_zalthor->unlock_planets.clear();
+    this->register_research(planning_zalthor);
+
+    ft_sharedptr<ft_research_definition> solar(new ft_research_definition());
+    solar->id = RESEARCH_SOLAR_PANELS;
+    solar->name = ft_string("Solar Panel Engineering");
+    solar->duration = 25.0;
+    solar->prerequisites.clear();
+    solar->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
+    solar->costs.clear();
+    cost.key = ORE_IRON;
+    cost.value = 20;
+    solar->costs.push_back(cost);
+    cost.key = ORE_COPPER;
+    cost.value = 30;
+    solar->costs.push_back(cost);
+    solar->unlock_planets.clear();
+    this->register_research(solar);
+
+    ft_sharedptr<ft_research_definition> mastery(new ft_research_definition());
+    mastery->id = RESEARCH_CRAFTING_MASTERY;
+    mastery->name = ft_string("Crafting Mastery");
+    mastery->duration = 35.0;
+    mastery->prerequisites.clear();
+    mastery->prerequisites.push_back(RESEARCH_SOLAR_PANELS);
+    mastery->costs.clear();
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 5;
+    mastery->costs.push_back(cost);
+    cost.key = ORE_TITANIUM;
+    cost.value = 3;
+    mastery->costs.push_back(cost);
+    mastery->unlock_planets.clear();
+    this->register_research(mastery);
+
+    ft_sharedptr<ft_research_definition> structural_i(new ft_research_definition());
+    structural_i->id = RESEARCH_STRUCTURAL_REINFORCEMENT_I;
+    structural_i->name = ft_string("Structural Reinforcement I");
+    structural_i->duration = 25.0;
+    structural_i->prerequisites.clear();
+    structural_i->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
+    structural_i->costs.clear();
+    cost.key = ITEM_IRON_BAR;
+    cost.value = 10;
+    structural_i->costs.push_back(cost);
+    cost.key = ORE_COAL;
+    cost.value = 10;
+    structural_i->costs.push_back(cost);
+    structural_i->unlock_planets.clear();
+    this->register_research(structural_i);
+
+    ft_sharedptr<ft_research_definition> structural_ii(new ft_research_definition());
+    structural_ii->id = RESEARCH_STRUCTURAL_REINFORCEMENT_II;
+    structural_ii->name = ft_string("Structural Reinforcement II");
+    structural_ii->duration = 35.0;
+    structural_ii->prerequisites.clear();
+    structural_ii->prerequisites.push_back(RESEARCH_STRUCTURAL_REINFORCEMENT_I);
+    structural_ii->costs.clear();
+    cost.key = ITEM_IRON_BAR;
+    cost.value = 20;
+    structural_ii->costs.push_back(cost);
+    cost.key = ORE_COAL;
+    cost.value = 20;
+    structural_ii->costs.push_back(cost);
+    structural_ii->unlock_planets.clear();
+    this->register_research(structural_ii);
+
+    ft_sharedptr<ft_research_definition> structural_iii(new ft_research_definition());
+    structural_iii->id = RESEARCH_STRUCTURAL_REINFORCEMENT_III;
+    structural_iii->name = ft_string("Structural Reinforcement III");
+    structural_iii->duration = 45.0;
+    structural_iii->prerequisites.clear();
+    structural_iii->prerequisites.push_back(RESEARCH_STRUCTURAL_REINFORCEMENT_II);
+    structural_iii->costs.clear();
+    cost.key = ITEM_IRON_BAR;
+    cost.value = 30;
+    structural_iii->costs.push_back(cost);
+    cost.key = ORE_COAL;
+    cost.value = 30;
+    structural_iii->costs.push_back(cost);
+    structural_iii->unlock_planets.clear();
+    this->register_research(structural_iii);
+
+    ft_sharedptr<ft_research_definition> defensive_i(new ft_research_definition());
+    defensive_i->id = RESEARCH_DEFENSIVE_FORTIFICATION_I;
+    defensive_i->name = ft_string("Defensive Fortification I");
+    defensive_i->duration = 30.0;
+    defensive_i->prerequisites.clear();
+    defensive_i->prerequisites.push_back(RESEARCH_UNLOCK_ZALTHOR);
+    defensive_i->costs.clear();
+    cost.key = ITEM_COPPER_BAR;
+    cost.value = 10;
+    defensive_i->costs.push_back(cost);
+    cost.key = ITEM_MITHRIL_BAR;
+    cost.value = 5;
+    defensive_i->costs.push_back(cost);
+    defensive_i->unlock_planets.clear();
+    this->register_research(defensive_i);
+
+    ft_sharedptr<ft_research_definition> defensive_ii(new ft_research_definition());
+    defensive_ii->id = RESEARCH_DEFENSIVE_FORTIFICATION_II;
+    defensive_ii->name = ft_string("Defensive Fortification II");
+    defensive_ii->duration = 40.0;
+    defensive_ii->prerequisites.clear();
+    defensive_ii->prerequisites.push_back(RESEARCH_DEFENSIVE_FORTIFICATION_I);
+    defensive_ii->costs.clear();
+    cost.key = ITEM_COPPER_BAR;
+    cost.value = 20;
+    defensive_ii->costs.push_back(cost);
+    cost.key = ITEM_MITHRIL_BAR;
+    cost.value = 10;
+    defensive_ii->costs.push_back(cost);
+    defensive_ii->unlock_planets.clear();
+    this->register_research(defensive_ii);
+
+    ft_sharedptr<ft_research_definition> defensive_iii(new ft_research_definition());
+    defensive_iii->id = RESEARCH_DEFENSIVE_FORTIFICATION_III;
+    defensive_iii->name = ft_string("Defensive Fortification III");
+    defensive_iii->duration = 50.0;
+    defensive_iii->prerequisites.clear();
+    defensive_iii->prerequisites.push_back(RESEARCH_DEFENSIVE_FORTIFICATION_II);
+    defensive_iii->costs.clear();
+    cost.key = ITEM_COPPER_BAR;
+    cost.value = 30;
+    defensive_iii->costs.push_back(cost);
+    cost.key = ITEM_MITHRIL_BAR;
+    cost.value = 15;
+    defensive_iii->costs.push_back(cost);
+    defensive_iii->unlock_planets.clear();
+    this->register_research(defensive_iii);
+
+    ft_sharedptr<ft_research_definition> armament_i(new ft_research_definition());
+    armament_i->id = RESEARCH_ARMAMENT_ENHANCEMENT_I;
+    armament_i->name = ft_string("Armament Enhancement I");
+    armament_i->duration = 35.0;
+    armament_i->prerequisites.clear();
+    armament_i->prerequisites.push_back(RESEARCH_UNLOCK_VULCAN);
+    armament_i->costs.clear();
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 10;
+    armament_i->costs.push_back(cost);
+    cost.key = ORE_TITANIUM;
+    cost.value = 5;
+    armament_i->costs.push_back(cost);
+    armament_i->unlock_planets.clear();
+    this->register_research(armament_i);
+
+    ft_sharedptr<ft_research_definition> armament_ii(new ft_research_definition());
+    armament_ii->id = RESEARCH_ARMAMENT_ENHANCEMENT_II;
+    armament_ii->name = ft_string("Armament Enhancement II");
+    armament_ii->duration = 45.0;
+    armament_ii->prerequisites.clear();
+    armament_ii->prerequisites.push_back(RESEARCH_ARMAMENT_ENHANCEMENT_I);
+    armament_ii->costs.clear();
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 20;
+    armament_ii->costs.push_back(cost);
+    cost.key = ORE_TITANIUM;
+    cost.value = 10;
+    armament_ii->costs.push_back(cost);
+    armament_ii->unlock_planets.clear();
+    this->register_research(armament_ii);
+
+    ft_sharedptr<ft_research_definition> armament_iii(new ft_research_definition());
+    armament_iii->id = RESEARCH_ARMAMENT_ENHANCEMENT_III;
+    armament_iii->name = ft_string("Armament Enhancement III");
+    armament_iii->duration = 55.0;
+    armament_iii->prerequisites.clear();
+    armament_iii->prerequisites.push_back(RESEARCH_ARMAMENT_ENHANCEMENT_II);
+    armament_iii->costs.clear();
+    cost.key = ITEM_ENGINE_PART;
+    cost.value = 30;
+    armament_iii->costs.push_back(cost);
+    cost.key = ORE_TITANIUM;
+    cost.value = 15;
+    armament_iii->costs.push_back(cost);
+    armament_iii->unlock_planets.clear();
+    this->register_research(armament_iii);
+
     this->update_availability();
 }
 
@@ -143,6 +367,28 @@ void ResearchManager::tick(double seconds, ft_vector<int> &completed)
         this->update_availability();
 }
 
+void ResearchManager::set_duration_scale(double scale)
+{
+    if (scale <= 0.0)
+        scale = 1.0;
+    double delta = scale - this->_duration_scale;
+    if (delta < 0.0)
+        delta = -delta;
+    if (delta < 0.000001)
+        return ;
+    double ratio = scale / this->_duration_scale;
+    this->_duration_scale = scale;
+    size_t count = this->_progress.size();
+    Pair<int, ft_research_progress> *entries = this->_progress.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        ft_research_progress &progress = entries[i].value;
+        if (progress.status == RESEARCH_STATUS_IN_PROGRESS && progress.remaining_time > 0.0)
+            progress.remaining_time *= ratio;
+    }
+}
+
 bool ResearchManager::can_start(int research_id) const
 {
     const Pair<int, ft_research_progress> *entry = this->_progress.find(research_id);
@@ -162,7 +408,11 @@ bool ResearchManager::start(int research_id)
     if (definition == ft_nullptr)
         return false;
     entry->value.status = RESEARCH_STATUS_IN_PROGRESS;
-    entry->value.remaining_time = definition->duration;
+    double scaled = definition->duration * this->_duration_scale;
+    if (scaled <= 0.0)
+        entry->value.remaining_time = 0.0;
+    else
+        entry->value.remaining_time = scaled;
     if (entry->value.remaining_time <= 0.0)
     {
         entry->value.remaining_time = 0.0;

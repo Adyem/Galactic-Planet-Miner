@@ -3,7 +3,7 @@
 #include "../libft/Libft/libft.hpp"
 
 ft_planet_build_state::ft_planet_build_state()
-    : planet_id(0), width(0), height(0), base_logistic(0), used_plots(0),
+    : planet_id(0), width(0), height(0), base_logistic(0), research_logistic_bonus(0), used_plots(0),
       logistic_capacity(0), logistic_usage(0), base_energy_generation(0.0),
       energy_generation(0.0), energy_consumption(0.0), support_energy(0.0),
       mine_multiplier(1.0), next_instance_id(1), grid(), instances()
@@ -11,6 +11,10 @@ ft_planet_build_state::ft_planet_build_state()
 }
 
 BuildingManager::BuildingManager()
+    : _definitions(),
+      _planets(),
+      _solar_panels_unlocked(false),
+      _crafting_energy_multiplier(1.0)
 {
     ft_sharedptr<ft_building_definition> mine(new ft_building_definition());
     mine->id = BUILDING_MINE_CORE;
@@ -203,6 +207,31 @@ BuildingManager::BuildingManager()
     generator->removable = true;
     this->register_definition(generator);
 
+    ft_sharedptr<ft_building_definition> solar(new ft_building_definition());
+    solar->id = BUILDING_SOLAR_ARRAY;
+    solar->name = ft_string("Solar Array");
+    solar->width = 1;
+    solar->height = 1;
+    solar->logistic_cost = 0;
+    solar->logistic_gain = 0;
+    solar->energy_cost = 0.0;
+    solar->energy_gain = 3.0;
+    solar->cycle_time = 0.0;
+    solar->inputs.clear();
+    solar->outputs.clear();
+    solar->build_costs.clear();
+    recipe.key = ORE_IRON;
+    recipe.value = 20;
+    solar->build_costs.push_back(recipe);
+    recipe.key = ORE_COPPER;
+    recipe.value = 30;
+    solar->build_costs.push_back(recipe);
+    solar->mine_bonus = 0.0;
+    solar->unique = false;
+    solar->occupies_grid = true;
+    solar->removable = true;
+    this->register_definition(solar);
+
     ft_sharedptr<ft_building_definition> upgrade(new ft_building_definition());
     upgrade->id = BUILDING_UPGRADE_STATION;
     upgrade->name = ft_string("Mine Upgrade Station");
@@ -309,7 +338,7 @@ void BuildingManager::clear_area(ft_planet_build_state &state, int instance_id)
 
 void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state)
 {
-    state.logistic_capacity = state.base_logistic;
+    state.logistic_capacity = state.base_logistic + state.research_logistic_bonus;
     state.energy_generation = state.base_energy_generation;
     state.support_energy = 0.0;
     state.mine_multiplier = 1.0;
@@ -413,6 +442,7 @@ void BuildingManager::initialize_planet(Game &game, int planet_id)
     ft_planet_build_state &stored = entry->value;
     stored.planet_id = planet_id;
     stored.base_logistic = 1;
+    stored.research_logistic_bonus = 0;
     stored.base_energy_generation = 0.0;
     if (planet_id == PLANET_TERRA)
     {
@@ -471,6 +501,31 @@ void BuildingManager::initialize_planet(Game &game, int planet_id)
     game.ensure_planet_item_slot(planet_id, ITEM_ENGINE_PART);
 }
 
+void BuildingManager::add_planet_logistic_bonus(int planet_id, int amount)
+{
+    if (amount <= 0)
+        return ;
+    ft_planet_build_state *state = this->get_state(planet_id);
+    if (state == ft_nullptr)
+        return ;
+    state->research_logistic_bonus += amount;
+    if (state->research_logistic_bonus < 0)
+        state->research_logistic_bonus = 0;
+    recalculate_planet_statistics(*state);
+}
+
+void BuildingManager::unlock_solar_panels()
+{
+    this->_solar_panels_unlocked = true;
+}
+
+void BuildingManager::set_crafting_energy_multiplier(double multiplier)
+{
+    if (multiplier <= 0.0)
+        multiplier = 1.0;
+    this->_crafting_energy_multiplier = multiplier;
+}
+
 int BuildingManager::place_building(Game &game, int planet_id, int building_id, int x, int y)
 {
     ft_planet_build_state *state = this->get_state(planet_id);
@@ -478,6 +533,8 @@ int BuildingManager::place_building(Game &game, int planet_id, int building_id, 
         return 0;
     const ft_building_definition *definition = this->get_definition(building_id);
     if (definition == ft_nullptr)
+        return 0;
+    if (building_id == BUILDING_SOLAR_ARRAY && !this->_solar_panels_unlocked)
         return 0;
     if (definition->unique && this->get_building_count(planet_id, building_id) > 0)
         return 0;
@@ -528,6 +585,8 @@ bool BuildingManager::can_place_building(const Game &game, int planet_id, int bu
         return false;
     const ft_building_definition *definition = this->get_definition(building_id);
     if (definition == ft_nullptr)
+        return false;
+    if (building_id == BUILDING_SOLAR_ARRAY && !this->_solar_panels_unlocked)
         return false;
     if (definition->unique && this->get_building_count(planet_id, building_id) > 0)
         return false;
@@ -649,9 +708,12 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
             if (state.logistic_usage + definition->logistic_cost > state.logistic_capacity)
                 can_run = false;
         }
-        if (definition->energy_cost > 0.0)
+        double energy_cost = definition->energy_cost;
+        if (definition->cycle_time > 0.0 && definition->outputs.size() > 0)
+            energy_cost *= this->_crafting_energy_multiplier;
+        if (energy_cost > 0.0)
         {
-            double projected = state.energy_consumption + definition->energy_cost;
+            double projected = state.energy_consumption + energy_cost;
             if (projected > state.energy_generation + 0.0001)
                 can_run = false;
         }
@@ -662,7 +724,7 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
         }
         instance.active = true;
         state.logistic_usage += definition->logistic_cost;
-        state.energy_consumption += definition->energy_cost;
+        state.energy_consumption += energy_cost;
     }
     for (size_t i = 0; i < total; ++i)
     {
