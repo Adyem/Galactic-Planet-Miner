@@ -6,7 +6,7 @@ ft_planet_build_state::ft_planet_build_state()
     : planet_id(0), width(0), height(0), base_logistic(0), research_logistic_bonus(0), used_plots(0),
       logistic_capacity(0), logistic_usage(0), base_energy_generation(0.0),
       energy_generation(0.0), energy_consumption(0.0), support_energy(0.0),
-      mine_multiplier(1.0), next_instance_id(1), grid(), instances()
+      mine_multiplier(1.0), energy_deficit_pressure(0.0), next_instance_id(1), grid(), instances()
 {
 }
 
@@ -342,6 +342,7 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
     state.energy_generation = state.base_energy_generation;
     state.support_energy = 0.0;
     state.mine_multiplier = 1.0;
+    state.energy_deficit_pressure = 0.0;
     size_t count = state.instances.size();
     Pair<int, ft_building_instance> *entries = state.instances.end();
     entries -= count;
@@ -683,11 +684,25 @@ double BuildingManager::get_mine_multiplier(int planet_id) const
     return state->mine_multiplier;
 }
 
+double BuildingManager::get_planet_energy_pressure(int planet_id) const
+{
+    const ft_planet_build_state *state = this->get_state(planet_id);
+    if (state == ft_nullptr)
+        return 0.0;
+    if (state->energy_deficit_pressure < 0.0)
+        return 0.0;
+    return state->energy_deficit_pressure;
+}
+
 void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, double seconds)
 {
+    state.energy_deficit_pressure = 0.0;
     state.energy_consumption = state.support_energy;
     if (state.energy_consumption > state.energy_generation)
+    {
+        state.energy_deficit_pressure += state.energy_consumption - state.energy_generation;
         state.energy_consumption = state.energy_generation;
+    }
     state.logistic_usage = 0;
     size_t total = state.instances.size();
     Pair<int, ft_building_instance> *entries = state.instances.end();
@@ -715,7 +730,16 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
         {
             double projected = state.energy_consumption + energy_cost;
             if (projected > state.energy_generation + 0.0001)
+            {
                 can_run = false;
+                double available = state.energy_generation - state.energy_consumption;
+                if (available < 0.0)
+                    available = 0.0;
+                double shortage = energy_cost - available;
+                if (shortage < 0.0)
+                    shortage = 0.0;
+                state.energy_deficit_pressure += shortage;
+            }
         }
         if (!can_run)
         {

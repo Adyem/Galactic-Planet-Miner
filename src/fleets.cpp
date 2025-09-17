@@ -1,6 +1,66 @@
 #include "fleets.hpp"
 #include "../libft/Template/vector.hpp"
 
+namespace
+{
+    void assign_ship_defaults(ft_ship &ship)
+    {
+        ship.max_speed = 18.0;
+        ship.acceleration = 4.0;
+        ship.turn_speed = 60.0;
+        ship.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+        ship.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+        ship.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+        ship.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
+        ship.role = SHIP_ROLE_LINE;
+        switch (ship.type)
+        {
+        case SHIP_SHIELD:
+            ship.max_speed = 21.0;
+            ship.acceleration = 5.5;
+            ship.turn_speed = 95.0;
+            ship.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            ship.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+            ship.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            ship.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
+            ship.role = SHIP_ROLE_LINE;
+            break;
+        case SHIP_RADAR:
+            ship.max_speed = 26.0;
+            ship.acceleration = 6.5;
+            ship.turn_speed = 110.0;
+            ship.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            ship.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+            ship.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            ship.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            ship.role = SHIP_ROLE_SUPPORT;
+            break;
+        case SHIP_SALVAGE:
+            ship.max_speed = 16.0;
+            ship.acceleration = 3.5;
+            ship.turn_speed = 70.0;
+            ship.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            ship.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            ship.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            ship.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
+            ship.role = SHIP_ROLE_TRANSPORT;
+            break;
+        case SHIP_CAPITAL:
+            ship.max_speed = 18.5;
+            ship.acceleration = 3.2;
+            ship.turn_speed = 48.0;
+            ship.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            ship.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            ship.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            ship.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            ship.role = SHIP_ROLE_LINE;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 int ft_fleet::_next_ship_id = 1;
 
 ft_fleet::ft_fleet() noexcept : _id(0), _travel_time(0)
@@ -102,6 +162,7 @@ int ft_fleet::create_ship(int ship_type) noexcept
 {
     int uid = _next_ship_id++;
     ft_ship ship(uid, ship_type);
+    assign_ship_defaults(ship);
     this->_ships.insert(uid, ship);
     return uid;
 }
@@ -174,6 +235,10 @@ void ft_fleet::set_ship_hp(int ship_uid, int value) noexcept
     if (ship == ft_nullptr)
         return ;
     ship->hp = value;
+    if (value > ship->max_hp)
+        ship->max_hp = value;
+    if (ship->max_hp < 0)
+        ship->max_hp = 0;
 }
 
 int ft_fleet::get_ship_hp(int ship_uid) const noexcept
@@ -190,6 +255,8 @@ int ft_fleet::add_ship_hp(int ship_uid, int amount) noexcept
     if (ship == ft_nullptr)
         return 0;
     ship->hp += amount;
+    if (ship->hp > ship->max_hp)
+        ship->max_hp = ship->hp;
     return ship->hp;
 }
 
@@ -210,6 +277,10 @@ void ft_fleet::set_ship_shield(int ship_uid, int value) noexcept
     if (ship == ft_nullptr)
         return ;
     ship->shield = value;
+    if (value > ship->max_shield)
+        ship->max_shield = value;
+    if (ship->max_shield < 0)
+        ship->max_shield = 0;
 }
 
 int ft_fleet::get_ship_shield(int ship_uid) const noexcept
@@ -226,6 +297,8 @@ int ft_fleet::add_ship_shield(int ship_uid, int amount) noexcept
     if (ship == ft_nullptr)
         return 0;
     ship->shield += amount;
+    if (ship->shield > ship->max_shield)
+        ship->max_shield = ship->shield;
     return ship->shield;
 }
 
@@ -238,6 +311,31 @@ int ft_fleet::sub_ship_shield(int ship_uid, int amount) noexcept
     if (ship->shield < 0)
         ship->shield = 0;
     return ship->shield;
+}
+
+void ft_fleet::get_ship_ids(ft_vector<int> &out) const noexcept
+{
+    out.clear();
+    size_t count = this->_ships.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_ship> *entries = this->_ships.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+        out.push_back(entries[i].key);
+}
+
+int ft_fleet::get_ship_type(int ship_uid) const noexcept
+{
+    const ft_ship *ship = this->find_ship(ship_uid);
+    if (ship == ft_nullptr)
+        return 0;
+    return ship->type;
+}
+
+const ft_ship *ft_fleet::get_ship(int ship_uid) const noexcept
+{
+    return this->find_ship(ship_uid);
 }
 
 double ft_fleet::absorb_damage(double damage, double shield_multiplier, double hull_multiplier) noexcept
