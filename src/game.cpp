@@ -50,19 +50,13 @@ Game::~Game()
 
 void Game::produce(double seconds)
 {
-    int planet_ids[] = {
-        PLANET_TERRA,
-        PLANET_MARS,
-        PLANET_ZALTHOR,
-        PLANET_VULCAN,
-        PLANET_NOCTARIS_PRIME,
-        PLANET_LUNA
-    };
-    size_t count = sizeof(planet_ids) / sizeof(planet_ids[0]);
-    for (size_t i = 0; i < count; ++i)
+    size_t planet_count = this->_planets.size();
+    Pair<int, ft_sharedptr<ft_planet> > *entries = this->_planets.end();
+    entries -= planet_count;
+    for (size_t i = 0; i < planet_count; ++i)
     {
-        int planet_id = planet_ids[i];
-        ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+        int planet_id = entries[i].key;
+        ft_sharedptr<ft_planet> planet = entries[i].value;
         if (!planet)
             continue;
         ft_vector<Pair<int, int> > produced = planet->produce(seconds);
