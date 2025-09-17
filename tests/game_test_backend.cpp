@@ -48,6 +48,37 @@ int verify_fractional_resource_accumulation()
     return 1;
 }
 
+int verify_hard_difficulty_fractional_output()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"), GAME_DIFFICULTY_HARD);
+    const int planet_id = PLANET_TERRA;
+    const int ore_id = ORE_COAL;
+
+    game.set_ore(planet_id, ORE_IRON, 0);
+    game.set_ore(planet_id, ORE_COPPER, 0);
+    game.set_ore(planet_id, ore_id, 0);
+
+    const int tick_count = 100;
+    for (int i = 0; i < tick_count; ++i)
+        game.produce(1.0);
+
+    int hard_amount = game.get_ore(planet_id, ore_id);
+    FT_ASSERT(hard_amount > 0);
+
+    ft_planet_terra baseline;
+    baseline.set_resource(ore_id, 0);
+    for (int i = 0; i < tick_count; ++i)
+        baseline.produce(1.0);
+    int base_amount = baseline.get_resource(ore_id);
+    FT_ASSERT(base_amount > 0);
+
+    const double hard_multiplier = 0.85;
+    int expected = static_cast<int>(static_cast<double>(base_amount) * hard_multiplier + 0.0000001);
+    FT_ASSERT_EQ(expected, hard_amount);
+
+    return 1;
+}
+
 int verify_supply_route_key_collisions()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));

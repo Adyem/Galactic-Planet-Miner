@@ -97,6 +97,7 @@ private:
     ft_map<RouteKey, ft_supply_route>            _supply_routes;
     ft_map<int, RouteKey>                        _route_lookup;
     ft_map<int, ft_supply_convoy>                _active_convoys;
+    ft_map<int, ft_map<int, double> >            _resource_deficits;
     int                                          _next_route_id;
     int                                          _next_convoy_id;
 
