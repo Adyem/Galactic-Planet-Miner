@@ -20,6 +20,7 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _supply_routes(),
       _route_lookup(),
       _active_convoys(),
+      _resource_deficits(),
       _next_route_id(1),
       _next_convoy_id(1)
 {
@@ -74,15 +75,55 @@ void Game::produce(double seconds)
                 if (multiplier_delta > 0.000001)
                 {
                     double scaled_amount = static_cast<double>(base_amount) * this->_resource_multiplier;
-                    int target = static_cast<int>(scaled_amount);
-                    if (this->_resource_multiplier > 1.0)
+                    int target = base_amount;
+                    if (this->_resource_multiplier < 1.0)
                     {
-                        double fractional = scaled_amount - static_cast<double>(target);
-                        if (fractional > 0.000001)
-                            target += 1;
+                        const double epsilon = 0.0000001;
+                        Pair<int, ft_map<int, double> > *planet_deficits = this->_resource_deficits.find(planet_id);
+                        if (planet_deficits == ft_nullptr)
+                        {
+                            ft_map<int, double> new_deficits;
+                            this->_resource_deficits.insert(planet_id, new_deficits);
+                            planet_deficits = this->_resource_deficits.find(planet_id);
+                        }
+                        Pair<int, double> *ore_deficit = ft_nullptr;
+                        if (planet_deficits != ft_nullptr)
+                        {
+                            ore_deficit = planet_deficits->value.find(ore_id);
+                            if (ore_deficit == ft_nullptr)
+                            {
+                                planet_deficits->value.insert(ore_id, 0.0);
+                                ore_deficit = planet_deficits->value.find(ore_id);
+                            }
+                        }
+                        double carryover = 0.0;
+                        if (ore_deficit != ft_nullptr)
+                            carryover = ore_deficit->value;
+                        double total = scaled_amount + carryover;
+                        target = static_cast<int>(total + epsilon);
+                        double remainder = total - static_cast<double>(target);
+                        if (remainder < 0.0)
+                            remainder = 0.0;
+                        if (ore_deficit != ft_nullptr)
+                            ore_deficit->value = remainder;
+                        if (target > base_amount)
+                            target = base_amount;
+                        if (target < 0)
+                            target = 0;
                     }
-                    if (target < 0)
-                        target = 0;
+                    else
+                    {
+                        int scaled_target = static_cast<int>(scaled_amount);
+                        target = scaled_target;
+                        if (this->_resource_multiplier > 1.0)
+                        {
+                            double fractional = scaled_amount - static_cast<double>(scaled_target);
+                            if (fractional > 0.000001)
+                                target += 1;
+                        }
+                        if (target < 0)
+                            target = 0;
+                    }
                     final_amount = target;
                     int diff = final_amount - base_amount;
                     if (diff > 0)

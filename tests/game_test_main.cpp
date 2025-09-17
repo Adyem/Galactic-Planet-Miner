@@ -26,6 +26,9 @@ int main()
     if (!verify_fractional_resource_accumulation())
         return 0;
 
+    if (!verify_hard_difficulty_fractional_output())
+        return 0;
+
     if (!verify_supply_route_key_collisions())
         return 0;
 
