@@ -1,0 +1,57 @@
+#include "../libft/Networking/http_server.hpp"
+#include "../libft/PThread/thread.hpp"
+#include "../libft/Time/time.hpp"
+#include "../libft/Libft/libft.hpp"
+#include "../libft/System_utils/test_runner.hpp"
+#include "../libft/Template/vector.hpp"
+#include "../libft/Template/pair.hpp"
+#include "game_test_scenarios.hpp"
+
+static void run_server()
+{
+    ft_http_server server;
+    server.start("127.0.0.1", 8080, AF_INET, false);
+    for (int i = 0; i < 64; ++i)
+        server.run_once();
+}
+
+int main()
+{
+    ft_thread server_thread(run_server);
+    time_sleep_ms(100);
+
+    if (!verify_backend_roundtrip())
+        return 0;
+
+
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    if (!validate_initial_campaign_flow(game))
+        return 0;
+    if (!evaluate_building_and_convoy_systems(game))
+        return 0;
+    if (!evaluate_ship_upgrade_research(game))
+        return 0;
+
+
+    if (!compare_energy_pressure_scenarios())
+        return 0;
+    if (!compare_storyline_assaults())
+        return 0;
+    if (!analyze_manual_vs_auto_assault_controls())
+        return 0;
+    if (!measure_assault_aggression_effects())
+        return 0;
+    if (!evaluate_focus_fire_cooldowns())
+        return 0;
+    if (!validate_tactical_pause_behaviors())
+        return 0;
+    if (!compare_generator_support())
+        return 0;
+    if (!inspect_support_ship_positioning())
+        return 0;
+    if (!verify_difficulty_scaling())
+        return 0;
+
+    server_thread.join();
+    return 0;
+}
