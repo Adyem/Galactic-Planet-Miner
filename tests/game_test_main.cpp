@@ -51,6 +51,10 @@ int main()
         return 0;
     if (!verify_difficulty_scaling())
         return 0;
+    if (!verify_crafting_and_energy_research())
+        return 0;
+    if (!verify_auxiliary_and_escape_protocol())
+        return 0;
 
     server_thread.join();
     return 0;
