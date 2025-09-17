@@ -16,5 +16,7 @@ int validate_tactical_pause_behaviors();
 int compare_generator_support();
 int inspect_support_ship_positioning();
 int verify_difficulty_scaling();
+int verify_crafting_and_energy_research();
+int verify_auxiliary_and_escape_protocol();
 
 #endif
