@@ -18,5 +18,6 @@ int inspect_support_ship_positioning();
 int verify_difficulty_scaling();
 int verify_crafting_and_energy_research();
 int verify_auxiliary_and_escape_protocol();
+int verify_fractional_resource_accumulation();
 
 #endif

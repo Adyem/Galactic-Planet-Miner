@@ -52,9 +52,12 @@ protected:
     int                                     _id;
     ft_vector<Pair<int, ft_sharedptr<ft_item> > > _items;
     ft_vector<Pair<int, double> >           _rates;
+    ft_vector<Pair<int, double> >           _carryover;
 
     ft_sharedptr<ft_item> find_item(int ore_id) noexcept;
     ft_sharedptr<const ft_item> find_item(int ore_id) const noexcept;
+    Pair<int, double> *find_carryover(int ore_id) noexcept;
+    const Pair<int, double> *find_carryover(int ore_id) const noexcept;
 
 public:
     explicit ft_planet(int id) noexcept;
