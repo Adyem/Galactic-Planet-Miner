@@ -2,17 +2,17 @@
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
 
-int Game::compose_route_key(int origin, int destination) const
+Game::RouteKey Game::compose_route_key(int origin, int destination) const
 {
-    return origin * 256 + destination;
+    return RouteKey(origin, destination);
 }
 
 Game::ft_supply_route *Game::ensure_supply_route(int origin, int destination)
 {
     if (origin == destination)
         return ft_nullptr;
-    int key = this->compose_route_key(origin, destination);
-    Pair<int, ft_supply_route> *entry = this->_supply_routes.find(key);
+    RouteKey key = this->compose_route_key(origin, destination);
+    Pair<RouteKey, ft_supply_route> *entry = this->_supply_routes.find(key);
     if (entry != ft_nullptr)
         return &entry->value;
     ft_supply_route route;
@@ -32,10 +32,10 @@ Game::ft_supply_route *Game::ensure_supply_route(int origin, int destination)
 
 const Game::ft_supply_route *Game::get_route_by_id(int route_id) const
 {
-    const Pair<int, int> *lookup = this->_route_lookup.find(route_id);
+    const Pair<int, RouteKey> *lookup = this->_route_lookup.find(route_id);
     if (lookup == ft_nullptr)
         return ft_nullptr;
-    const Pair<int, ft_supply_route> *entry = this->_supply_routes.find(lookup->value);
+    const Pair<RouteKey, ft_supply_route> *entry = this->_supply_routes.find(lookup->value);
     if (entry == ft_nullptr)
         return ft_nullptr;
     return &entry->value;
