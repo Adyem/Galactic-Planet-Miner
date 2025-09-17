@@ -20,6 +20,22 @@
 class Game
 {
 private:
+    struct RouteKey
+    {
+        int origin;
+        int destination;
+
+        RouteKey() : origin(0), destination(0) {}
+        RouteKey(int o, int d) : origin(o), destination(d) {}
+
+        bool operator==(const RouteKey &other) const
+        {
+            return this->origin == other.origin && this->destination == other.destination;
+        }
+    };
+
+    friend int verify_supply_route_key_collisions();
+
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
     ft_map<int, ft_sharedptr<ft_planet> >         _locked_planets;
@@ -78,8 +94,8 @@ private:
               destroyed(false)
         {}
     };
-    ft_map<int, ft_supply_route>                 _supply_routes;
-    ft_map<int, int>                             _route_lookup;
+    ft_map<RouteKey, ft_supply_route>            _supply_routes;
+    ft_map<int, RouteKey>                        _route_lookup;
     ft_map<int, ft_supply_convoy>                _active_convoys;
     int                                          _next_route_id;
     int                                          _next_convoy_id;
@@ -106,7 +122,7 @@ private:
     int count_capital_ships() const;
     void clear_escape_pod_records(const ft_fleet &fleet);
     bool is_ship_type_available(int ship_type) const;
-    int compose_route_key(int origin, int destination) const;
+    RouteKey compose_route_key(int origin, int destination) const;
     ft_supply_route *ensure_supply_route(int origin, int destination);
     const ft_supply_route *get_route_by_id(int route_id) const;
     double estimate_route_travel_time(int origin, int destination) const;
