@@ -146,6 +146,25 @@ const ft_vector<Pair<int, double> > &ft_planet::get_resources() const noexcept
     return this->_rates;
 }
 
+const ft_vector<Pair<int, double> > &ft_planet::get_carryover() const noexcept
+{
+    return this->_carryover;
+}
+
+void ft_planet::set_carryover(int ore_id, double amount) noexcept
+{
+    Pair<int, double> *entry = this->find_carryover(ore_id);
+    if (entry)
+    {
+        entry->value = amount;
+        return ;
+    }
+    Pair<int, double> carry;
+    carry.key = ore_id;
+    carry.value = amount;
+    this->_carryover.push_back(carry);
+}
+
 ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
 {
     ft_vector<Pair<int, int> > produced;

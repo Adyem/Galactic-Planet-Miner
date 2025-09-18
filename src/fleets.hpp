@@ -128,11 +128,14 @@ public:
     int get_escort_veterancy_bonus() const noexcept;
     bool add_escort_veterancy(double amount) noexcept;
     bool decay_escort_veterancy(double amount) noexcept;
+    void set_escort_veterancy(double value) noexcept;
 
     int create_ship(int ship_type) noexcept;
     void remove_ship(int ship_uid) noexcept;
     bool move_ship_to(ft_fleet &target, int ship_uid) noexcept;
     void move_ships_to(ft_fleet &target) noexcept;
+    void clear_ships() noexcept;
+    void add_ship_snapshot(const ft_ship &ship) noexcept;
 
     void set_ship_armor(int ship_uid, int value) noexcept;
     int get_ship_armor(int ship_uid) const noexcept;

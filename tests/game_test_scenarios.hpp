@@ -32,5 +32,9 @@ int verify_convoy_escort_travel_speed();
 int verify_achievement_catalog();
 int verify_achievement_progression();
 int verify_quest_achievement_failures();
+int verify_save_system_round_trip();
+int verify_save_system_edge_cases();
+int validate_save_system_serialized_samples();
+int verify_campaign_checkpoint_flow();
 
 #endif

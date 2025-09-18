@@ -29,7 +29,8 @@ SRC_COMMON  = \
     $(SRC_DIR)/game_convoys.cpp \
     $(SRC_DIR)/game_fleets.cpp \
     $(SRC_DIR)/game_combat_interface.cpp \
-    $(SRC_DIR)/game.cpp
+    $(SRC_DIR)/game.cpp \
+    $(SRC_DIR)/save_system.cpp
 SRC_MAIN    = $(SRC_DIR)/main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
@@ -41,7 +42,8 @@ SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_control.cpp \
     $(TEST_DIR)/game_test_support.cpp \
     $(TEST_DIR)/game_test_research.cpp \
-    $(TEST_DIR)/game_test_difficulty.cpp
+    $(TEST_DIR)/game_test_difficulty.cpp \
+    $(TEST_DIR)/game_test_save.cpp
 
 CC          = g++
 

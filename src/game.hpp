@@ -9,6 +9,7 @@
 #include "combat.hpp"
 #include "buildings.hpp"
 #include "achievements.hpp"
+#include "save_system.hpp"
 #include "../libft/Game/game_state.hpp"
 #include "../libft/Template/map.hpp"
 #include "../libft/Template/vector.hpp"
@@ -65,6 +66,7 @@ private:
     ft_map<int, ft_sharedptr<ft_fleet> >          _fleets;
     ft_map<int, ft_sharedptr<ft_fleet> >          _planet_fleets;
     BackendClient                                _backend;
+    SaveSystem                                   _save_system;
     ResearchManager                              _research;
     QuestManager                                 _quests;
     CombatManager                                _combat;
@@ -149,6 +151,10 @@ private:
     int                                          _rebellion_branch_assault_victories;
     int                                          _order_branch_pending_assault;
     int                                          _rebellion_branch_pending_assault;
+    ft_string                                    _last_planet_checkpoint;
+    ft_string                                    _last_fleet_checkpoint;
+    ft_string                                    _last_checkpoint_tag;
+    bool                                         _has_checkpoint;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -211,6 +217,9 @@ private:
     void update_route_escalation(ft_supply_route &route, double seconds);
     void trigger_route_assault(ft_supply_route &route);
     void trigger_branch_assault(int planet_id, double difficulty, bool order_branch);
+    void apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &snapshot);
+    void apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snapshot);
+    void checkpoint_campaign_state_internal(const ft_string &tag);
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -335,6 +344,14 @@ public:
     double get_fleet_travel_time(int fleet_id) const;
     int get_planet_fleet_ship_hp(int planet_id, int ship_uid) const;
     ft_location get_planet_fleet_location(int planet_id) const;
+
+    void save_campaign_checkpoint(const ft_string &tag) noexcept;
+    bool has_campaign_checkpoint() const noexcept;
+    const ft_string &get_campaign_planet_checkpoint() const noexcept;
+    const ft_string &get_campaign_fleet_checkpoint() const noexcept;
+    const ft_string &get_campaign_checkpoint_tag() const noexcept;
+    bool reload_campaign_checkpoint() noexcept;
+    bool load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json) noexcept;
 };
 
 #endif

@@ -4,6 +4,7 @@
 
 Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     : _backend(host, path),
+      _save_system(),
       _difficulty(GAME_DIFFICULTY_STANDARD),
       _resource_multiplier(1.0),
       _quest_time_scale(1.0),
@@ -35,7 +36,11 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _order_branch_assault_victories(0),
       _rebellion_branch_assault_victories(0),
       _order_branch_pending_assault(0),
-      _rebellion_branch_pending_assault(0)
+      _rebellion_branch_pending_assault(0),
+      _last_planet_checkpoint(),
+      _last_fleet_checkpoint(),
+      _last_checkpoint_tag(),
+      _has_checkpoint(false)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -58,6 +63,7 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     this->_streak_milestones.push_back(3);
     this->_streak_milestones.push_back(5);
     this->_streak_milestones.push_back(8);
+    this->save_campaign_checkpoint(ft_string("initial_setup"));
 }
 
 Game::~Game()
@@ -636,5 +642,160 @@ int Game::get_achievement_target(int achievement_id) const
 bool Game::get_achievement_info(int achievement_id, ft_achievement_info &out) const
 {
     return this->_achievements.get_info(achievement_id, out);
+}
+
+void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &snapshot)
+{
+    size_t count = snapshot.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_sharedptr<ft_planet> > *entries = snapshot.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        int planet_id = entries[i].key;
+        const ft_sharedptr<ft_planet> &saved_planet = entries[i].value;
+        if (!saved_planet)
+            continue;
+        ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+        if (!planet)
+        {
+            this->unlock_planet(planet_id);
+            planet = this->get_planet(planet_id);
+        }
+        if (!planet)
+            continue;
+        const ft_vector<Pair<int, double> > &saved_rates = saved_planet->get_resources();
+        for (size_t j = 0; j < saved_rates.size(); ++j)
+            planet->register_resource(saved_rates[j].key, saved_rates[j].value);
+        const ft_vector<Pair<int, double> > &saved_carryover = saved_planet->get_carryover();
+        for (size_t j = 0; j < saved_carryover.size(); ++j)
+            planet->set_carryover(saved_carryover[j].key, saved_carryover[j].value);
+        for (size_t j = 0; j < saved_rates.size(); ++j)
+        {
+            int ore_id = saved_rates[j].key;
+            planet->set_resource(ore_id, saved_planet->get_resource(ore_id));
+            this->send_state(planet_id, ore_id);
+        }
+        this->_resource_deficits.remove(planet_id);
+    }
+}
+
+void Game::apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snapshot)
+{
+    ft_vector<int> to_remove;
+    size_t existing_count = this->_fleets.size();
+    if (existing_count > 0)
+    {
+        const Pair<int, ft_sharedptr<ft_fleet> > *existing_entries = this->_fleets.end();
+        existing_entries -= existing_count;
+        for (size_t i = 0; i < existing_count; ++i)
+        {
+            int fleet_id = existing_entries[i].key;
+            if (snapshot.find(fleet_id) == ft_nullptr)
+                to_remove.push_back(fleet_id);
+        }
+    }
+    for (size_t i = 0; i < to_remove.size(); ++i)
+        this->remove_fleet(to_remove[i], -1, -1);
+
+    size_t count = snapshot.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_sharedptr<ft_fleet> > *entries = snapshot.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        int fleet_id = entries[i].key;
+        const ft_sharedptr<ft_fleet> &saved_fleet = entries[i].value;
+        if (!saved_fleet)
+            continue;
+        if (this->_fleets.find(fleet_id) == ft_nullptr)
+            this->create_fleet(fleet_id);
+        ft_sharedptr<ft_fleet> fleet = this->get_fleet(fleet_id);
+        if (!fleet)
+            continue;
+        this->clear_escape_pod_records(*fleet);
+        fleet->clear_ships();
+        ft_location location = saved_fleet->get_location();
+        if (location.type == LOCATION_TRAVEL)
+            fleet->set_location_travel(location.from, location.to, saved_fleet->get_travel_time());
+        else if (location.type == LOCATION_MISC)
+            fleet->set_location_misc(location.misc);
+        else
+            fleet->set_location_planet(location.from);
+        fleet->set_escort_veterancy(saved_fleet->get_escort_veterancy());
+        ft_vector<int> ship_ids;
+        saved_fleet->get_ship_ids(ship_ids);
+        for (size_t j = 0; j < ship_ids.size(); ++j)
+        {
+            const ft_ship *ship = saved_fleet->get_ship(ship_ids[j]);
+            if (ship)
+                fleet->add_ship_snapshot(*ship);
+        }
+    }
+}
+
+void Game::checkpoint_campaign_state_internal(const ft_string &tag)
+{
+    ft_string planet_json = this->_save_system.serialize_planets(this->_planets);
+    ft_string fleet_json = this->_save_system.serialize_fleets(this->_fleets);
+    bool planets_valid = (planet_json.size() > 0) || (this->_planets.size() == 0);
+    bool fleets_valid = (fleet_json.size() > 0) || (this->_fleets.size() == 0);
+    if (!planets_valid || !fleets_valid)
+        return ;
+    this->_last_planet_checkpoint = planet_json;
+    this->_last_fleet_checkpoint = fleet_json;
+    this->_last_checkpoint_tag = tag;
+    this->_has_checkpoint = true;
+}
+
+void Game::save_campaign_checkpoint(const ft_string &tag) noexcept
+{
+    this->checkpoint_campaign_state_internal(tag);
+}
+
+bool Game::has_campaign_checkpoint() const noexcept
+{
+    return this->_has_checkpoint;
+}
+
+const ft_string &Game::get_campaign_planet_checkpoint() const noexcept
+{
+    return this->_last_planet_checkpoint;
+}
+
+const ft_string &Game::get_campaign_fleet_checkpoint() const noexcept
+{
+    return this->_last_fleet_checkpoint;
+}
+
+const ft_string &Game::get_campaign_checkpoint_tag() const noexcept
+{
+    return this->_last_checkpoint_tag;
+}
+
+bool Game::reload_campaign_checkpoint() noexcept
+{
+    if (!this->_has_checkpoint)
+        return false;
+    return this->load_campaign_from_save(this->_last_planet_checkpoint, this->_last_fleet_checkpoint);
+}
+
+bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json) noexcept
+{
+    ft_map<int, ft_sharedptr<ft_planet> > planet_snapshot;
+    ft_map<int, ft_sharedptr<ft_fleet> > fleet_snapshot;
+    bool planets_ok = true;
+    bool fleets_ok = true;
+    if (planet_json.size() > 0)
+        planets_ok = this->_save_system.deserialize_planets(planet_json.c_str(), planet_snapshot);
+    if (fleet_json.size() > 0)
+        fleets_ok = this->_save_system.deserialize_fleets(fleet_json.c_str(), fleet_snapshot);
+    if (!planets_ok || !fleets_ok)
+        return false;
+    this->apply_planet_snapshot(planet_snapshot);
+    this->apply_fleet_snapshot(fleet_snapshot);
+    return true;
 }
 

@@ -175,6 +175,32 @@ values with `set_ship_*`, `add_ship_*`, `sub_ship_*`, and query them with
 `set_fleet_location_travel`, or `set_fleet_location_misc`, and read its current
 location with `get_fleet_location`.
 
+## Save and Load Scaffolding
+
+Initial save/load support now lives in `SaveSystem`. The class wraps the `libft`
+JSON helpers so campaign state can be exported and restored without depending on
+the C++ standard library serializers. Two helpers are currently available:
+
+- `serialize_planets` / `deserialize_planets` round-trip the unlocked planet
+  map, including stored ore amounts, mining rates, and fractional carryover
+  buffers so production math stays stable after a reload.
+- `serialize_fleets` / `deserialize_fleets` persist fleet rosters, travel
+  assignments, escort veterancy, and all ship statistics. Fleet snapshots use
+  stable ship identifiers and scale floating-point values into integers to avoid
+  precision loss in JSON.
+
+The serializers rely on new accessors such as `ft_planet::get_carryover` and
+`ft_fleet::add_ship_snapshot` so game code can hand the `SaveSystem` concrete
+state. Once integrated with the campaign flow, these helpers enable quick
+checkpointing and prototyping of persistence features.
+
+`Game` now checkpoints automatically whenever a major quest completes or a
+research project finishes, stamping the snapshot with a descriptive tag such as
+`quest_completed_3` or `research_completed_12`. Campaign layers can also call
+`Game::save_campaign_checkpoint` directly to capture ad-hoc saves and
+`Game::reload_campaign_checkpoint` to restore the most recent snapshot using the
+embedded JSON state.
+
 ## Achievements
 
 The backend now tracks persistent achievements so campaign progress can trigger

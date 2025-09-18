@@ -90,6 +90,14 @@ int main()
         return 0;
     if (!verify_auxiliary_and_escape_protocol())
         return 0;
+    if (!verify_save_system_round_trip())
+        return 0;
+    if (!verify_save_system_edge_cases())
+        return 0;
+    if (!validate_save_system_serialized_samples())
+        return 0;
+    if (!verify_campaign_checkpoint_flow())
+        return 0;
 
     server_thread.join();
     return 0;
