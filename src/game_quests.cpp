@@ -51,6 +51,9 @@ void Game::build_quest_context(ft_quest_context &context) const
         context.total_ship_count += fleet->get_ship_count();
         context.total_ship_hp += fleet->get_total_ship_hp();
     }
+    context.successful_deliveries = this->_convoys_delivered_total;
+    context.convoy_raid_losses = this->_convoy_raid_losses;
+    context.delivery_streak = this->_current_delivery_streak;
 }
 
 void Game::handle_quest_completion(int quest_id)

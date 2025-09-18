@@ -24,7 +24,13 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _resource_deficits(),
       _next_route_id(1),
       _next_convoy_id(1),
-      _next_contract_id(1)
+      _next_contract_id(1),
+      _convoys_delivered_total(0),
+      _convoy_raid_losses(0),
+      _current_delivery_streak(0),
+      _longest_delivery_streak(0),
+      _streak_milestones(),
+      _next_streak_milestone_index(0)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -44,6 +50,9 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     this->_locked_planets.insert(PLANET_LUNA, luna);
 
     this->configure_difficulty(difficulty);
+    this->_streak_milestones.push_back(3);
+    this->_streak_milestones.push_back(5);
+    this->_streak_milestones.push_back(8);
 }
 
 Game::~Game()
