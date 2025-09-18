@@ -22,6 +22,8 @@ Game::ft_supply_route *Game::ensure_supply_route(int origin, int destination)
     route.base_travel_time = this->estimate_route_travel_time(origin, destination);
     route.escort_requirement = this->estimate_route_escort_requirement(origin, destination);
     route.base_raid_risk = this->estimate_route_raid_risk(origin, destination);
+    route.threat_level = 0.0;
+    route.quiet_timer = 0.0;
     this->_supply_routes.insert(key, route);
     entry = this->_supply_routes.find(key);
     if (entry == ft_nullptr)
@@ -61,6 +63,87 @@ const Game::ft_supply_route *Game::get_route_by_id(int route_id) const
     if (entry == ft_nullptr)
         return ft_nullptr;
     return &entry->value;
+}
+
+Game::ft_supply_route *Game::get_route_by_id(int route_id)
+{
+    Pair<int, RouteKey> *lookup = this->_route_lookup.find(route_id);
+    if (lookup == ft_nullptr)
+        return ft_nullptr;
+    Pair<RouteKey, ft_supply_route> *entry = this->_supply_routes.find(lookup->value);
+    if (entry == ft_nullptr)
+        return ft_nullptr;
+    return &entry->value;
+}
+
+double Game::get_supply_route_threat_level(int origin_planet_id, int destination_planet_id) const
+{
+    const ft_supply_route *route = this->find_supply_route(origin_planet_id, destination_planet_id);
+    if (!route)
+        return 0.0;
+    return route->threat_level;
+}
+
+void Game::modify_route_threat(ft_supply_route &route, double delta, bool reset_quiet_timer)
+{
+    route.threat_level += delta;
+    if (route.threat_level < 0.0)
+        route.threat_level = 0.0;
+    else if (route.threat_level > 10.0)
+        route.threat_level = 10.0;
+    if (reset_quiet_timer)
+    {
+        route.quiet_timer = 0.0;
+    }
+}
+
+void Game::decay_route_threat(ft_supply_route &route, double seconds)
+{
+    if (seconds <= 0.0)
+        return ;
+    if (route.quiet_timer < 0.0)
+        route.quiet_timer = 0.0;
+    route.quiet_timer += seconds;
+    if (route.threat_level <= 0.0)
+    {
+        route.threat_level = 0.0;
+        double calm_cap = 300.0;
+        if (route.quiet_timer > calm_cap)
+            route.quiet_timer = calm_cap;
+        return ;
+    }
+    double decay_delay = 30.0;
+    if (route.quiet_timer < decay_delay)
+        return ;
+    double time_past_delay = route.quiet_timer - decay_delay;
+    double effective_seconds = seconds;
+    if (time_past_delay < seconds)
+        effective_seconds = time_past_delay;
+    if (effective_seconds < 0.0)
+        effective_seconds = 0.0;
+    double decay_rate = 0.02;
+    double reduction = effective_seconds * decay_rate;
+    if (reduction > route.threat_level)
+        reduction = route.threat_level;
+    route.threat_level -= reduction;
+    if (route.threat_level < 0.0)
+        route.threat_level = 0.0;
+    double calm_cap = decay_delay + 300.0;
+    if (route.quiet_timer > calm_cap)
+        route.quiet_timer = calm_cap;
+}
+
+void Game::decay_all_route_threat(double seconds)
+{
+    if (seconds <= 0.0)
+        return ;
+    size_t count = this->_supply_routes.size();
+    if (count == 0)
+        return ;
+    Pair<RouteKey, ft_supply_route> *entries = this->_supply_routes.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+        this->decay_route_threat(entries[i].value, seconds);
 }
 
 int Game::count_active_convoys_for_contract(int contract_id) const
@@ -483,6 +566,16 @@ double Game::calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool ori
     if (!route)
         return 0.0;
     double risk = route->base_raid_risk;
+    if (route->threat_level > 0.0)
+    {
+        double threat_factor = route->threat_level;
+        if (threat_factor > 6.0)
+            threat_factor = 6.0;
+        double threat_multiplier = 1.0 + threat_factor * 0.35;
+        if (threat_multiplier > 3.5)
+            threat_multiplier = 3.5;
+        risk *= threat_multiplier;
+    }
     int effective_origin = convoy.origin_escort + convoy.escort_rating;
     if (effective_origin > 48)
         effective_origin = 48;
@@ -535,9 +628,10 @@ double Game::calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool ori
 
 void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack)
 {
-    const ft_supply_route *route = this->get_route_by_id(convoy.route_id);
+    ft_supply_route *route = this->get_route_by_id(convoy.route_id);
     if (!route)
         return ;
+    this->modify_route_threat(*route, 0.45, true);
     double severity = 0.45;
     int effective_origin = convoy.origin_escort + convoy.escort_rating;
     if (effective_origin > 48)
@@ -769,6 +863,7 @@ void Game::advance_convoys(double seconds)
 {
     if (seconds <= 0.0)
         return ;
+    this->decay_all_route_threat(seconds);
     size_t count = this->_active_convoys.size();
     if (count == 0)
         return ;
@@ -830,7 +925,12 @@ void Game::reset_delivery_streak()
 
 void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
 {
-    (void)convoy;
+    ft_supply_route *route = this->get_route_by_id(convoy.route_id);
+    if (route)
+    {
+        double reduction = convoy.raided ? -0.6 : -0.9;
+        this->modify_route_threat(*route, reduction, true);
+    }
     this->_convoys_delivered_total += 1;
     this->_current_delivery_streak += 1;
     if (this->_current_delivery_streak > this->_longest_delivery_streak)
@@ -855,6 +955,12 @@ void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
 
 void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_raid)
 {
+    ft_supply_route *route = this->get_route_by_id(convoy.route_id);
+    if (route)
+    {
+        double delta = destroyed_by_raid ? 1.2 : 0.6;
+        this->modify_route_threat(*route, delta, true);
+    }
     bool had_escort = (convoy.escort_fleet_id > 0 && convoy.escort_rating > 0);
     if (destroyed_by_raid)
         this->_convoy_raid_losses += 1;

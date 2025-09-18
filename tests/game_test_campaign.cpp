@@ -910,6 +910,9 @@ int verify_multiple_convoy_raids()
 
     convoy_game.tick(300.0);
 
+    double threat_after_raids = convoy_game.get_supply_route_threat_level(PLANET_TERRA, PLANET_NOCTARIS_PRIME);
+    FT_ASSERT(threat_after_raids > 0.1);
+
     const ft_vector<ft_string> &log = convoy_game.get_lore_log();
     size_t raid_entries = 0;
     bool destroyed_recorded = false;
@@ -922,5 +925,21 @@ int verify_multiple_convoy_raids()
             destroyed_recorded = true;
     }
     FT_ASSERT(raid_entries >= 2 || destroyed_recorded);
+    int deliveries_before = convoy_game.get_total_convoys_delivered();
+    for (int convoy = 0; convoy < 3; ++convoy)
+    {
+        int moved_again = convoy_game.transfer_ore(PLANET_TERRA, PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR, 20);
+        FT_ASSERT(moved_again >= 20);
+        double wait = 0.0;
+        while (convoy_game.get_active_convoy_count() > 0 && wait < 360.0)
+        {
+            convoy_game.tick(4.0);
+            wait += 4.0;
+        }
+        FT_ASSERT(wait < 360.0);
+    }
+    FT_ASSERT(convoy_game.get_total_convoys_delivered() > deliveries_before);
+    double threat_after_deliveries = convoy_game.get_supply_route_threat_level(PLANET_TERRA, PLANET_NOCTARIS_PRIME);
+    FT_ASSERT(threat_after_deliveries < threat_after_raids);
     return 1;
 }

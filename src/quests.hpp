@@ -101,9 +101,13 @@ struct ft_quest_context
     int successful_deliveries;
     int convoy_raid_losses;
     int delivery_streak;
+    double total_convoy_threat;
+    double average_convoy_threat;
+    double maximum_convoy_threat;
     ft_quest_context()
         : resource_totals(), research_status(), total_ship_count(0), total_ship_hp(0),
-          successful_deliveries(0), convoy_raid_losses(0), delivery_streak(0)
+          successful_deliveries(0), convoy_raid_losses(0), delivery_streak(0),
+          total_convoy_threat(0.0), average_convoy_threat(0.0), maximum_convoy_threat(0.0)
     {}
 };
 
