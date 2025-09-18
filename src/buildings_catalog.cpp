@@ -7,7 +7,8 @@ ft_planet_build_state::ft_planet_build_state()
     : planet_id(0), width(0), height(0), base_logistic(0), research_logistic_bonus(0), used_plots(0),
       logistic_capacity(0), logistic_usage(0), base_energy_generation(0.0),
       energy_generation(0.0), energy_consumption(0.0), support_energy(0.0),
-      mine_multiplier(1.0), energy_deficit_pressure(0.0), next_instance_id(1), grid(), instances()
+      mine_multiplier(1.0), convoy_speed_bonus(0.0), convoy_raid_risk_modifier(0.0),
+      energy_deficit_pressure(0.0), next_instance_id(1), grid(), instances()
 {
 }
 
@@ -184,6 +185,36 @@ BuildingManager::BuildingManager()
     transfer->occupies_grid = true;
     transfer->removable = true;
     this->register_definition(transfer);
+
+    ft_sharedptr<ft_building_definition> relay(new ft_building_definition());
+    relay->id = BUILDING_TRADE_RELAY;
+    relay->name = ft_string("Trade Relay Nexus");
+    relay->width = 2;
+    relay->height = 2;
+    relay->logistic_cost = 1;
+    relay->logistic_gain = 0;
+    relay->energy_cost = 3.5;
+    relay->energy_gain = 0.0;
+    relay->cycle_time = 0.0;
+    relay->inputs.clear();
+    relay->outputs.clear();
+    relay->build_costs.clear();
+    recipe.key = ITEM_COPPER_BAR;
+    recipe.value = 10;
+    relay->build_costs.push_back(recipe);
+    recipe.key = ITEM_ADVANCED_ENGINE_PART;
+    recipe.value = 3;
+    relay->build_costs.push_back(recipe);
+    recipe.key = ITEM_ACCUMULATOR;
+    recipe.value = 2;
+    relay->build_costs.push_back(recipe);
+    relay->mine_bonus = 0.0;
+    relay->convoy_speed_bonus = 0.12;
+    relay->convoy_raid_risk_modifier = 0.18;
+    relay->unique = false;
+    relay->occupies_grid = true;
+    relay->removable = true;
+    this->register_definition(relay);
 
     ft_sharedptr<ft_building_definition> generator(new ft_building_definition());
     generator->id = BUILDING_POWER_GENERATOR;
@@ -601,6 +632,7 @@ BuildingManager::BuildingManager()
     this->set_building_unlocked(BUILDING_CRAFTING_BAY, true);
     this->set_building_unlocked(BUILDING_CONVEYOR, true);
     this->set_building_unlocked(BUILDING_TRANSFER_NODE, true);
+    this->set_building_unlocked(BUILDING_TRADE_RELAY, false);
     this->set_building_unlocked(BUILDING_POWER_GENERATOR, true);
     this->set_building_unlocked(BUILDING_SOLAR_ARRAY, false);
     this->set_building_unlocked(BUILDING_UPGRADE_STATION, true);

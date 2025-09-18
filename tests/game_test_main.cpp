@@ -32,6 +32,9 @@ int main()
     if (!verify_supply_route_key_collisions())
         return 0;
 
+    if (!verify_trade_relay_convoy_modifiers())
+        return 0;
+
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
     if (!validate_initial_campaign_flow(game))
         return 0;

@@ -78,6 +78,10 @@ convoy is en route, the cargo may be partially or completely destroyed. Query
 `Game::get_active_convoy_count()` to monitor shipments that are still in
 transit. Successful deliveries and ambushes are recorded in the lore log so
 players can react by reinforcing escort fleets or clearing assault threats.
+Colony infrastructure now feeds into this logistics layer: constructing a Trade
+Relay Nexus on either endpoint of a route grants a 12% speed bonus and an 18%
+raid-risk reduction per relay, so outfitting both the origin and destination
+builds meaningfully faster, safer trade lanes.
 
 ## Base Building
 
@@ -94,6 +98,7 @@ where applicable.
 | Crafting Bay | Assembles engine parts | Always available |
 | Facility Workshop | Crafts advanced engine parts | Crafting Mastery |
 | Orbital Shipyard | Builds fusion reactors for fleet production | Crafting Mastery |
+| Trade Relay Nexus | Upgrades convoy routes with faster travel and lower raid risk | Interstellar Trade Networks |
 | Tritium Extractor | Distills tritium from obsidian and crystal | Armament Enhancement II |
 | Proximity Radar Array | Expands logistics while powering static defenses | Defensive Fortification I |
 | Mobile Defense Radar | Further boosts logistics support coverage | Defensive Fortification II |

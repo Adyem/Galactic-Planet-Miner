@@ -111,6 +111,23 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
         entry.append(ft_string(")"));
     }
     entry.append(ft_string("."));
+    double origin_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(origin_planet_id);
+    double destination_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(destination_planet_id);
+    double origin_risk_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(origin_planet_id);
+    double destination_risk_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(destination_planet_id);
+    bool has_speed_bonus = (origin_speed_bonus > 0.0 || destination_speed_bonus > 0.0);
+    bool has_risk_bonus = (origin_risk_modifier > 0.0 || destination_risk_modifier > 0.0);
+    if (has_speed_bonus || has_risk_bonus)
+    {
+        entry.append(ft_string(" Trade relays "));
+        if (has_speed_bonus && has_risk_bonus)
+            entry.append(ft_string("accelerate this route and blunt raider odds"));
+        else if (has_speed_bonus)
+            entry.append(ft_string("accelerate this route"));
+        else
+            entry.append(ft_string("blunt raider odds"));
+        entry.append(ft_string("."));
+    }
     this->_lore_log.push_back(entry);
     return amount;
 }
@@ -263,6 +280,7 @@ int Game::calculate_fleet_escort_rating(const ft_fleet &fleet) const
 double Game::calculate_convoy_travel_time(const ft_supply_route &route, int origin_escort, int destination_escort) const
 {
     double time = route.base_travel_time;
+    double base_floor = route.base_travel_time * 0.3;
     int strongest = origin_escort;
     if (destination_escort > strongest)
         strongest = destination_escort;
@@ -275,6 +293,20 @@ double Game::calculate_convoy_travel_time(const ft_supply_route &route, int orig
         if (time < minimum)
             time = minimum;
     }
+    double origin_bonus = this->_buildings.get_planet_convoy_speed_bonus(route.origin_planet_id);
+    double destination_bonus = this->_buildings.get_planet_convoy_speed_bonus(route.destination_planet_id);
+    double combined_bonus = origin_bonus + destination_bonus;
+    if (combined_bonus > 0.6)
+        combined_bonus = 0.6;
+    if (combined_bonus > 0.0)
+    {
+        double multiplier = 1.0 - combined_bonus;
+        if (multiplier < 0.3)
+            multiplier = 0.3;
+        time *= multiplier;
+    }
+    if (time < base_floor)
+        time = base_floor;
     if (time < 10.0)
         time = 10.0;
     return time;
@@ -313,6 +345,18 @@ double Game::calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool ori
         risk *= 1.6;
     if (convoy.raided)
         risk *= 0.35;
+    double origin_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(convoy.origin_planet_id);
+    double destination_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(convoy.destination_planet_id);
+    double combined_modifier = origin_modifier + destination_modifier;
+    if (combined_modifier > 0.75)
+        combined_modifier = 0.75;
+    if (combined_modifier > 0.0)
+    {
+        double multiplier = 1.0 - combined_modifier;
+        if (multiplier < 0.25)
+            multiplier = 0.25;
+        risk *= multiplier;
+    }
     if (risk < 0.002)
         risk = 0.002;
     return risk;
@@ -384,6 +428,22 @@ void Game::finalize_convoy(const ft_supply_convoy &convoy)
         entry.append(ft_string(" units to "));
         entry.append(ft_to_string(convoy.destination_planet_id));
         entry.append(ft_string("."));
+        double origin_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(convoy.origin_planet_id);
+        double destination_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(convoy.destination_planet_id);
+        double origin_risk_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(convoy.origin_planet_id);
+        double destination_risk_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(convoy.destination_planet_id);
+        bool has_speed_bonus = (origin_speed_bonus > 0.0 || destination_speed_bonus > 0.0);
+        bool has_risk_bonus = (origin_risk_modifier > 0.0 || destination_risk_modifier > 0.0);
+        if (has_speed_bonus || has_risk_bonus)
+        {
+            entry.append(ft_string(" Trade relays "));
+            if (has_speed_bonus && has_risk_bonus)
+                entry.append(ft_string("shortened the journey and kept raiders at bay."));
+            else if (has_speed_bonus)
+                entry.append(ft_string("shortened the journey."));
+            else
+                entry.append(ft_string("kept raiders at bay."));
+        }
         this->_lore_log.push_back(entry);
     }
     else

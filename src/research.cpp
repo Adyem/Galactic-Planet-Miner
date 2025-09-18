@@ -162,6 +162,25 @@ ResearchManager::ResearchManager()
     mastery->unlock_planets.clear();
     this->register_research(mastery);
 
+    ft_sharedptr<ft_research_definition> trade(new ft_research_definition());
+    trade->id = RESEARCH_INTERSTELLAR_TRADE;
+    trade->name = ft_string("Interstellar Trade Networks");
+    trade->duration = 32.0;
+    trade->prerequisites.clear();
+    trade->prerequisites.push_back(RESEARCH_CRAFTING_MASTERY);
+    trade->costs.clear();
+    cost.key = ITEM_ADVANCED_ENGINE_PART;
+    cost.value = 6;
+    trade->costs.push_back(cost);
+    cost.key = ITEM_ACCUMULATOR;
+    cost.value = 3;
+    trade->costs.push_back(cost);
+    cost.key = ITEM_TITANIUM_BAR;
+    cost.value = 6;
+    trade->costs.push_back(cost);
+    trade->unlock_planets.clear();
+    this->register_research(trade);
+
     ft_sharedptr<ft_research_definition> structural_i(new ft_research_definition());
     structural_i->id = RESEARCH_STRUCTURAL_REINFORCEMENT_I;
     structural_i->name = ft_string("Structural Reinforcement I");

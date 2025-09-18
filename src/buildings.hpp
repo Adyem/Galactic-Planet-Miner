@@ -31,7 +31,8 @@ enum e_building_id
     BUILDING_PLASMA_TURRET,
     BUILDING_RAILGUN_TURRET,
     BUILDING_FLAGSHIP_DOCK,
-    BUILDING_HELIOS_BEACON
+    BUILDING_HELIOS_BEACON,
+    BUILDING_TRADE_RELAY
 };
 
 struct ft_building_definition
@@ -49,9 +50,19 @@ struct ft_building_definition
     ft_vector<Pair<int, int> >  outputs;
     ft_vector<Pair<int, int> >  build_costs;
     double                      mine_bonus;
+    double                      convoy_speed_bonus;
+    double                      convoy_raid_risk_modifier;
     bool                        unique;
     bool                        occupies_grid;
     bool                        removable;
+
+    ft_building_definition()
+        : id(0), name(), width(0), height(0), logistic_cost(0), logistic_gain(0),
+          energy_cost(0.0), energy_gain(0.0), cycle_time(0.0), inputs(), outputs(),
+          build_costs(), mine_bonus(0.0), convoy_speed_bonus(0.0),
+          convoy_raid_risk_modifier(0.0), unique(false), occupies_grid(false),
+          removable(false)
+    {}
 };
 
 struct ft_building_instance
@@ -80,6 +91,8 @@ struct ft_planet_build_state
     double                      energy_consumption;
     double                      support_energy;
     double                      mine_multiplier;
+    double                      convoy_speed_bonus;
+    double                      convoy_raid_risk_modifier;
     double                      energy_deficit_pressure;
     int                         next_instance_id;
     ft_vector<int>              grid;
@@ -140,6 +153,8 @@ public:
     double get_planet_energy_consumption(int planet_id) const;
     double get_mine_multiplier(int planet_id) const;
     double get_planet_energy_pressure(int planet_id) const;
+    double get_planet_convoy_speed_bonus(int planet_id) const;
+    double get_planet_convoy_raid_risk_modifier(int planet_id) const;
 
     void tick(Game &game, double seconds);
 };
