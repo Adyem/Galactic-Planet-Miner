@@ -349,6 +349,15 @@ double ft_fleet::get_escort_veterancy() const noexcept
     return this->_escort_veterancy;
 }
 
+void ft_fleet::set_escort_veterancy(double value) noexcept
+{
+    if (value < 0.0)
+        value = 0.0;
+    if (value > ESCORT_VETERANCY_MAX_XP)
+        value = ESCORT_VETERANCY_MAX_XP;
+    this->_escort_veterancy = value;
+}
+
 int ft_fleet::get_escort_veterancy_bonus() const noexcept
 {
     if (this->_escort_veterancy <= 0.0)
@@ -395,6 +404,18 @@ int ft_fleet::create_ship(int ship_type) noexcept
     assign_ship_defaults(ship);
     this->_ships.insert(uid, ship);
     return uid;
+}
+
+void ft_fleet::clear_ships() noexcept
+{
+    this->_ships.clear();
+}
+
+void ft_fleet::add_ship_snapshot(const ft_ship &ship) noexcept
+{
+    this->_ships.insert(ship.id, ship);
+    if (ship.id >= _next_ship_id)
+        _next_ship_id = ship.id + 1;
 }
 
 void ft_fleet::remove_ship(int ship_uid) noexcept

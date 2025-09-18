@@ -180,6 +180,9 @@ void Game::handle_quest_completion(int quest_id)
     if (entry.size() > 0)
         this->_lore_log.push_back(entry);
     this->record_quest_achievement(quest_id);
+    ft_string tag("quest_completed_");
+    tag.append(ft_to_string(quest_id));
+    this->save_campaign_checkpoint(tag);
 }
 
 void Game::handle_quest_failure(int quest_id)
