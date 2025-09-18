@@ -108,6 +108,8 @@ private:
         double  raid_meter;
         int     origin_escort;
         int     destination_escort;
+        int     escort_fleet_id;
+        int     escort_rating;
         bool    raided;
         bool    destroyed;
         bool    loss_recorded;
@@ -115,13 +117,14 @@ private:
             : id(0), route_id(0), contract_id(0), origin_planet_id(0),
               destination_planet_id(0), resource_id(0), amount(0),
               remaining_time(0.0), raid_meter(0.0), origin_escort(0),
-              destination_escort(0), raided(false), destroyed(false),
-              loss_recorded(false)
+              destination_escort(0), escort_fleet_id(0), escort_rating(0),
+              raided(false), destroyed(false), loss_recorded(false)
         {}
     };
     ft_map<RouteKey, ft_supply_route>            _supply_routes;
     ft_map<int, RouteKey>                        _route_lookup;
     ft_map<int, ft_supply_convoy>                _active_convoys;
+    ft_map<int, int>                             _route_convoy_escorts;
     ft_map<int, ft_supply_contract>              _supply_contracts;
     ft_map<int, ft_map<int, double> >            _resource_deficits;
     int                                          _next_route_id;
@@ -158,12 +161,16 @@ private:
     bool is_ship_type_available(int ship_type) const;
     RouteKey compose_route_key(int origin, int destination) const;
     ft_supply_route *ensure_supply_route(int origin, int destination);
+    ft_supply_route *find_supply_route(int origin, int destination);
+    const ft_supply_route *find_supply_route(int origin, int destination) const;
     const ft_supply_route *get_route_by_id(int route_id) const;
     double estimate_route_travel_time(int origin, int destination) const;
     int estimate_route_escort_requirement(int origin, int destination) const;
     double estimate_route_raid_risk(int origin, int destination) const;
     int calculate_planet_escort_rating(int planet_id) const;
     int calculate_fleet_escort_rating(const ft_fleet &fleet) const;
+    bool is_fleet_escorting_convoy(int fleet_id) const;
+    int claim_route_escort(int route_id);
     double calculate_convoy_travel_time(const ft_supply_route &route, int origin_escort, int destination_escort) const;
     double calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack) const;
     void handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack);
@@ -174,7 +181,7 @@ private:
     bool has_active_convoy_for_contract(int contract_id) const;
     int dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
                         int destination_planet_id, int resource_id, int amount,
-                        int contract_id);
+                        int contract_id, int escort_fleet_id = 0);
     void process_supply_contracts(double seconds);
     void advance_convoys(double seconds);
     void record_convoy_delivery(const ft_supply_convoy &convoy);
@@ -217,6 +224,10 @@ public:
     double get_quest_time_remaining(int quest_id) const;
     bool resolve_quest_choice(int quest_id, int choice_id);
     int get_quest_choice(int quest_id) const;
+
+    bool assign_convoy_escort(int origin_planet_id, int destination_planet_id, int fleet_id);
+    bool clear_convoy_escort(int origin_planet_id, int destination_planet_id);
+    int get_assigned_convoy_escort(int origin_planet_id, int destination_planet_id) const;
 
     bool start_raider_assault(int planet_id, double difficulty, int control_mode = ASSAULT_CONTROL_AUTO);
     bool assign_fleet_to_assault(int planet_id, int fleet_id);

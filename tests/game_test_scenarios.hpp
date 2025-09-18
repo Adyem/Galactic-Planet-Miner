@@ -25,5 +25,6 @@ int verify_fractional_resource_accumulation();
 int verify_hard_difficulty_fractional_output();
 int verify_supply_route_key_collisions();
 int verify_trade_relay_convoy_modifiers();
+int verify_convoy_escort_travel_speed();
 
 #endif

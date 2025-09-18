@@ -30,6 +30,28 @@ Game::ft_supply_route *Game::ensure_supply_route(int origin, int destination)
     return &entry->value;
 }
 
+Game::ft_supply_route *Game::find_supply_route(int origin, int destination)
+{
+    if (origin == destination)
+        return ft_nullptr;
+    RouteKey key = this->compose_route_key(origin, destination);
+    Pair<RouteKey, ft_supply_route> *entry = this->_supply_routes.find(key);
+    if (entry == ft_nullptr)
+        return ft_nullptr;
+    return &entry->value;
+}
+
+const Game::ft_supply_route *Game::find_supply_route(int origin, int destination) const
+{
+    if (origin == destination)
+        return ft_nullptr;
+    RouteKey key = this->compose_route_key(origin, destination);
+    const Pair<RouteKey, ft_supply_route> *entry = this->_supply_routes.find(key);
+    if (entry == ft_nullptr)
+        return ft_nullptr;
+    return &entry->value;
+}
+
 const Game::ft_supply_route *Game::get_route_by_id(int route_id) const
 {
     const Pair<int, RouteKey> *lookup = this->_route_lookup.find(route_id);
@@ -94,9 +116,72 @@ void Game::accelerate_contract(int contract_id, double fraction)
         contract.elapsed_seconds = 0.0;
 }
 
+bool Game::assign_convoy_escort(int origin_planet_id, int destination_planet_id, int fleet_id)
+{
+    if (origin_planet_id == destination_planet_id)
+        return false;
+    if (fleet_id <= 0)
+        return false;
+    ft_supply_route *route = this->ensure_supply_route(origin_planet_id, destination_planet_id);
+    if (!route)
+        return false;
+    ft_sharedptr<ft_fleet> fleet = this->get_fleet(fleet_id);
+    if (!fleet)
+        return false;
+    if (this->is_fleet_escorting_convoy(fleet_id))
+        return false;
+    ft_location location = fleet->get_location();
+    if (location.type != LOCATION_PLANET || location.from != origin_planet_id)
+        return false;
+    size_t assignment_count = this->_route_convoy_escorts.size();
+    if (assignment_count > 0)
+    {
+        Pair<int, int> *assignments = this->_route_convoy_escorts.end();
+        assignments -= assignment_count;
+        for (size_t i = 0; i < assignment_count; ++i)
+        {
+            if (assignments[i].value == fleet_id && assignments[i].key != route->id)
+                return false;
+        }
+    }
+    Pair<int, int> *existing = this->_route_convoy_escorts.find(route->id);
+    if (existing != ft_nullptr)
+        existing->value = fleet_id;
+    else
+        this->_route_convoy_escorts.insert(route->id, fleet_id);
+    return true;
+}
+
+bool Game::clear_convoy_escort(int origin_planet_id, int destination_planet_id)
+{
+    if (origin_planet_id == destination_planet_id)
+        return false;
+    const ft_supply_route *route = this->find_supply_route(origin_planet_id, destination_planet_id);
+    if (!route)
+        return false;
+    Pair<int, int> *entry = this->_route_convoy_escorts.find(route->id);
+    if (entry == ft_nullptr)
+        return false;
+    this->_route_convoy_escorts.remove(route->id);
+    return true;
+}
+
+int Game::get_assigned_convoy_escort(int origin_planet_id, int destination_planet_id) const
+{
+    if (origin_planet_id == destination_planet_id)
+        return 0;
+    const ft_supply_route *route = this->find_supply_route(origin_planet_id, destination_planet_id);
+    if (!route)
+        return 0;
+    const Pair<int, int> *entry = this->_route_convoy_escorts.find(route->id);
+    if (entry == ft_nullptr)
+        return 0;
+    return entry->value;
+}
+
 int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
                           int destination_planet_id, int resource_id,
-                          int amount, int contract_id)
+                          int amount, int contract_id, int escort_fleet_id)
 {
     if (amount <= 0)
         return 0;
@@ -110,7 +195,38 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
     convoy.amount = amount;
     convoy.origin_escort = this->calculate_planet_escort_rating(origin_planet_id);
     convoy.destination_escort = this->calculate_planet_escort_rating(destination_planet_id);
-    convoy.remaining_time = this->calculate_convoy_travel_time(route, convoy.origin_escort, convoy.destination_escort);
+    if (escort_fleet_id <= 0)
+        escort_fleet_id = this->claim_route_escort(route.id);
+    if (escort_fleet_id > 0)
+    {
+        ft_sharedptr<ft_fleet> escort = this->get_fleet(escort_fleet_id);
+        bool valid = true;
+        if (!escort)
+            valid = false;
+        if (valid)
+        {
+            if (this->is_fleet_escorting_convoy(escort_fleet_id))
+                valid = false;
+        }
+        if (valid)
+        {
+            ft_location escort_location = escort->get_location();
+            if (escort_location.type != LOCATION_PLANET || escort_location.from != origin_planet_id)
+                valid = false;
+        }
+        if (valid)
+        {
+            convoy.escort_fleet_id = escort_fleet_id;
+            convoy.escort_rating = this->calculate_fleet_escort_rating(*escort);
+        }
+    }
+    int effective_origin = convoy.origin_escort + convoy.escort_rating;
+    if (effective_origin > 48)
+        effective_origin = 48;
+    int effective_destination = convoy.destination_escort + convoy.escort_rating;
+    if (effective_destination > 48)
+        effective_destination = 48;
+    convoy.remaining_time = this->calculate_convoy_travel_time(route, effective_origin, effective_destination);
     this->_active_convoys.insert(convoy.id, convoy);
     ft_string entry("Quartermaster Nia dispatches a convoy from ");
     entry.append(ft_to_string(origin_planet_id));
@@ -126,6 +242,12 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
         entry.append(ft_string(")"));
     }
     entry.append(ft_string("."));
+    if (convoy.escort_fleet_id > 0)
+    {
+        entry.append(ft_string(" Escort fleet #"));
+        entry.append(ft_to_string(convoy.escort_fleet_id));
+        entry.append(ft_string(" forms up for protection."));
+    }
     double origin_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(origin_planet_id);
     double destination_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(destination_planet_id);
     double origin_risk_modifier = this->_buildings.get_planet_convoy_raid_risk_modifier(origin_planet_id);
@@ -292,6 +414,34 @@ int Game::calculate_fleet_escort_rating(const ft_fleet &fleet) const
     return rating;
 }
 
+bool Game::is_fleet_escorting_convoy(int fleet_id) const
+{
+    if (fleet_id <= 0)
+        return false;
+    size_t count = this->_active_convoys.size();
+    if (count == 0)
+        return false;
+    const Pair<int, ft_supply_convoy> *entries = this->_active_convoys.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const ft_supply_convoy &convoy = entries[i].value;
+        if (convoy.escort_fleet_id == fleet_id)
+            return true;
+    }
+    return false;
+}
+
+int Game::claim_route_escort(int route_id)
+{
+    Pair<int, int> *entry = this->_route_convoy_escorts.find(route_id);
+    if (entry == ft_nullptr)
+        return 0;
+    int fleet_id = entry->value;
+    this->_route_convoy_escorts.remove(route_id);
+    return fleet_id;
+}
+
 double Game::calculate_convoy_travel_time(const ft_supply_route &route, int origin_escort, int destination_escort) const
 {
     double time = route.base_travel_time;
@@ -333,24 +483,30 @@ double Game::calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool ori
     if (!route)
         return 0.0;
     double risk = route->base_raid_risk;
+    int effective_origin = convoy.origin_escort + convoy.escort_rating;
+    if (effective_origin > 48)
+        effective_origin = 48;
+    int effective_destination = convoy.destination_escort + convoy.escort_rating;
+    if (effective_destination > 48)
+        effective_destination = 48;
     if (route->escort_requirement > 0)
     {
-        if (convoy.origin_escort < route->escort_requirement)
+        if (effective_origin < route->escort_requirement)
         {
-            double deficit = static_cast<double>(route->escort_requirement - convoy.origin_escort);
+            double deficit = static_cast<double>(route->escort_requirement - effective_origin);
             risk *= 1.6;
             risk += deficit * 0.01;
         }
         else
         {
-            double surplus = static_cast<double>(convoy.origin_escort - route->escort_requirement);
+            double surplus = static_cast<double>(effective_origin - route->escort_requirement);
             double divisor = 1.0 + surplus * 0.12;
             if (divisor > 1.0)
                 risk /= divisor;
         }
-        if (convoy.destination_escort > route->escort_requirement)
+        if (effective_destination > route->escort_requirement)
         {
-            double dest_surplus = static_cast<double>(convoy.destination_escort - route->escort_requirement);
+            double dest_surplus = static_cast<double>(effective_destination - route->escort_requirement);
             risk -= dest_surplus * 0.006;
         }
     }
@@ -383,14 +539,20 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
     if (!route)
         return ;
     double severity = 0.45;
-    if (convoy.origin_escort < route->escort_requirement)
+    int effective_origin = convoy.origin_escort + convoy.escort_rating;
+    if (effective_origin > 48)
+        effective_origin = 48;
+    int effective_destination = convoy.destination_escort + convoy.escort_rating;
+    if (effective_destination > 48)
+        effective_destination = 48;
+    if (effective_origin < route->escort_requirement)
         severity += 0.25;
-    if (convoy.destination_escort < route->escort_requirement)
+    if (effective_destination < route->escort_requirement)
         severity += 0.1;
     if (origin_under_attack || destination_under_attack)
     {
         severity += 0.3;
-        if (convoy.origin_escort < route->escort_requirement)
+        if (effective_origin < route->escort_requirement)
             severity = 1.0;
     }
     if (severity > 1.0)
@@ -424,9 +586,24 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
     entry.append(ft_to_string(lost));
     entry.append(ft_string(" units were lost"));
     if (convoy.destroyed)
-        entry.append(ft_string(", and the shipment was wiped out."));
+    {
+        if (convoy.escort_rating > 0 && convoy.escort_fleet_id > 0)
+        {
+            entry.append(ft_string(", and escort fleet #"));
+            entry.append(ft_to_string(convoy.escort_fleet_id));
+            entry.append(ft_string(" was overwhelmed."));
+        }
+        else
+            entry.append(ft_string(", and without escorts the freighters were wiped out."));
+    }
+    else if (convoy.escort_rating > 0 && convoy.escort_fleet_id > 0)
+    {
+        entry.append(ft_string(", but escort fleet #"));
+        entry.append(ft_to_string(convoy.escort_fleet_id));
+        entry.append(ft_string(" drove the raiders off."));
+    }
     else
-        entry.append(ft_string(", but escorts salvaged part of the cargo."));
+        entry.append(ft_string(", and the defenseless freighters limped onward."));
     this->_lore_log.push_back(entry);
     this->accelerate_contract(convoy.contract_id, 0.5);
 }
@@ -482,6 +659,8 @@ void Game::finalize_convoy(ft_supply_convoy &convoy)
         this->_lore_log.push_back(entry);
     }
     this->handle_contract_completion(convoy);
+    convoy.escort_fleet_id = 0;
+    convoy.escort_rating = 0;
 }
 
 void Game::handle_contract_completion(const ft_supply_convoy &convoy)
@@ -676,6 +855,7 @@ void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
 
 void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_raid)
 {
+    bool had_escort = (convoy.escort_fleet_id > 0 && convoy.escort_rating > 0);
     if (destroyed_by_raid)
         this->_convoy_raid_losses += 1;
     if (this->_current_delivery_streak > 0)
@@ -691,7 +871,20 @@ void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_
         ft_string raid_entry("Professor Lumen tallies raid losses now at ");
         raid_entry.append(ft_to_string(this->_convoy_raid_losses));
         raid_entry.append(ft_string(" convoys."));
+        if (had_escort)
+        {
+            raid_entry.append(ft_string(" Escort fleet #"));
+            raid_entry.append(ft_to_string(convoy.escort_fleet_id));
+            raid_entry.append(ft_string(" could not turn the tide."));
+        }
         this->_lore_log.push_back(raid_entry);
+    }
+    else if (had_escort)
+    {
+        ft_string escort_entry("Escort fleet #");
+        escort_entry.append(ft_to_string(convoy.escort_fleet_id));
+        escort_entry.append(ft_string(" returns without its charge."));
+        this->_lore_log.push_back(escort_entry);
     }
 }
 

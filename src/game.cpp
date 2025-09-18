@@ -20,6 +20,7 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _supply_routes(),
       _route_lookup(),
       _active_convoys(),
+      _route_convoy_escorts(),
       _supply_contracts(),
       _resource_deficits(),
       _next_route_id(1),
