@@ -8,7 +8,7 @@
 #include "buildings.hpp"
 #include "game_test_scenarios.hpp"
 
-static void fast_forward_to_supply_quests(Game &game)
+static int fast_forward_to_supply_quests(Game &game)
 {
     game.set_ore(PLANET_TERRA, ORE_IRON, 20);
     game.set_ore(PLANET_TERRA, ORE_COPPER, 20);
@@ -34,6 +34,7 @@ static void fast_forward_to_supply_quests(Game &game)
     FT_ASSERT(game.start_research(RESEARCH_UNLOCK_ZALTHOR));
     game.tick(50.0);
     game.tick(0.0);
+    return 1;
 }
 
 int validate_initial_campaign_flow(Game &game)
@@ -805,7 +806,7 @@ int verify_supply_contract_automation()
 int verify_convoy_quest_objectives()
 {
     Game success_game(ft_string("127.0.0.1:8080"), ft_string("/"));
-    fast_forward_to_supply_quests(success_game);
+    FT_ASSERT(fast_forward_to_supply_quests(success_game));
     FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, success_game.get_active_quest());
 
     success_game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
@@ -850,7 +851,7 @@ int verify_convoy_quest_objectives()
     FT_ASSERT(success_game.get_convoy_raid_losses() >= 1);
 
     Game failure_game(ft_string("127.0.0.1:8080"), ft_string("/"));
-    fast_forward_to_supply_quests(failure_game);
+    FT_ASSERT(fast_forward_to_supply_quests(failure_game));
     FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, failure_game.get_active_quest());
     failure_game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
     failure_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
