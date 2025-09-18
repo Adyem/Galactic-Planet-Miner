@@ -2,6 +2,10 @@
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
 
+static const double ROUTE_ESCALATION_THRESHOLD = 5.0;
+static const double ROUTE_ESCALATION_TRIGGER_TIME = 60.0;
+static const double ROUTE_ESCALATION_DECAY_RATE = 1.0;
+
 Game::RouteKey Game::compose_route_key(int origin, int destination) const
 {
     return RouteKey(origin, destination);
@@ -24,6 +28,9 @@ Game::ft_supply_route *Game::ensure_supply_route(int origin, int destination)
     route.base_raid_risk = this->estimate_route_raid_risk(origin, destination);
     route.threat_level = 0.0;
     route.quiet_timer = 0.0;
+    route.escalation_timer = 0.0;
+    route.escalation_pending = false;
+    route.escalation_planet_id = 0;
     this->_supply_routes.insert(key, route);
     entry = this->_supply_routes.find(key);
     if (entry == ft_nullptr)
@@ -144,6 +151,114 @@ void Game::decay_all_route_threat(double seconds)
     entries -= count;
     for (size_t i = 0; i < count; ++i)
         this->decay_route_threat(entries[i].value, seconds);
+}
+
+void Game::update_route_escalation(ft_supply_route &route, double seconds)
+{
+    if (seconds <= 0.0)
+        return ;
+    bool origin_assault = this->_combat.is_assault_active(route.origin_planet_id);
+    bool destination_assault = this->_combat.is_assault_active(route.destination_planet_id);
+    if (origin_assault && destination_assault)
+    {
+        route.escalation_timer = 0.0;
+        route.escalation_pending = false;
+        route.escalation_planet_id = 0;
+        return ;
+    }
+    bool origin_available = this->is_planet_unlocked(route.origin_planet_id) && !origin_assault;
+    bool destination_available = this->is_planet_unlocked(route.destination_planet_id) && !destination_assault;
+    if (destination_available)
+        route.escalation_planet_id = route.destination_planet_id;
+    else if (origin_available)
+        route.escalation_planet_id = route.origin_planet_id;
+    else if (!route.escalation_pending)
+        route.escalation_planet_id = 0;
+    bool threat_high = (route.threat_level >= ROUTE_ESCALATION_THRESHOLD);
+    if (threat_high && route.escalation_planet_id != 0)
+    {
+        route.escalation_timer += seconds;
+        if (route.escalation_timer > ROUTE_ESCALATION_TRIGGER_TIME)
+            route.escalation_timer = ROUTE_ESCALATION_TRIGGER_TIME;
+        if (!route.escalation_pending && route.escalation_timer >= ROUTE_ESCALATION_TRIGGER_TIME)
+            route.escalation_pending = true;
+    }
+    else
+    {
+        if (route.escalation_timer > 0.0)
+        {
+            route.escalation_timer -= seconds * ROUTE_ESCALATION_DECAY_RATE;
+            if (route.escalation_timer < 0.0)
+                route.escalation_timer = 0.0;
+        }
+        if (route.escalation_timer <= 0.0)
+        {
+            route.escalation_pending = false;
+            if (!threat_high)
+                route.escalation_planet_id = 0;
+        }
+    }
+    if (route.escalation_pending)
+        this->trigger_route_assault(route);
+}
+
+void Game::trigger_route_assault(ft_supply_route &route)
+{
+    if (!route.escalation_pending)
+        return ;
+    int planet_id = route.escalation_planet_id;
+    if (planet_id == 0)
+        return ;
+    if (!this->is_planet_unlocked(planet_id))
+        return ;
+    if (this->_combat.is_assault_active(planet_id))
+        return ;
+    double difficulty = 1.0 + (route.threat_level * 0.12);
+    if (difficulty < 0.8)
+        difficulty = 0.8;
+    if (!this->start_raider_assault(planet_id, difficulty))
+        return ;
+    ft_string entry("Sustained raids along convoy route ");
+    entry.append(ft_to_string(route.origin_planet_id));
+    entry.append(ft_string(" -> "));
+    entry.append(ft_to_string(route.destination_planet_id));
+    entry.append(ft_string(" escalate into a direct assault on planet "));
+    entry.append(ft_to_string(planet_id));
+    entry.append(ft_string("."));
+    this->_lore_log.push_back(entry);
+    double relief = route.threat_level - (ROUTE_ESCALATION_THRESHOLD - 1.0);
+    if (relief < 2.5)
+        relief = 2.5;
+    if (relief > route.threat_level)
+        relief = route.threat_level;
+    this->modify_route_threat(route, -relief, true);
+    route.escalation_timer = 0.0;
+    route.escalation_pending = false;
+    route.escalation_planet_id = 0;
+}
+
+void Game::trigger_branch_assault(int planet_id, double difficulty, bool order_branch)
+{
+    if (planet_id == 0)
+        return ;
+    if (!this->is_planet_unlocked(planet_id))
+        return ;
+    if (this->_combat.is_assault_active(planet_id))
+        return ;
+    if (!this->start_raider_assault(planet_id, difficulty))
+        return ;
+    if (order_branch)
+        this->_order_branch_pending_assault = planet_id;
+    else
+        this->_rebellion_branch_pending_assault = planet_id;
+    ft_string entry;
+    if (order_branch)
+        entry = ft_string("Marshal Rhea orders a purge strike on planet ");
+    else
+        entry = ft_string("Captain Blackthorne rallies the liberation strike on planet ");
+    entry.append(ft_to_string(planet_id));
+    entry.append(ft_string("."));
+    this->_lore_log.push_back(entry);
 }
 
 int Game::count_active_convoys_for_contract(int contract_id) const
@@ -329,7 +444,15 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
     {
         entry.append(ft_string(" Escort fleet #"));
         entry.append(ft_to_string(convoy.escort_fleet_id));
-        entry.append(ft_string(" forms up for protection."));
+        entry.append(ft_string(" forms up for protection"));
+        int veterancy_bonus = this->get_fleet_escort_veterancy_bonus(convoy.escort_fleet_id);
+        if (veterancy_bonus > 0)
+        {
+            entry.append(ft_string(", bringing a +"));
+            entry.append(ft_to_string(veterancy_bonus));
+            entry.append(ft_string(" escort bonus from prior runs"));
+        }
+        entry.append(ft_string("."));
     }
     double origin_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(origin_planet_id);
     double destination_speed_bonus = this->_buildings.get_planet_convoy_speed_bonus(destination_planet_id);
@@ -492,6 +615,9 @@ int Game::calculate_fleet_escort_rating(const ft_fleet &fleet) const
             break;
         }
     }
+    int veterancy_bonus = fleet.get_escort_veterancy_bonus();
+    if (veterancy_bonus > 0)
+        rating += veterancy_bonus;
     if (rating > 48)
         rating = 48;
     return rating;
@@ -865,55 +991,64 @@ void Game::advance_convoys(double seconds)
         return ;
     this->decay_all_route_threat(seconds);
     size_t count = this->_active_convoys.size();
-    if (count == 0)
-        return ;
-    Pair<int, ft_supply_convoy> *entries = this->_active_convoys.end();
-    entries -= count;
-    ft_vector<int> completed;
-    for (size_t i = 0; i < count; ++i)
+    if (count > 0)
     {
-        ft_supply_convoy &convoy = entries[i].value;
-        if (convoy.remaining_time <= 0.0)
+        Pair<int, ft_supply_convoy> *entries = this->_active_convoys.end();
+        entries -= count;
+        ft_vector<int> completed;
+        for (size_t i = 0; i < count; ++i)
         {
-            completed.push_back(entries[i].key);
-            continue;
-        }
-        bool origin_under_attack = this->_combat.is_assault_active(convoy.origin_planet_id);
-        bool destination_under_attack = this->_combat.is_assault_active(convoy.destination_planet_id);
-        if (!convoy.destroyed)
-        {
-            double risk = this->calculate_convoy_raid_risk(convoy, origin_under_attack, destination_under_attack);
-            convoy.raid_meter += risk * seconds;
-            if (convoy.raid_meter >= 1.0)
+            ft_supply_convoy &convoy = entries[i].value;
+            if (convoy.remaining_time <= 0.0)
             {
-                while (convoy.raid_meter >= 1.0 && !convoy.destroyed)
-                {
-                    double remainder = convoy.raid_meter - 1.0;
-                    if (remainder < 0.0)
-                        remainder = 0.0;
-                    this->handle_convoy_raid(convoy, origin_under_attack, destination_under_attack);
-                    if (convoy.destroyed)
-                    {
-                        completed.push_back(entries[i].key);
-                        break;
-                    }
-                    convoy.raid_meter = remainder;
-                }
-                if (convoy.destroyed)
-                    continue;
+                completed.push_back(entries[i].key);
+                continue;
             }
+            bool origin_under_attack = this->_combat.is_assault_active(convoy.origin_planet_id);
+            bool destination_under_attack = this->_combat.is_assault_active(convoy.destination_planet_id);
+            if (!convoy.destroyed)
+            {
+                double risk = this->calculate_convoy_raid_risk(convoy, origin_under_attack, destination_under_attack);
+                convoy.raid_meter += risk * seconds;
+                if (convoy.raid_meter >= 1.0)
+                {
+                    while (convoy.raid_meter >= 1.0 && !convoy.destroyed)
+                    {
+                        double remainder = convoy.raid_meter - 1.0;
+                        if (remainder < 0.0)
+                            remainder = 0.0;
+                        this->handle_convoy_raid(convoy, origin_under_attack, destination_under_attack);
+                        if (convoy.destroyed)
+                        {
+                            completed.push_back(entries[i].key);
+                            break;
+                        }
+                        convoy.raid_meter = remainder;
+                    }
+                    if (convoy.destroyed)
+                        continue;
+                }
+            }
+            convoy.remaining_time -= seconds;
+            if (convoy.remaining_time <= 0.0)
+                completed.push_back(entries[i].key);
         }
-        convoy.remaining_time -= seconds;
-        if (convoy.remaining_time <= 0.0)
-            completed.push_back(entries[i].key);
+        for (size_t i = 0; i < completed.size(); ++i)
+        {
+            Pair<int, ft_supply_convoy> *entry = this->_active_convoys.find(completed[i]);
+            if (entry == ft_nullptr)
+                continue;
+            this->finalize_convoy(entry->value);
+            this->_active_convoys.remove(completed[i]);
+        }
     }
-    for (size_t i = 0; i < completed.size(); ++i)
+    size_t route_count = this->_supply_routes.size();
+    if (route_count > 0)
     {
-        Pair<int, ft_supply_convoy> *entry = this->_active_convoys.find(completed[i]);
-        if (entry == ft_nullptr)
-            continue;
-        this->finalize_convoy(entry->value);
-        this->_active_convoys.remove(completed[i]);
+        Pair<RouteKey, ft_supply_route> *routes = this->_supply_routes.end();
+        routes -= route_count;
+        for (size_t i = 0; i < route_count; ++i)
+            this->update_route_escalation(routes[i].value, seconds);
     }
 }
 
@@ -950,6 +1085,41 @@ void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
         entry.append(ft_string(" convoys arriving uninterrupted."));
         this->_lore_log.push_back(entry);
         this->_next_streak_milestone_index += 1;
+    }
+    this->record_achievement_event(ACHIEVEMENT_EVENT_CONVOY_DELIVERED, 1);
+    this->record_achievement_event(ACHIEVEMENT_EVENT_CONVOY_STREAK_BEST, this->_longest_delivery_streak);
+    if (convoy.escort_fleet_id > 0 && convoy.escort_rating > 0)
+    {
+        ft_sharedptr<ft_fleet> escort = this->get_fleet(convoy.escort_fleet_id);
+        if (escort)
+        {
+            double xp_gain = 16.0;
+            if (route)
+                xp_gain += static_cast<double>(route->escort_requirement) * 3.0;
+            if (route && route->threat_level > 0.0)
+                xp_gain += route->threat_level * 1.5;
+            if (convoy.raided)
+                xp_gain += 12.0;
+            if (xp_gain < 0.0)
+                xp_gain = 0.0;
+            if (escort->add_escort_veterancy(xp_gain))
+            {
+                int bonus = escort->get_escort_veterancy_bonus();
+                ft_string veterancy_entry("Escort fleet #");
+                veterancy_entry.append(ft_to_string(convoy.escort_fleet_id));
+                veterancy_entry.append(ft_string(" hones its convoy tactics guarding route "));
+                veterancy_entry.append(ft_to_string(convoy.origin_planet_id));
+                veterancy_entry.append(ft_string(" -> "));
+                veterancy_entry.append(ft_to_string(convoy.destination_planet_id));
+                veterancy_entry.append(ft_string(", raising its escort rating bonus to +"));
+                veterancy_entry.append(ft_to_string(bonus));
+                if (convoy.raided)
+                    veterancy_entry.append(ft_string(" after weathering a raid."));
+                else
+                    veterancy_entry.append(ft_string("."));
+                this->_lore_log.push_back(veterancy_entry);
+            }
+        }
     }
 }
 
@@ -991,6 +1161,37 @@ void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_
         escort_entry.append(ft_to_string(convoy.escort_fleet_id));
         escort_entry.append(ft_string(" returns without its charge."));
         this->_lore_log.push_back(escort_entry);
+    }
+    if (had_escort)
+    {
+        ft_sharedptr<ft_fleet> escort = this->get_fleet(convoy.escort_fleet_id);
+        if (escort)
+        {
+            double penalty = destroyed_by_raid ? 36.0 : 18.0;
+            if (!destroyed_by_raid && convoy.raided)
+                penalty += 8.0;
+            if (penalty < 0.0)
+                penalty = 0.0;
+            if (escort->decay_escort_veterancy(penalty))
+            {
+                int bonus = escort->get_escort_veterancy_bonus();
+                ft_string veterancy_entry("Escort fleet #");
+                veterancy_entry.append(ft_to_string(convoy.escort_fleet_id));
+                if (destroyed_by_raid)
+                    veterancy_entry.append(ft_string(" loses convoy veterancy after its freighters were wiped out"));
+                else
+                    veterancy_entry.append(ft_string(" sheds convoy veterancy while regrouping from heavy losses"));
+                if (bonus > 0)
+                {
+                    veterancy_entry.append(ft_string(", retaining a +"));
+                    veterancy_entry.append(ft_to_string(bonus));
+                    veterancy_entry.append(ft_string(" escort bonus."));
+                }
+                else
+                    veterancy_entry.append(ft_string(", leaving no remaining escort bonus."));
+                this->_lore_log.push_back(veterancy_entry);
+            }
+        }
     }
 }
 
@@ -1115,6 +1316,26 @@ bool Game::get_supply_contract(int contract_id, ft_supply_contract &out) const
 int Game::get_active_convoy_count() const
 {
     return static_cast<int>(this->_active_convoys.size());
+}
+
+double Game::get_fleet_escort_veterancy(int fleet_id) const
+{
+    if (fleet_id <= 0)
+        return 0.0;
+    ft_sharedptr<const ft_fleet> fleet = this->get_fleet(fleet_id);
+    if (!fleet)
+        return 0.0;
+    return fleet->get_escort_veterancy();
+}
+
+int Game::get_fleet_escort_veterancy_bonus(int fleet_id) const
+{
+    if (fleet_id <= 0)
+        return 0;
+    ft_sharedptr<const ft_fleet> fleet = this->get_fleet(fleet_id);
+    if (!fleet)
+        return 0;
+    return fleet->get_escort_veterancy_bonus();
 }
 
 int Game::transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amount)

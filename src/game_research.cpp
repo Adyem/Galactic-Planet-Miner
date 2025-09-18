@@ -112,6 +112,7 @@ void Game::handle_research_completion(int research_id)
                 entries[i].value = false;
         }
     }
+    this->record_achievement_event(ACHIEVEMENT_EVENT_RESEARCH_COMPLETED, 1);
     if (update_modifiers)
         this->update_combat_modifiers();
 }

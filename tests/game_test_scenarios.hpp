@@ -5,11 +5,14 @@
 
 int verify_backend_roundtrip();
 int validate_initial_campaign_flow(Game &game);
+int validate_order_branch_storyline();
 int evaluate_building_and_convoy_systems(Game &game);
 int evaluate_ship_upgrade_research(Game &game);
 int verify_supply_contract_automation();
 int verify_convoy_quest_objectives();
 int verify_multiple_convoy_raids();
+int verify_supply_route_escalation();
+int verify_escort_veterancy_progression();
 int compare_energy_pressure_scenarios();
 int compare_storyline_assaults();
 int analyze_manual_vs_auto_assault_controls();
@@ -26,5 +29,8 @@ int verify_hard_difficulty_fractional_output();
 int verify_supply_route_key_collisions();
 int verify_trade_relay_convoy_modifiers();
 int verify_convoy_escort_travel_speed();
+int verify_achievement_catalog();
+int verify_achievement_progression();
+int verify_quest_achievement_failures();
 
 #endif
