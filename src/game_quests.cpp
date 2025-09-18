@@ -54,6 +54,27 @@ void Game::build_quest_context(ft_quest_context &context) const
     context.successful_deliveries = this->_convoys_delivered_total;
     context.convoy_raid_losses = this->_convoy_raid_losses;
     context.delivery_streak = this->_current_delivery_streak;
+    double total_threat = 0.0;
+    double max_threat = 0.0;
+    size_t route_count = this->_supply_routes.size();
+    if (route_count > 0)
+    {
+        const Pair<RouteKey, ft_supply_route> *route_entries = this->_supply_routes.end();
+        route_entries -= route_count;
+        for (size_t i = 0; i < route_count; ++i)
+        {
+            double threat = route_entries[i].value.threat_level;
+            total_threat += threat;
+            if (threat > max_threat)
+                max_threat = threat;
+        }
+    }
+    context.total_convoy_threat = total_threat;
+    if (route_count > 0)
+        context.average_convoy_threat = total_threat / static_cast<double>(route_count);
+    else
+        context.average_convoy_threat = 0.0;
+    context.maximum_convoy_threat = max_threat;
 }
 
 void Game::handle_quest_completion(int quest_id)

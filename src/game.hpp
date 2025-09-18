@@ -90,9 +90,12 @@ private:
         double  base_travel_time;
         int     escort_requirement;
         double  base_raid_risk;
+        double  threat_level;
+        double  quiet_timer;
         ft_supply_route()
             : id(0), origin_planet_id(0), destination_planet_id(0),
-              base_travel_time(30.0), escort_requirement(0), base_raid_risk(0.02)
+              base_travel_time(30.0), escort_requirement(0), base_raid_risk(0.02),
+              threat_level(0.0), quiet_timer(0.0)
         {}
     };
     struct ft_supply_convoy
@@ -164,6 +167,7 @@ private:
     ft_supply_route *find_supply_route(int origin, int destination);
     const ft_supply_route *find_supply_route(int origin, int destination) const;
     const ft_supply_route *get_route_by_id(int route_id) const;
+    ft_supply_route *get_route_by_id(int route_id);
     double estimate_route_travel_time(int origin, int destination) const;
     int estimate_route_escort_requirement(int origin, int destination) const;
     double estimate_route_raid_risk(int origin, int destination) const;
@@ -187,6 +191,9 @@ private:
     void record_convoy_delivery(const ft_supply_convoy &convoy);
     void record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_raid);
     void reset_delivery_streak();
+    void modify_route_threat(ft_supply_route &route, double delta, bool reset_quiet_timer);
+    void decay_route_threat(ft_supply_route &route, double seconds);
+    void decay_all_route_threat(double seconds);
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -253,6 +260,7 @@ public:
     int get_convoy_raid_losses() const { return this->_convoy_raid_losses; }
     int get_convoy_delivery_streak() const { return this->_current_delivery_streak; }
     int get_longest_convoy_delivery_streak() const { return this->_longest_delivery_streak; }
+    double get_supply_route_threat_level(int origin_planet_id, int destination_planet_id) const;
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
     int get_active_convoy_count() const;
