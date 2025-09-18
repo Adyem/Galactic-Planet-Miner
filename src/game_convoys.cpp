@@ -41,22 +41,37 @@ const Game::ft_supply_route *Game::get_route_by_id(int route_id) const
     return &entry->value;
 }
 
-bool Game::has_active_convoy_for_contract(int contract_id) const
+int Game::count_active_convoys_for_contract(int contract_id) const
 {
     if (contract_id <= 0)
-        return false;
+        return 0;
     size_t count = this->_active_convoys.size();
     if (count == 0)
-        return false;
+        return 0;
     const Pair<int, ft_supply_convoy> *entries = this->_active_convoys.end();
     entries -= count;
+    int active = 0;
     for (size_t i = 0; i < count; ++i)
     {
         const ft_supply_convoy &convoy = entries[i].value;
         if (convoy.contract_id == contract_id)
-            return true;
+            active += 1;
     }
-    return false;
+    return active;
+}
+
+bool Game::has_active_convoy_for_contract(int contract_id) const
+{
+    if (contract_id <= 0)
+        return false;
+    const Pair<int, ft_supply_contract> *contract_entry = this->_supply_contracts.find(contract_id);
+    if (contract_entry == ft_nullptr)
+        return false;
+    int limit = contract_entry->value.max_active_convoys;
+    if (limit < 1)
+        limit = 1;
+    int active = this->count_active_convoys_for_contract(contract_id);
+    return active >= limit;
 }
 
 void Game::accelerate_contract(int contract_id, double fraction)
@@ -496,6 +511,8 @@ void Game::process_supply_contracts(double seconds)
         ft_supply_contract &contract = entries[i].value;
         if (contract.interval_seconds <= 0.0)
             continue;
+        if (contract.max_active_convoys < 1)
+            contract.max_active_convoys = 1;
         contract.elapsed_seconds += seconds;
         if (contract.elapsed_seconds < 0.0)
             contract.elapsed_seconds = 0.0;
@@ -563,7 +580,6 @@ void Game::process_supply_contracts(double seconds)
                 contract.elapsed_seconds = 0.0;
             if (contract.elapsed_seconds > contract.interval_seconds)
                 contract.elapsed_seconds = contract.interval_seconds;
-            break;
         }
         if (!dispatched && contract.elapsed_seconds > contract.interval_seconds)
             contract.elapsed_seconds = contract.interval_seconds;
@@ -682,7 +698,8 @@ void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_
 int Game::create_supply_contract(int origin_planet_id, int destination_planet_id,
                                  int resource_id, int shipment_size,
                                  double interval_seconds,
-                                 int minimum_destination_stock)
+                                 int minimum_destination_stock,
+                                 int max_active_convoys)
 {
     if (origin_planet_id == destination_planet_id)
         return 0;
@@ -706,6 +723,9 @@ int Game::create_supply_contract(int origin_planet_id, int destination_planet_id
     contract.shipment_size = shipment_size;
     contract.interval_seconds = interval_seconds;
     contract.elapsed_seconds = 0.0;
+    if (max_active_convoys < 1)
+        max_active_convoys = 1;
+    contract.max_active_convoys = max_active_convoys;
     if (minimum_destination_stock >= 0)
     {
         contract.has_minimum_stock = true;
@@ -734,7 +754,8 @@ bool Game::cancel_supply_contract(int contract_id)
 
 bool Game::update_supply_contract(int contract_id, int shipment_size,
                                   double interval_seconds,
-                                  int minimum_destination_stock)
+                                  int minimum_destination_stock,
+                                  int max_active_convoys)
 {
     if (shipment_size <= 0)
         return false;
@@ -756,6 +777,14 @@ bool Game::update_supply_contract(int contract_id, int shipment_size,
         contract.has_minimum_stock = false;
         contract.minimum_stock = 0;
     }
+    if (max_active_convoys >= 0)
+    {
+        if (max_active_convoys < 1)
+            max_active_convoys = 1;
+        contract.max_active_convoys = max_active_convoys;
+    }
+    if (contract.max_active_convoys < 1)
+        contract.max_active_convoys = 1;
     if (contract.elapsed_seconds > contract.interval_seconds)
         contract.elapsed_seconds = contract.interval_seconds;
     if (contract.elapsed_seconds < 0.0)
