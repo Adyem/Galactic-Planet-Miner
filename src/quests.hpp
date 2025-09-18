@@ -18,7 +18,10 @@ enum e_quest_id
     QUEST_CLIMACTIC_BATTLE,
     QUEST_CRITICAL_DECISION,
     QUEST_ORDER_UPRISING,
-    QUEST_REBELLION_FLEET
+    QUEST_REBELLION_FLEET,
+    QUEST_SECURE_SUPPLY_LINES,
+    QUEST_STEADY_SUPPLY_STREAK,
+    QUEST_HIGH_VALUE_ESCORT
 };
 
 enum e_quest_status
@@ -36,7 +39,10 @@ enum e_quest_objective_type
     QUEST_OBJECTIVE_RESOURCE_TOTAL = 1,
     QUEST_OBJECTIVE_RESEARCH_COMPLETED,
     QUEST_OBJECTIVE_FLEET_COUNT,
-    QUEST_OBJECTIVE_TOTAL_SHIP_HP
+    QUEST_OBJECTIVE_TOTAL_SHIP_HP,
+    QUEST_OBJECTIVE_CONVOYS_DELIVERED,
+    QUEST_OBJECTIVE_CONVOY_STREAK,
+    QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST
 };
 
 enum e_quest_choice_value
@@ -92,7 +98,13 @@ struct ft_quest_context
     ft_map<int, int> research_status;
     int total_ship_count;
     int total_ship_hp;
-    ft_quest_context() : resource_totals(), research_status(), total_ship_count(0), total_ship_hp(0) {}
+    int successful_deliveries;
+    int convoy_raid_losses;
+    int delivery_streak;
+    ft_quest_context()
+        : resource_totals(), research_status(), total_ship_count(0), total_ship_hp(0),
+          successful_deliveries(0), convoy_raid_losses(0), delivery_streak(0)
+    {}
 };
 
 class QuestManager

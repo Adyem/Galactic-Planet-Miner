@@ -40,6 +40,8 @@ int main()
         return 0;
     if (!evaluate_building_and_convoy_systems(game))
         return 0;
+    if (!verify_convoy_quest_objectives())
+        return 0;
     if (!evaluate_ship_upgrade_research(game))
         return 0;
     if (!verify_supply_contract_automation())

@@ -58,6 +58,59 @@ QuestManager::QuestManager()
     investigate->objectives.push_back(objective);
     this->register_quest(investigate);
 
+    ft_sharedptr<ft_quest_definition> secure(new ft_quest_definition());
+    secure->id = QUEST_SECURE_SUPPLY_LINES;
+    secure->name = ft_string("Secure Supply Lines");
+    secure->description = ft_string("Deliver convoys while keeping raid losses contained.");
+    secure->time_limit = 0.0;
+    secure->requires_choice = false;
+    secure->required_choice_quest = 0;
+    secure->required_choice_value = 0;
+    secure->prerequisites.push_back(QUEST_INVESTIGATE_RAIDERS);
+    objective.type = QUEST_OBJECTIVE_CONVOYS_DELIVERED;
+    objective.target_id = 0;
+    objective.amount = 3;
+    secure->objectives.push_back(objective);
+    objective.type = QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST;
+    objective.target_id = 0;
+    objective.amount = 1;
+    secure->objectives.push_back(objective);
+    this->register_quest(secure);
+
+    ft_sharedptr<ft_quest_definition> streak(new ft_quest_definition());
+    streak->id = QUEST_STEADY_SUPPLY_STREAK;
+    streak->name = ft_string("Steady Supply Streak");
+    streak->description = ft_string("Maintain an uninterrupted chain of convoy deliveries.");
+    streak->time_limit = 0.0;
+    streak->requires_choice = false;
+    streak->required_choice_quest = 0;
+    streak->required_choice_value = 0;
+    streak->prerequisites.push_back(QUEST_SECURE_SUPPLY_LINES);
+    objective.type = QUEST_OBJECTIVE_CONVOY_STREAK;
+    objective.target_id = 0;
+    objective.amount = 3;
+    streak->objectives.push_back(objective);
+    this->register_quest(streak);
+
+    ft_sharedptr<ft_quest_definition> escort(new ft_quest_definition());
+    escort->id = QUEST_HIGH_VALUE_ESCORT;
+    escort->name = ft_string("High-Value Escort");
+    escort->description = ft_string("Escort critical shipments through heightened raids.");
+    escort->time_limit = 0.0;
+    escort->requires_choice = false;
+    escort->required_choice_quest = 0;
+    escort->required_choice_value = 0;
+    escort->prerequisites.push_back(QUEST_STEADY_SUPPLY_STREAK);
+    objective.type = QUEST_OBJECTIVE_CONVOYS_DELIVERED;
+    objective.target_id = 0;
+    objective.amount = 8;
+    escort->objectives.push_back(objective);
+    objective.type = QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST;
+    objective.target_id = 0;
+    objective.amount = 1;
+    escort->objectives.push_back(objective);
+    this->register_quest(escort);
+
     ft_sharedptr<ft_quest_definition> battle(new ft_quest_definition());
     battle->id = QUEST_CLIMACTIC_BATTLE;
     battle->name = ft_string("Climactic Battle");
@@ -67,6 +120,7 @@ QuestManager::QuestManager()
     battle->required_choice_quest = 0;
     battle->required_choice_value = 0;
     battle->prerequisites.push_back(QUEST_INVESTIGATE_RAIDERS);
+    battle->prerequisites.push_back(QUEST_HIGH_VALUE_ESCORT);
     objective.type = QUEST_OBJECTIVE_RESEARCH_COMPLETED;
     objective.target_id = RESEARCH_UNLOCK_VULCAN;
     objective.amount = 1;
@@ -242,6 +296,21 @@ bool QuestManager::are_objectives_met(const ft_quest_definition &definition, con
         else if (objective.type == QUEST_OBJECTIVE_TOTAL_SHIP_HP)
         {
             if (context.total_ship_hp < objective.amount)
+                return false;
+        }
+        else if (objective.type == QUEST_OBJECTIVE_CONVOYS_DELIVERED)
+        {
+            if (context.successful_deliveries < objective.amount)
+                return false;
+        }
+        else if (objective.type == QUEST_OBJECTIVE_CONVOY_STREAK)
+        {
+            if (context.delivery_streak < objective.amount)
+                return false;
+        }
+        else if (objective.type == QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST)
+        {
+            if (context.convoy_raid_losses > objective.amount)
                 return false;
         }
     }

@@ -109,11 +109,13 @@ private:
         int     destination_escort;
         bool    raided;
         bool    destroyed;
+        bool    loss_recorded;
         ft_supply_convoy()
             : id(0), route_id(0), contract_id(0), origin_planet_id(0),
               destination_planet_id(0), resource_id(0), amount(0),
               remaining_time(0.0), raid_meter(0.0), origin_escort(0),
-              destination_escort(0), raided(false), destroyed(false)
+              destination_escort(0), raided(false), destroyed(false),
+              loss_recorded(false)
         {}
     };
     ft_map<RouteKey, ft_supply_route>            _supply_routes;
@@ -124,6 +126,12 @@ private:
     int                                          _next_route_id;
     int                                          _next_convoy_id;
     int                                          _next_contract_id;
+    int                                          _convoys_delivered_total;
+    int                                          _convoy_raid_losses;
+    int                                          _current_delivery_streak;
+    int                                          _longest_delivery_streak;
+    ft_vector<int>                               _streak_milestones;
+    size_t                                       _next_streak_milestone_index;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -158,7 +166,7 @@ private:
     double calculate_convoy_travel_time(const ft_supply_route &route, int origin_escort, int destination_escort) const;
     double calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack) const;
     void handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack, bool destination_under_attack);
-    void finalize_convoy(const ft_supply_convoy &convoy);
+    void finalize_convoy(ft_supply_convoy &convoy);
     void handle_contract_completion(const ft_supply_convoy &convoy);
     void accelerate_contract(int contract_id, double fraction);
     bool has_active_convoy_for_contract(int contract_id) const;
@@ -167,6 +175,9 @@ private:
                         int contract_id);
     void process_supply_contracts(double seconds);
     void advance_convoys(double seconds);
+    void record_convoy_delivery(const ft_supply_convoy &convoy);
+    void record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_raid);
+    void reset_delivery_streak();
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -225,6 +236,10 @@ public:
     int get_ore(int planet_id, int ore_id) const;
     void set_ore(int planet_id, int ore_id, int amount);
     int transfer_ore(int from_planet_id, int to_planet_id, int ore_id, int amount);
+    int get_total_convoys_delivered() const { return this->_convoys_delivered_total; }
+    int get_convoy_raid_losses() const { return this->_convoy_raid_losses; }
+    int get_convoy_delivery_streak() const { return this->_current_delivery_streak; }
+    int get_longest_convoy_delivery_streak() const { return this->_longest_delivery_streak; }
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
     int get_active_convoy_count() const;

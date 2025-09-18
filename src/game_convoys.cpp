@@ -395,6 +395,11 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
         convoy.amount = 0;
         convoy.destroyed = true;
         convoy.remaining_time = 0.0;
+        if (!convoy.loss_recorded)
+        {
+            this->record_convoy_loss(convoy, true);
+            convoy.loss_recorded = true;
+        }
     }
     ft_string entry("Raiders ambushed a convoy from ");
     entry.append(ft_to_string(convoy.origin_planet_id));
@@ -411,10 +416,11 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
     this->accelerate_contract(convoy.contract_id, 0.5);
 }
 
-void Game::finalize_convoy(const ft_supply_convoy &convoy)
+void Game::finalize_convoy(ft_supply_convoy &convoy)
 {
     if (!convoy.destroyed && convoy.amount > 0)
     {
+        this->record_convoy_delivery(convoy);
         ft_sharedptr<ft_planet> destination = this->get_planet(convoy.destination_planet_id);
         if (destination)
         {
@@ -448,6 +454,11 @@ void Game::finalize_convoy(const ft_supply_convoy &convoy)
     }
     else
     {
+        if (!convoy.loss_recorded)
+        {
+            this->record_convoy_loss(convoy, convoy.raided);
+            convoy.loss_recorded = true;
+        }
         ft_string entry("A convoy from ");
         entry.append(ft_to_string(convoy.origin_planet_id));
         entry.append(ft_string(" to "));
@@ -613,6 +624,58 @@ void Game::advance_convoys(double seconds)
             continue;
         this->finalize_convoy(entry->value);
         this->_active_convoys.remove(completed[i]);
+    }
+}
+
+void Game::reset_delivery_streak()
+{
+    this->_current_delivery_streak = 0;
+    this->_next_streak_milestone_index = 0;
+}
+
+void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
+{
+    (void)convoy;
+    this->_convoys_delivered_total += 1;
+    this->_current_delivery_streak += 1;
+    if (this->_current_delivery_streak > this->_longest_delivery_streak)
+    {
+        this->_longest_delivery_streak = this->_current_delivery_streak;
+        ft_string record_entry("Quartermaster Nia records a new convoy streak of ");
+        record_entry.append(ft_to_string(this->_current_delivery_streak));
+        record_entry.append(ft_string(" successful deliveries."));
+        this->_lore_log.push_back(record_entry);
+    }
+    while (this->_next_streak_milestone_index < this->_streak_milestones.size() &&
+           this->_current_delivery_streak >= this->_streak_milestones[this->_next_streak_milestone_index])
+    {
+        int milestone = this->_streak_milestones[this->_next_streak_milestone_index];
+        ft_string entry("Logistics crews celebrate ");
+        entry.append(ft_to_string(milestone));
+        entry.append(ft_string(" convoys arriving uninterrupted."));
+        this->_lore_log.push_back(entry);
+        this->_next_streak_milestone_index += 1;
+    }
+}
+
+void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_raid)
+{
+    if (destroyed_by_raid)
+        this->_convoy_raid_losses += 1;
+    if (this->_current_delivery_streak > 0)
+    {
+        ft_string streak_entry("Quartermaster Nia laments the end of a ");
+        streak_entry.append(ft_to_string(this->_current_delivery_streak));
+        streak_entry.append(ft_string(" convoy streak."));
+        this->_lore_log.push_back(streak_entry);
+    }
+    this->reset_delivery_streak();
+    if (destroyed_by_raid)
+    {
+        ft_string raid_entry("Professor Lumen tallies raid losses now at ");
+        raid_entry.append(ft_to_string(this->_convoy_raid_losses));
+        raid_entry.append(ft_string(" convoys."));
+        this->_lore_log.push_back(raid_entry);
     }
 }
 

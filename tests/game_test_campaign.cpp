@@ -8,6 +8,34 @@
 #include "buildings.hpp"
 #include "game_test_scenarios.hpp"
 
+static void fast_forward_to_supply_quests(Game &game)
+{
+    game.set_ore(PLANET_TERRA, ORE_IRON, 20);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 20);
+    game.tick(0.0);
+
+    game.create_fleet(1);
+    int capital = game.create_ship(1, SHIP_CAPITAL);
+    FT_ASSERT(capital != 0);
+    game.set_ship_hp(1, capital, 140);
+    game.create_fleet(2);
+    int escort = game.create_ship(2, SHIP_SHIELD);
+    FT_ASSERT(escort != 0);
+    game.set_ship_hp(2, escort, 80);
+    game.tick(0.0);
+
+    game.set_ore(PLANET_TERRA, ORE_IRON, 120);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 80);
+    game.set_ore(PLANET_TERRA, ORE_COAL, 24);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    game.tick(40.0);
+    game.set_ore(PLANET_TERRA, ORE_COAL, 24);
+    game.set_ore(PLANET_TERRA, ORE_MITHRIL, 12);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_ZALTHOR));
+    game.tick(50.0);
+    game.tick(0.0);
+}
+
 int validate_initial_campaign_flow(Game &game)
 {
     FT_ASSERT_EQ(GAME_DIFFICULTY_STANDARD, game.get_difficulty());
@@ -133,6 +161,31 @@ int validate_initial_campaign_flow(Game &game)
     FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_UNLOCK_VULCAN));
     game.tick(0.0);
     FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_INVESTIGATE_RAIDERS));
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, game.get_active_quest());
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_SECURE_SUPPLY_LINES));
+    FT_ASSERT_EQ(0, game.get_total_convoys_delivered());
+    FT_ASSERT_EQ(0, game.get_convoy_delivery_streak());
+    FT_ASSERT_EQ(0, game.get_convoy_raid_losses());
+    game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+    game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    for (int shipment = 0; shipment < 8; ++shipment)
+    {
+        int moved = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 20);
+        FT_ASSERT(moved >= 20);
+        double waited = 0.0;
+        while (game.get_active_convoy_count() > 0 && waited < 240.0)
+        {
+            game.tick(4.0);
+            waited += 4.0;
+        }
+        FT_ASSERT(waited < 240.0);
+    }
+    FT_ASSERT(game.get_total_convoys_delivered() >= 8);
+    FT_ASSERT(game.get_convoy_delivery_streak() >= 8);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_SECURE_SUPPLY_LINES));
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_STEADY_SUPPLY_STREAK));
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_HIGH_VALUE_ESCORT));
     FT_ASSERT_EQ(QUEST_CLIMACTIC_BATTLE, game.get_active_quest());
     FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_CLIMACTIC_BATTLE));
 
@@ -737,6 +790,100 @@ int verify_supply_contract_automation()
     contract_game.tick(90.0);
     FT_ASSERT_EQ(0, contract_game.get_active_convoy_count());
     FT_ASSERT(!contract_game.cancel_supply_contract(contract_id));
+    return 1;
+}
+
+int verify_convoy_quest_objectives()
+{
+    Game success_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    fast_forward_to_supply_quests(success_game);
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, success_game.get_active_quest());
+
+    success_game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    success_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+    success_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 400);
+    FT_ASSERT(success_game.start_raider_assault(PLANET_TERRA, 1.0));
+    FT_ASSERT(success_game.start_raider_assault(PLANET_MARS, 1.0));
+    int risky = success_game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 40);
+    FT_ASSERT(risky >= 40);
+    double elapsed = 0.0;
+    while (success_game.get_active_convoy_count() > 0 && elapsed < 400.0)
+    {
+        success_game.tick(5.0);
+        elapsed += 5.0;
+    }
+    FT_ASSERT(elapsed < 400.0);
+    while ((success_game.is_assault_active(PLANET_TERRA) || success_game.is_assault_active(PLANET_MARS)) && elapsed < 560.0)
+    {
+        success_game.tick(5.0);
+        elapsed += 5.0;
+    }
+    FT_ASSERT(success_game.get_convoy_raid_losses() >= 1);
+    FT_ASSERT(!success_game.is_assault_active(PLANET_TERRA));
+    FT_ASSERT(!success_game.is_assault_active(PLANET_MARS));
+
+    for (int convoy = 0; convoy < 8; ++convoy)
+    {
+        int moved = success_game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 20);
+        FT_ASSERT(moved >= 20);
+        double wait = 0.0;
+        while (success_game.get_active_convoy_count() > 0 && wait < 240.0)
+        {
+            success_game.tick(4.0);
+            wait += 4.0;
+        }
+        FT_ASSERT(wait < 240.0);
+    }
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, success_game.get_quest_status(QUEST_SECURE_SUPPLY_LINES));
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, success_game.get_quest_status(QUEST_STEADY_SUPPLY_STREAK));
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, success_game.get_quest_status(QUEST_HIGH_VALUE_ESCORT));
+    FT_ASSERT_EQ(QUEST_CLIMACTIC_BATTLE, success_game.get_active_quest());
+    FT_ASSERT(success_game.get_convoy_raid_losses() >= 1);
+
+    Game failure_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    fast_forward_to_supply_quests(failure_game);
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, failure_game.get_active_quest());
+    failure_game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    failure_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+    failure_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 400);
+    for (int loss = 0; loss < 2; ++loss)
+    {
+        FT_ASSERT(failure_game.start_raider_assault(PLANET_TERRA, 1.0));
+        FT_ASSERT(failure_game.start_raider_assault(PLANET_MARS, 1.0));
+        int moved = failure_game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 30);
+        FT_ASSERT(moved >= 30);
+        double wait = 0.0;
+        while (failure_game.get_active_convoy_count() > 0 && wait < 400.0)
+        {
+            failure_game.tick(5.0);
+            wait += 5.0;
+        }
+        FT_ASSERT(wait < 400.0);
+        while ((failure_game.is_assault_active(PLANET_TERRA) || failure_game.is_assault_active(PLANET_MARS)) && wait < 560.0)
+        {
+            failure_game.tick(5.0);
+            wait += 5.0;
+        }
+    }
+    FT_ASSERT(failure_game.get_convoy_raid_losses() >= 2);
+    FT_ASSERT(!failure_game.is_assault_active(PLANET_TERRA));
+    FT_ASSERT(!failure_game.is_assault_active(PLANET_MARS));
+
+    for (int convoy = 0; convoy < 3; ++convoy)
+    {
+        int moved = failure_game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 20);
+        FT_ASSERT(moved >= 20);
+        double wait = 0.0;
+        while (failure_game.get_active_convoy_count() > 0 && wait < 240.0)
+        {
+            failure_game.tick(4.0);
+            wait += 4.0;
+        }
+        FT_ASSERT(wait < 240.0);
+    }
+    FT_ASSERT(failure_game.get_total_convoys_delivered() >= 3);
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, failure_game.get_quest_status(QUEST_SECURE_SUPPLY_LINES));
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, failure_game.get_active_quest());
     return 1;
 }
 

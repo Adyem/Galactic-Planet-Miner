@@ -3,6 +3,7 @@
 #include "../libft/Template/vector.hpp"
 #include "fleets.hpp"
 #include "buildings.hpp"
+#include "quests.hpp"
 #include "game_test_scenarios.hpp"
 
 int compare_energy_pressure_scenarios()
@@ -167,6 +168,23 @@ int compare_storyline_assaults()
     FT_ASSERT(narrative_game.start_research(RESEARCH_UNLOCK_ZALTHOR));
     narrative_game.tick(40.0);
     narrative_game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, narrative_game.get_active_quest());
+    narrative_game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    narrative_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+    narrative_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    for (int convoy = 0; convoy < 8; ++convoy)
+    {
+        int moved = narrative_game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 20);
+        FT_ASSERT(moved >= 20);
+        double waited = 0.0;
+        while (narrative_game.get_active_convoy_count() > 0 && waited < 240.0)
+        {
+            narrative_game.tick(4.0);
+            waited += 4.0;
+        }
+        FT_ASSERT(waited < 240.0);
+    }
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, narrative_game.get_quest_status(QUEST_HIGH_VALUE_ESCORT));
     FT_ASSERT_EQ(QUEST_CLIMACTIC_BATTLE, narrative_game.get_active_quest());
     narrative_game.remove_ship(1, narrative_setup_one);
     narrative_game.remove_ship(2, narrative_setup_two);
