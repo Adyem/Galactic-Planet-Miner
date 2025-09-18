@@ -104,6 +104,8 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
     state.energy_generation = state.base_energy_generation;
     state.support_energy = 0.0;
     state.mine_multiplier = 1.0;
+    state.convoy_speed_bonus = 0.0;
+    state.convoy_raid_risk_modifier = 0.0;
     state.energy_deficit_pressure = 0.0;
     size_t count = state.instances.size();
     Pair<int, ft_building_instance> *entries = state.instances.end();
@@ -117,11 +119,17 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
         state.logistic_capacity += definition->logistic_gain;
         state.energy_generation += definition->energy_gain;
         state.mine_multiplier += definition->mine_bonus;
+        state.convoy_speed_bonus += definition->convoy_speed_bonus;
+        state.convoy_raid_risk_modifier += definition->convoy_raid_risk_modifier;
         if (definition->energy_cost > 0.0 && (definition->cycle_time <= 0.0 || definition->outputs.size() == 0))
             state.support_energy += definition->energy_cost;
     }
     if (state.mine_multiplier < 1.0)
         state.mine_multiplier = 1.0;
+    if (state.convoy_speed_bonus < 0.0)
+        state.convoy_speed_bonus = 0.0;
+    if (state.convoy_raid_risk_modifier < 0.0)
+        state.convoy_raid_risk_modifier = 0.0;
     state.energy_consumption = state.support_energy;
     state.logistic_usage = 0;
 }
@@ -308,6 +316,8 @@ void BuildingManager::apply_research_unlock(int research_id)
         this->set_building_unlocked(BUILDING_SHIELD_GENERATOR, true);
     else if (research_id == RESEARCH_TRITIUM_EXTRACTION)
         this->set_building_unlocked(BUILDING_TRITIUM_EXTRACTOR, true);
+    else if (research_id == RESEARCH_INTERSTELLAR_TRADE)
+        this->set_building_unlocked(BUILDING_TRADE_RELAY, true);
     else if (research_id == RESEARCH_CAPITAL_SHIP_INITIATIVE)
         this->set_building_unlocked(BUILDING_FLAGSHIP_DOCK, true);
 }
@@ -498,6 +508,26 @@ double BuildingManager::get_planet_energy_pressure(int planet_id) const
     if (state->energy_deficit_pressure < 0.0)
         return 0.0;
     return state->energy_deficit_pressure;
+}
+
+double BuildingManager::get_planet_convoy_speed_bonus(int planet_id) const
+{
+    const ft_planet_build_state *state = this->get_state(planet_id);
+    if (state == ft_nullptr)
+        return 0.0;
+    if (state->convoy_speed_bonus < 0.0)
+        return 0.0;
+    return state->convoy_speed_bonus;
+}
+
+double BuildingManager::get_planet_convoy_raid_risk_modifier(int planet_id) const
+{
+    const ft_planet_build_state *state = this->get_state(planet_id);
+    if (state == ft_nullptr)
+        return 0.0;
+    if (state->convoy_raid_risk_modifier < 0.0)
+        return 0.0;
+    return state->convoy_raid_risk_modifier;
 }
 
 void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, double seconds)
