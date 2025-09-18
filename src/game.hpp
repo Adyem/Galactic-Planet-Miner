@@ -31,12 +31,13 @@ public:
         double  elapsed_seconds;
         bool    has_minimum_stock;
         int     minimum_stock;
+        int     max_active_convoys;
 
         ft_supply_contract()
             : id(0), origin_planet_id(0), destination_planet_id(0),
               resource_id(0), shipment_size(0), interval_seconds(0.0),
               elapsed_seconds(0.0), has_minimum_stock(false),
-              minimum_stock(0)
+              minimum_stock(0), max_active_convoys(1)
         {}
     };
 
@@ -169,6 +170,7 @@ private:
     void finalize_convoy(ft_supply_convoy &convoy);
     void handle_contract_completion(const ft_supply_convoy &convoy);
     void accelerate_contract(int contract_id, double fraction);
+    int count_active_convoys_for_contract(int contract_id) const;
     bool has_active_convoy_for_contract(int contract_id) const;
     int dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
                         int destination_planet_id, int resource_id, int amount,
@@ -247,11 +249,13 @@ public:
     int create_supply_contract(int origin_planet_id, int destination_planet_id,
                                int resource_id, int shipment_size,
                                double interval_seconds,
-                               int minimum_destination_stock = -1);
+                               int minimum_destination_stock = -1,
+                               int max_active_convoys = 1);
     bool cancel_supply_contract(int contract_id);
     bool update_supply_contract(int contract_id, int shipment_size,
                                 double interval_seconds,
-                                int minimum_destination_stock = -1);
+                                int minimum_destination_stock = -1,
+                                int max_active_convoys = -1);
     void get_supply_contract_ids(ft_vector<int> &out) const;
     bool get_supply_contract(int contract_id, ft_supply_contract &out) const;
 

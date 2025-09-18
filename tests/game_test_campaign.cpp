@@ -727,7 +727,7 @@ int verify_supply_contract_automation()
     FT_ASSERT_EQ(0, invalid_contract);
 
     int contract_id = contract_game.create_supply_contract(PLANET_TERRA, PLANET_MARS,
-                                                           ITEM_IRON_BAR, 30, 45.0, 25);
+                                                           ITEM_IRON_BAR, 30, 45.0, 25, 2);
     FT_ASSERT(contract_id > 0);
 
     ft_vector<int> contract_ids;
@@ -748,6 +748,7 @@ int verify_supply_contract_automation()
     FT_ASSERT(contract_details.has_minimum_stock);
     FT_ASSERT_EQ(25, contract_details.minimum_stock);
     FT_ASSERT_EQ(30, contract_details.shipment_size);
+    FT_ASSERT_EQ(2, contract_details.max_active_convoys);
 
     contract_game.tick(30.0);
     FT_ASSERT_EQ(0, contract_game.get_active_convoy_count());
@@ -757,12 +758,13 @@ int verify_supply_contract_automation()
 
     contract_game.tick(120.0);
     FT_ASSERT_EQ(0, contract_game.get_active_convoy_count());
-    FT_ASSERT(contract_game.get_ore(PLANET_MARS, ITEM_IRON_BAR) >= 40);
+    FT_ASSERT(contract_game.get_ore(PLANET_MARS, ITEM_IRON_BAR) >= 70);
 
-    FT_ASSERT(contract_game.update_supply_contract(contract_id, 18, 30.0, -1));
+    FT_ASSERT(contract_game.update_supply_contract(contract_id, 18, 30.0, -1, 3));
     FT_ASSERT(contract_game.get_supply_contract(contract_id, contract_details));
     FT_ASSERT(!contract_details.has_minimum_stock);
     FT_ASSERT_EQ(18, contract_details.shipment_size);
+    FT_ASSERT_EQ(3, contract_details.max_active_convoys);
 
     contract_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 5);
     contract_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 12);
@@ -772,6 +774,13 @@ int verify_supply_contract_automation()
 
     contract_game.tick(120.0);
     FT_ASSERT(contract_game.get_ore(PLANET_MARS, ITEM_IRON_BAR) >= 17);
+
+    contract_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 90);
+    contract_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+
+    contract_game.tick(90.0);
+    FT_ASSERT_EQ(0, contract_game.get_active_convoy_count());
+    FT_ASSERT(contract_game.get_ore(PLANET_MARS, ITEM_IRON_BAR) >= 54);
 
     FT_ASSERT(contract_game.cancel_supply_contract(contract_id));
     contract_game.get_supply_contract_ids(contract_ids);
