@@ -1,4 +1,5 @@
 #include "quests.hpp"
+#include "buildings.hpp"
 
 QuestManager::QuestManager()
     : _time_scale(1.0)
@@ -183,6 +184,74 @@ QuestManager::QuestManager()
     rebellion->objectives.push_back(objective);
     this->register_quest(rebellion);
 
+    ft_sharedptr<ft_quest_definition> order_suppress(new ft_quest_definition());
+    order_suppress->id = QUEST_ORDER_SUPPRESS_RAIDS;
+    order_suppress->name = ft_string("Suppress the Raider Cells");
+    order_suppress->description = ft_string("Deploy Order loyalists to quiet convoy lanes and establish sensor grids.");
+    order_suppress->time_limit = 0.0;
+    order_suppress->requires_choice = false;
+    order_suppress->required_choice_quest = QUEST_CRITICAL_DECISION;
+    order_suppress->required_choice_value = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
+    order_suppress->prerequisites.push_back(QUEST_ORDER_UPRISING);
+    objective.type = QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST;
+    objective.target_id = 0;
+    objective.amount = 250;
+    order_suppress->objectives.push_back(objective);
+    objective.type = QUEST_OBJECTIVE_BUILDING_COUNT;
+    objective.target_id = BUILDING_PROXIMITY_RADAR;
+    objective.amount = 1;
+    order_suppress->objectives.push_back(objective);
+    this->register_quest(order_suppress);
+
+    ft_sharedptr<ft_quest_definition> order_dominion(new ft_quest_definition());
+    order_dominion->id = QUEST_ORDER_DOMINION;
+    order_dominion->name = ft_string("Order Dominion");
+    order_dominion->description = ft_string("Rally the Order fleets to crush a decisive assault and cement control.");
+    order_dominion->time_limit = 0.0;
+    order_dominion->requires_choice = false;
+    order_dominion->required_choice_quest = QUEST_CRITICAL_DECISION;
+    order_dominion->required_choice_value = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
+    order_dominion->prerequisites.push_back(QUEST_ORDER_SUPPRESS_RAIDS);
+    objective.type = QUEST_OBJECTIVE_ASSAULT_VICTORIES;
+    objective.target_id = PLANET_MARS;
+    objective.amount = 1;
+    order_dominion->objectives.push_back(objective);
+    this->register_quest(order_dominion);
+
+    ft_sharedptr<ft_quest_definition> rebellion_network(new ft_quest_definition());
+    rebellion_network->id = QUEST_REBELLION_NETWORK;
+    rebellion_network->name = ft_string("Shadow Network");
+    rebellion_network->description = ft_string("Spin up rebel listening posts and keep the raids suppressed long enough to regroup.");
+    rebellion_network->time_limit = 0.0;
+    rebellion_network->requires_choice = false;
+    rebellion_network->required_choice_quest = QUEST_CRITICAL_DECISION;
+    rebellion_network->required_choice_value = QUEST_CHOICE_SPARE_BLACKTHORNE;
+    rebellion_network->prerequisites.push_back(QUEST_REBELLION_FLEET);
+    objective.type = QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST;
+    objective.target_id = 0;
+    objective.amount = 300;
+    rebellion_network->objectives.push_back(objective);
+    objective.type = QUEST_OBJECTIVE_BUILDING_COUNT;
+    objective.target_id = BUILDING_TRADE_RELAY;
+    objective.amount = 1;
+    rebellion_network->objectives.push_back(objective);
+    this->register_quest(rebellion_network);
+
+    ft_sharedptr<ft_quest_definition> rebellion_liberation(new ft_quest_definition());
+    rebellion_liberation->id = QUEST_REBELLION_LIBERATION;
+    rebellion_liberation->name = ft_string("Liberation of the Frontier");
+    rebellion_liberation->description = ft_string("Lead allied cells through a flagship assault to secure the frontier worlds.");
+    rebellion_liberation->time_limit = 0.0;
+    rebellion_liberation->requires_choice = false;
+    rebellion_liberation->required_choice_quest = QUEST_CRITICAL_DECISION;
+    rebellion_liberation->required_choice_value = QUEST_CHOICE_SPARE_BLACKTHORNE;
+    rebellion_liberation->prerequisites.push_back(QUEST_REBELLION_NETWORK);
+    objective.type = QUEST_OBJECTIVE_ASSAULT_VICTORIES;
+    objective.target_id = PLANET_ZALTHOR;
+    objective.amount = 1;
+    rebellion_liberation->objectives.push_back(objective);
+    this->register_quest(rebellion_liberation);
+
     this->update_availability();
     this->activate_next();
 }
@@ -311,6 +380,24 @@ bool QuestManager::are_objectives_met(const ft_quest_definition &definition, con
         else if (objective.type == QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST)
         {
             if (context.convoy_raid_losses > objective.amount)
+                return false;
+        }
+        else if (objective.type == QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST)
+        {
+            double threshold = static_cast<double>(objective.amount) / 100.0;
+            if (context.maximum_convoy_threat > threshold)
+                return false;
+        }
+        else if (objective.type == QUEST_OBJECTIVE_BUILDING_COUNT)
+        {
+            const Pair<int, int> *entry = context.building_counts.find(objective.target_id);
+            if (entry == ft_nullptr || entry->value < objective.amount)
+                return false;
+        }
+        else if (objective.type == QUEST_OBJECTIVE_ASSAULT_VICTORIES)
+        {
+            const Pair<int, int> *entry = context.assault_victories.find(objective.target_id);
+            if (entry == ft_nullptr || entry->value < objective.amount)
                 return false;
         }
     }

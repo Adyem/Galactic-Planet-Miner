@@ -12,6 +12,7 @@ TEST_DIR    = tests
 
 SRC_COMMON  = \
     $(SRC_DIR)/backend_client.cpp \
+    $(SRC_DIR)/achievements.cpp \
     $(SRC_DIR)/planets.cpp \
     $(SRC_DIR)/fleets.cpp \
     $(SRC_DIR)/buildings.cpp \
@@ -33,6 +34,7 @@ SRC_MAIN    = $(SRC_DIR)/main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_main.cpp \
+    $(TEST_DIR)/game_test_achievements.cpp \
     $(TEST_DIR)/game_test_backend.cpp \
     $(TEST_DIR)/game_test_campaign.cpp \
     $(TEST_DIR)/game_test_energy.cpp \

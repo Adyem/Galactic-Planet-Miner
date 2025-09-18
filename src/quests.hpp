@@ -21,7 +21,11 @@ enum e_quest_id
     QUEST_REBELLION_FLEET,
     QUEST_SECURE_SUPPLY_LINES,
     QUEST_STEADY_SUPPLY_STREAK,
-    QUEST_HIGH_VALUE_ESCORT
+    QUEST_HIGH_VALUE_ESCORT,
+    QUEST_ORDER_SUPPRESS_RAIDS,
+    QUEST_ORDER_DOMINION,
+    QUEST_REBELLION_NETWORK,
+    QUEST_REBELLION_LIBERATION
 };
 
 enum e_quest_status
@@ -42,7 +46,10 @@ enum e_quest_objective_type
     QUEST_OBJECTIVE_TOTAL_SHIP_HP,
     QUEST_OBJECTIVE_CONVOYS_DELIVERED,
     QUEST_OBJECTIVE_CONVOY_STREAK,
-    QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST
+    QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST,
+    QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST,
+    QUEST_OBJECTIVE_BUILDING_COUNT,
+    QUEST_OBJECTIVE_ASSAULT_VICTORIES
 };
 
 enum e_quest_choice_value
@@ -104,10 +111,13 @@ struct ft_quest_context
     double total_convoy_threat;
     double average_convoy_threat;
     double maximum_convoy_threat;
+    ft_map<int, int> building_counts;
+    ft_map<int, int> assault_victories;
     ft_quest_context()
         : resource_totals(), research_status(), total_ship_count(0), total_ship_hp(0),
           successful_deliveries(0), convoy_raid_losses(0), delivery_streak(0),
-          total_convoy_threat(0.0), average_convoy_threat(0.0), maximum_convoy_threat(0.0)
+          total_convoy_threat(0.0), average_convoy_threat(0.0), maximum_convoy_threat(0.0),
+          building_counts(), assault_victories()
     {}
 };
 

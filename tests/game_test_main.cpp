@@ -35,11 +35,22 @@ int main()
     if (!verify_trade_relay_convoy_modifiers())
         return 0;
 
+    if (!verify_achievement_catalog())
+        return 0;
+
+    if (!verify_achievement_progression())
+        return 0;
+
+    if (!verify_quest_achievement_failures())
+        return 0;
+
     if (!verify_convoy_escort_travel_speed())
         return 0;
 
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
     if (!validate_initial_campaign_flow(game))
+        return 0;
+    if (!validate_order_branch_storyline())
         return 0;
     if (!evaluate_building_and_convoy_systems(game))
         return 0;
@@ -50,6 +61,10 @@ int main()
     if (!verify_supply_contract_automation())
         return 0;
     if (!verify_multiple_convoy_raids())
+        return 0;
+    if (!verify_supply_route_escalation())
+        return 0;
+    if (!verify_escort_veterancy_progression())
         return 0;
 
 

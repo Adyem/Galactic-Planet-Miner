@@ -109,6 +109,7 @@ private:
     ft_map<int, ft_ship>   _ships;
     ft_location            _loc;
     double                 _travel_time;
+    double                 _escort_veterancy;
     static int             _next_ship_id;
 
     ft_ship *find_ship(int ship_uid) noexcept;
@@ -123,6 +124,10 @@ public:
     int get_total_ship_hp() const noexcept;
     int get_total_ship_shield() const noexcept;
     double get_attack_power() const noexcept;
+    double get_escort_veterancy() const noexcept;
+    int get_escort_veterancy_bonus() const noexcept;
+    bool add_escort_veterancy(double amount) noexcept;
+    bool decay_escort_veterancy(double amount) noexcept;
 
     int create_ship(int ship_type) noexcept;
     void remove_ship(int ship_uid) noexcept;

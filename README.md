@@ -83,6 +83,30 @@ Relay Nexus on either endpoint of a route grants a 12% speed bonus and an 18%
 raid-risk reduction per relay, so outfitting both the origin and destination
 builds meaningfully faster, safer trade lanes.
 
+Routes also track how long they linger at high threat levels. When sustained
+losses keep a route above a threat rating of five for roughly a minute, the
+Game backend will escalate the pressure into a full raider assault on whichever
+endpoint is unlocked and not already under siege. The assault is started via
+`Game::start_raider_assault`, noted in the lore log with the affected route, and
+resets the escalation timer so commanders must suffer renewed convoy losses
+before another pressure spike can occur.
+
+### Escort Veterancy
+
+Dedicated escort fleets now build convoy experience that directly improves
+their performance. Each successful delivery grants veterancy experience scaled
+by the route's escort requirement, lingering threat level, and whether the
+convoy survived a raid. Every 60 experience unlocks an additional escort-rating
+bonus point (up to +8), which feeds into `Game::calculate_fleet_escort_rating`
+alongside ship composition. Higher escort ratings shorten travel times and cut
+raid odds, so veteran formations measurably improve supply reliability. Heavy
+losses drain this experience—if raiders destroy the convoy or inflict severe
+casualties, `Game::record_convoy_loss` applies a veterancy penalty and logs the
+setback in the lore feed. UI layers can surface progression with
+`Game::get_fleet_escort_veterancy` and `Game::get_fleet_escort_veterancy_bonus`,
+while level-up and decay events are automatically narrated so designers can
+react to the evolving logistics story.
+
 ## Base Building
 
 The `BuildingManager` now exposes a full roster of factory, defense, and infrastructure
@@ -150,3 +174,50 @@ values with `set_ship_*`, `add_ship_*`, `sub_ship_*`, and query them with
 `get_ship_*`. Control a fleet's position with `set_fleet_location_planet`,
 `set_fleet_location_travel`, or `set_fleet_location_misc`, and read its current
 location with `get_fleet_location`.
+
+## Achievements
+
+The backend now tracks persistent achievements so campaign progress can trigger
+global rewards and lore entries. The catalog spans logistics milestones and the
+full sequence of story quests:
+
+- Progression anchors:
+  - `Second Home` – Unlock any additional colony world.
+  - `Research Pioneer` – Complete three major research projects.
+  - `Logistics Pilot` – Deliver three convoys successfully.
+  - `Streak Guardian` – Push the longest delivery streak to five runs.
+- Story milestones:
+  - `Perimeter Guardian` – Complete Initial Raider Skirmishes.
+  - `Terra's Shield` – Complete Defense of Terra.
+  - `Cipher Breaker` – Complete Investigate Raider Motives.
+  - `Supply Line Sentinel` – Complete Secure Supply Lines.
+  - `Streak Specialist` – Complete Steady Supply Streak.
+  - `Escort Commander` – Complete High-Value Escort.
+- `Climactic Victor` – Complete Climactic Battle.
+- `Decisive Arbiter` – Resolve The Critical Decision.
+- `Order's Hammer` – Complete Order's Last Stand.
+- `Rebellion's Hope` – Complete Rebellion Rising.
+
+## Branch endgames and scripted assaults
+
+Resolving The Critical Decision now branches the campaign into multi-stage finales
+that tie logistics to late-game assaults. Executing Blackthorne unlocks Order
+quests that demand calm convoy lanes (maximum route threat below roughly 2.5) and
+construction of Proximity Radar coverage before Marshal Rhea authorizes a
+scripted strike on Mars. Sparing Blackthorne unlocks a rebellion arc that hinges
+on Interstellar Trade research, Trade Relay deployment, and keeping route threat
+under 3.0 before Captain Blackthorne rallies a liberation assault on Zalthor.
+
+When these quests complete, `Game::handle_quest_completion` clears threat on the
+relevant supply routes, logs lore entries, and calls
+`Game::trigger_branch_assault` so the game client can assign fleets to the
+branch-specific battle. Victories increment branch assault counters exposed via
+`Game::build_quest_context`, letting designers gate the final reward quest on
+successful defense rather than timers. Failing the assault re-triggers the strike
+while the quest remains active, ensuring repeated attacks require renewed threat
+buildup and fresh preparations.
+
+Use `Game::get_achievement_ids` to enumerate known achievements and
+`Game::get_achievement_info` to inspect the current status, progress, and target
+for each entry. Whenever an achievement is earned, Archivist Lyra records the
+milestone in the lore log so UI layers can surface the celebration.

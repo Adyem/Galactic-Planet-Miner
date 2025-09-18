@@ -8,6 +8,7 @@
 #include "quests.hpp"
 #include "combat.hpp"
 #include "buildings.hpp"
+#include "achievements.hpp"
 #include "../libft/Game/game_state.hpp"
 #include "../libft/Template/map.hpp"
 #include "../libft/Template/vector.hpp"
@@ -68,6 +69,7 @@ private:
     QuestManager                                 _quests;
     CombatManager                                _combat;
     BuildingManager                              _buildings;
+    AchievementManager                           _achievements;
     ft_vector<ft_string>                         _lore_log;
     int                                          _difficulty;
     double                                       _resource_multiplier;
@@ -92,10 +94,14 @@ private:
         double  base_raid_risk;
         double  threat_level;
         double  quiet_timer;
+        double  escalation_timer;
+        bool    escalation_pending;
+        int     escalation_planet_id;
         ft_supply_route()
             : id(0), origin_planet_id(0), destination_planet_id(0),
               base_travel_time(30.0), escort_requirement(0), base_raid_risk(0.02),
-              threat_level(0.0), quiet_timer(0.0)
+              threat_level(0.0), quiet_timer(0.0), escalation_timer(0.0),
+              escalation_pending(false), escalation_planet_id(0)
         {}
     };
     struct ft_supply_convoy
@@ -139,6 +145,10 @@ private:
     int                                          _longest_delivery_streak;
     ft_vector<int>                               _streak_milestones;
     size_t                                       _next_streak_milestone_index;
+    int                                          _order_branch_assault_victories;
+    int                                          _rebellion_branch_assault_victories;
+    int                                          _order_branch_pending_assault;
+    int                                          _rebellion_branch_pending_assault;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -162,6 +172,10 @@ private:
     int count_capital_ships() const;
     void clear_escape_pod_records(const ft_fleet &fleet);
     bool is_ship_type_available(int ship_type) const;
+    void record_achievement_event(int event_id, int value);
+    int get_quest_achievement_event(int quest_id) const;
+    void record_quest_achievement(int quest_id);
+    void announce_achievements(const ft_vector<int> &achievement_ids);
     RouteKey compose_route_key(int origin, int destination) const;
     ft_supply_route *ensure_supply_route(int origin, int destination);
     ft_supply_route *find_supply_route(int origin, int destination);
@@ -194,6 +208,9 @@ private:
     void modify_route_threat(ft_supply_route &route, double delta, bool reset_quiet_timer);
     void decay_route_threat(ft_supply_route &route, double seconds);
     void decay_all_route_threat(double seconds);
+    void update_route_escalation(ft_supply_route &route, double seconds);
+    void trigger_route_assault(ft_supply_route &route);
+    void trigger_branch_assault(int planet_id, double difficulty, bool order_branch);
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -264,6 +281,14 @@ public:
     double get_rate(int planet_id, int ore_id) const;
     const ft_vector<Pair<int, double> > &get_planet_resources(int planet_id) const;
     int get_active_convoy_count() const;
+    double get_fleet_escort_veterancy(int fleet_id) const;
+    int get_fleet_escort_veterancy_bonus(int fleet_id) const;
+
+    void get_achievement_ids(ft_vector<int> &out) const;
+    int get_achievement_status(int achievement_id) const;
+    int get_achievement_progress(int achievement_id) const;
+    int get_achievement_target(int achievement_id) const;
+    bool get_achievement_info(int achievement_id, ft_achievement_info &out) const;
 
     int create_supply_contract(int origin_planet_id, int destination_planet_id,
                                int resource_id, int shipment_size,

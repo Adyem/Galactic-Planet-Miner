@@ -31,7 +31,11 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _current_delivery_streak(0),
       _longest_delivery_streak(0),
       _streak_milestones(),
-      _next_streak_milestone_index(0)
+      _next_streak_milestone_index(0),
+      _order_branch_assault_victories(0),
+      _rebellion_branch_assault_victories(0),
+      _order_branch_pending_assault(0),
+      _rebellion_branch_pending_assault(0)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -212,6 +216,24 @@ void Game::tick(double seconds)
         entry.append(ft_to_string(planet_id));
         entry.append(ft_string(": the raider fleet was repelled."));
         this->_lore_log.push_back(entry);
+        if (planet_id == this->_order_branch_pending_assault)
+        {
+            this->_order_branch_assault_victories += 1;
+            this->_order_branch_pending_assault = 0;
+            ft_string branch_entry("Marshal Rhea honors the Dominion strike force triumphant at planet ");
+            branch_entry.append(ft_to_string(planet_id));
+            branch_entry.append(ft_string("."));
+            this->_lore_log.push_back(branch_entry);
+        }
+        if (planet_id == this->_rebellion_branch_pending_assault)
+        {
+            this->_rebellion_branch_assault_victories += 1;
+            this->_rebellion_branch_pending_assault = 0;
+            ft_string branch_entry("Captain Blackthorne salutes the liberated crews holding planet ");
+            branch_entry.append(ft_to_string(planet_id));
+            branch_entry.append(ft_string("."));
+            this->_lore_log.push_back(branch_entry);
+        }
     }
     for (size_t i = 0; i < assault_failed.size(); ++i)
     {
@@ -231,6 +253,20 @@ void Game::tick(double seconds)
         entry.append(ft_to_string(planet_id));
         entry.append(ft_string(": raiders breached the defenses."));
         this->_lore_log.push_back(entry);
+        if (planet_id == this->_order_branch_pending_assault)
+        {
+            if (this->get_quest_status(QUEST_ORDER_DOMINION) == QUEST_STATUS_ACTIVE)
+                this->trigger_branch_assault(planet_id, 1.2, true);
+            else
+                this->_order_branch_pending_assault = 0;
+        }
+        if (planet_id == this->_rebellion_branch_pending_assault)
+        {
+            if (this->get_quest_status(QUEST_REBELLION_LIBERATION) == QUEST_STATUS_ACTIVE)
+                this->trigger_branch_assault(planet_id, 1.1, false);
+            else
+                this->_rebellion_branch_pending_assault = 0;
+        }
     }
 }
 
@@ -320,6 +356,7 @@ void Game::unlock_planet(int planet_id)
     const ft_vector<Pair<int, double> > &resources = planet->get_resources();
     for (size_t i = 0; i < resources.size(); ++i)
         this->send_state(planet_id, resources[i].key);
+    this->record_achievement_event(ACHIEVEMENT_EVENT_PLANET_UNLOCKED, 1);
 }
 
 void Game::configure_difficulty(int difficulty)
@@ -359,6 +396,62 @@ void Game::update_combat_modifiers()
     this->_combat.set_player_weapon_multiplier(this->_ship_weapon_multiplier);
     this->_combat.set_player_shield_multiplier(this->_ship_shield_multiplier);
     this->_combat.set_player_hull_multiplier(this->_ship_hull_multiplier);
+}
+
+void Game::record_achievement_event(int event_id, int value)
+{
+    ft_vector<int> completed;
+    this->_achievements.record_event(event_id, value, &completed);
+    if (completed.size() == 0)
+        return ;
+    this->announce_achievements(completed);
+}
+
+int Game::get_quest_achievement_event(int quest_id) const
+{
+    if (quest_id == QUEST_INITIAL_SKIRMISHES)
+        return ACHIEVEMENT_EVENT_QUEST_INITIAL_SKIRMISHES;
+    if (quest_id == QUEST_DEFENSE_OF_TERRA)
+        return ACHIEVEMENT_EVENT_QUEST_DEFENSE_OF_TERRA;
+    if (quest_id == QUEST_INVESTIGATE_RAIDERS)
+        return ACHIEVEMENT_EVENT_QUEST_INVESTIGATE_RAIDERS;
+    if (quest_id == QUEST_SECURE_SUPPLY_LINES)
+        return ACHIEVEMENT_EVENT_QUEST_SECURE_SUPPLY_LINES;
+    if (quest_id == QUEST_STEADY_SUPPLY_STREAK)
+        return ACHIEVEMENT_EVENT_QUEST_STEADY_SUPPLY_STREAK;
+    if (quest_id == QUEST_HIGH_VALUE_ESCORT)
+        return ACHIEVEMENT_EVENT_QUEST_HIGH_VALUE_ESCORT;
+    if (quest_id == QUEST_CLIMACTIC_BATTLE)
+        return ACHIEVEMENT_EVENT_QUEST_CLIMACTIC_BATTLE;
+    if (quest_id == QUEST_CRITICAL_DECISION)
+        return ACHIEVEMENT_EVENT_QUEST_CRITICAL_DECISION;
+    if (quest_id == QUEST_ORDER_UPRISING)
+        return ACHIEVEMENT_EVENT_QUEST_ORDER_UPRISING;
+    if (quest_id == QUEST_REBELLION_FLEET)
+        return ACHIEVEMENT_EVENT_QUEST_REBELLION_FLEET;
+    return 0;
+}
+
+void Game::record_quest_achievement(int quest_id)
+{
+    int event_id = this->get_quest_achievement_event(quest_id);
+    if (event_id != 0)
+        this->record_achievement_event(event_id, 1);
+}
+
+void Game::announce_achievements(const ft_vector<int> &achievement_ids)
+{
+    for (size_t i = 0; i < achievement_ids.size(); ++i)
+    {
+        ft_achievement_info info;
+        if (!this->_achievements.get_info(achievement_ids[i], info))
+            continue;
+        ft_string entry("Archivist Lyra records achievement ");
+        entry.append(info.name);
+        entry.append(ft_string(": "));
+        entry.append(info.description);
+        this->_lore_log.push_back(entry);
+    }
 }
 
 bool Game::is_planet_unlocked(int planet_id) const
@@ -518,5 +611,30 @@ const ft_vector<Pair<int, double> > &Game::get_planet_resources(int planet_id) c
     if (!planet)
         return empty;
     return planet->get_resources();
+}
+
+void Game::get_achievement_ids(ft_vector<int> &out) const
+{
+    this->_achievements.get_achievement_ids(out);
+}
+
+int Game::get_achievement_status(int achievement_id) const
+{
+    return this->_achievements.get_status(achievement_id);
+}
+
+int Game::get_achievement_progress(int achievement_id) const
+{
+    return this->_achievements.get_progress(achievement_id);
+}
+
+int Game::get_achievement_target(int achievement_id) const
+{
+    return this->_achievements.get_target(achievement_id);
+}
+
+bool Game::get_achievement_info(int achievement_id, ft_achievement_info &out) const
+{
+    return this->_achievements.get_info(achievement_id, out);
 }
 
