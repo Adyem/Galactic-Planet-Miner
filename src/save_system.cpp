@@ -500,3 +500,165 @@ bool SaveSystem::deserialize_fleets(const char *content,
     json_free_groups(groups);
     return true;
 }
+
+ft_string SaveSystem::serialize_research(const ResearchManager &research) const noexcept
+{
+    json_document document;
+    json_group *settings = document.create_group("research_settings");
+    if (settings)
+    {
+        document.append_group(settings);
+        long scaled = this->scale_double_to_long(research.get_duration_scale());
+        ft_string value = ft_to_string(scaled);
+        json_item *scale_item = document.create_item("duration_scale", value.c_str());
+        if (scale_item)
+            document.add_item(settings, scale_item);
+    }
+    ft_map<int, ft_research_progress> progress;
+    research.get_progress_state(progress);
+    size_t count = progress.size();
+    if (count > 0)
+    {
+        const Pair<int, ft_research_progress> *entries = progress.end();
+        entries -= count;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ft_string group_name = "research_";
+            group_name.append(ft_to_string(entries[i].key));
+            json_group *group = document.create_group(group_name.c_str());
+            if (!group)
+                continue;
+            document.append_group(group);
+            json_item *id_item = document.create_item("id", entries[i].key);
+            if (id_item)
+                document.add_item(group, id_item);
+            json_item *status_item = document.create_item("status", entries[i].value.status);
+            if (status_item)
+                document.add_item(group, status_item);
+            long remaining_scaled = this->scale_double_to_long(entries[i].value.remaining_time);
+            ft_string remaining_value = ft_to_string(remaining_scaled);
+            json_item *remaining_item = document.create_item("remaining_time", remaining_value.c_str());
+            if (remaining_item)
+                document.add_item(group, remaining_item);
+        }
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_research(const char *content, ResearchManager &research) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    ft_map<int, ft_research_progress> snapshot;
+    double duration_scale = research.get_duration_scale();
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *id_item = json_find_item(current, "id");
+        if (id_item)
+        {
+            int research_id = ft_atoi(id_item->value);
+            ft_research_progress progress;
+            progress.status = RESEARCH_STATUS_LOCKED;
+            progress.remaining_time = 0.0;
+            json_item *status_item = json_find_item(current, "status");
+            if (status_item)
+                progress.status = ft_atoi(status_item->value);
+            json_item *remaining_item = json_find_item(current, "remaining_time");
+            if (remaining_item)
+                progress.remaining_time = this->unscale_long_to_double(ft_atol(remaining_item->value));
+            snapshot.insert(research_id, progress);
+        }
+        else
+        {
+            json_item *scale_item = json_find_item(current, "duration_scale");
+            if (scale_item)
+                duration_scale = this->unscale_long_to_double(ft_atol(scale_item->value));
+        }
+        current = current->next;
+    }
+    research.set_duration_scale(duration_scale);
+    research.set_progress_state(snapshot);
+    json_free_groups(groups);
+    return true;
+}
+
+ft_string SaveSystem::serialize_achievements(const AchievementManager &achievements) const noexcept
+{
+    json_document document;
+    ft_map<int, ft_achievement_progress> progress;
+    achievements.get_progress_state(progress);
+    size_t count = progress.size();
+    if (count > 0)
+    {
+        const Pair<int, ft_achievement_progress> *entries = progress.end();
+        entries -= count;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ft_string group_name = "achievement_";
+            group_name.append(ft_to_string(entries[i].key));
+            json_group *group = document.create_group(group_name.c_str());
+            if (!group)
+                continue;
+            document.append_group(group);
+            json_item *id_item = document.create_item("id", entries[i].key);
+            if (id_item)
+                document.add_item(group, id_item);
+            json_item *value_item = document.create_item("value", entries[i].value.value);
+            if (value_item)
+                document.add_item(group, value_item);
+            json_item *completed_item = document.create_item("completed", entries[i].value.completed ? 1 : 0);
+            if (completed_item)
+                document.add_item(group, completed_item);
+        }
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_achievements(const char *content, AchievementManager &achievements) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    ft_map<int, ft_achievement_progress> snapshot;
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *id_item = json_find_item(current, "id");
+        if (!id_item)
+        {
+            current = current->next;
+            continue;
+        }
+        int achievement_id = ft_atoi(id_item->value);
+        ft_achievement_progress progress;
+        progress.value = 0;
+        progress.completed = false;
+        json_item *value_item = json_find_item(current, "value");
+        if (value_item)
+            progress.value = ft_atoi(value_item->value);
+        json_item *completed_item = json_find_item(current, "completed");
+        if (completed_item)
+            progress.completed = ft_atoi(completed_item->value) != 0;
+        snapshot.insert(achievement_id, progress);
+        current = current->next;
+    }
+    achievements.set_progress_state(snapshot);
+    json_free_groups(groups);
+    return true;
+}

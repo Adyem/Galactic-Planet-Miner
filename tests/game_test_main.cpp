@@ -94,9 +94,17 @@ int main()
         return 0;
     if (!verify_save_system_edge_cases())
         return 0;
+    if (!verify_save_system_invalid_inputs())
+        return 0;
     if (!validate_save_system_serialized_samples())
         return 0;
+    if (!verify_research_save_round_trip())
+        return 0;
+    if (!verify_achievement_save_round_trip())
+        return 0;
     if (!verify_campaign_checkpoint_flow())
+        return 0;
+    if (!verify_campaign_rejects_invalid_save())
         return 0;
 
     server_thread.join();

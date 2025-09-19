@@ -107,6 +107,9 @@ public:
     int get_target(int achievement_id) const;
     bool get_info(int achievement_id, ft_achievement_info &out) const;
     void get_achievement_ids(ft_vector<int> &out) const;
+
+    void get_progress_state(ft_map<int, ft_achievement_progress> &out) const;
+    bool set_progress_state(const ft_map<int, ft_achievement_progress> &state);
 };
 
 #endif

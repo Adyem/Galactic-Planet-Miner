@@ -282,3 +282,38 @@ void AchievementManager::get_achievement_ids(ft_vector<int> &out) const
     for (size_t i = 0; i < count; ++i)
         out.push_back(entries[i].key);
 }
+
+void AchievementManager::get_progress_state(ft_map<int, ft_achievement_progress> &out) const
+{
+    out.clear();
+    size_t count = this->_progress.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_achievement_progress> *entries = this->_progress.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+        out.insert(entries[i].key, entries[i].value);
+}
+
+bool AchievementManager::set_progress_state(const ft_map<int, ft_achievement_progress> &state)
+{
+    bool applied = false;
+    size_t count = state.size();
+    if (count == 0)
+        return false;
+    const Pair<int, ft_achievement_progress> *entries = state.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        Pair<int, ft_achievement_progress> *existing = this->_progress.find(entries[i].key);
+        if (existing == ft_nullptr)
+            continue;
+        int value = entries[i].value.value;
+        if (value < 0)
+            value = 0;
+        existing->value.value = value;
+        existing->value.completed = entries[i].value.completed;
+        applied = true;
+    }
+    return applied;
+}

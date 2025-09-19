@@ -188,6 +188,12 @@ the C++ standard library serializers. Two helpers are currently available:
   assignments, escort veterancy, and all ship statistics. Fleet snapshots use
   stable ship identifiers and scale floating-point values into integers to avoid
   precision loss in JSON.
+- `serialize_research` / `deserialize_research` capture the entire research
+  catalog, including active projects, time remaining, and the global duration
+  scale so campaign pacing matches the moment a save was taken.
+- `serialize_achievements` / `deserialize_achievements` preserve achievement
+  progress and completion flags so lore entries and rewards remain consistent
+  across reloads.
 
 The serializers rely on new accessors such as `ft_planet::get_carryover` and
 `ft_fleet::add_ship_snapshot` so game code can hand the `SaveSystem` concrete

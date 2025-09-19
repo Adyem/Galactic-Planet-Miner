@@ -670,3 +670,59 @@ void ResearchManager::mark_completed(int research_id)
     entry->value.remaining_time = 0.0;
     this->update_availability();
 }
+
+void ResearchManager::get_progress_state(ft_map<int, ft_research_progress> &out) const
+{
+    out.clear();
+    size_t count = this->_progress.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_research_progress> *entries = this->_progress.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+        out.insert(entries[i].key, entries[i].value);
+}
+
+bool ResearchManager::set_progress_state(const ft_map<int, ft_research_progress> &state)
+{
+    bool applied = false;
+    size_t count = state.size();
+    if (count == 0)
+    {
+        this->update_availability();
+        return false;
+    }
+    const Pair<int, ft_research_progress> *entries = state.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        Pair<int, ft_research_progress> *existing = this->_progress.find(entries[i].key);
+        if (existing == ft_nullptr)
+            continue;
+        int status = entries[i].value.status;
+        if (status < RESEARCH_STATUS_LOCKED)
+            status = RESEARCH_STATUS_LOCKED;
+        else if (status > RESEARCH_STATUS_COMPLETED)
+            status = RESEARCH_STATUS_COMPLETED;
+        existing->value.status = status;
+        double remaining = entries[i].value.remaining_time;
+        if (remaining < 0.0)
+            remaining = 0.0;
+        existing->value.remaining_time = remaining;
+        if (existing->value.status == RESEARCH_STATUS_COMPLETED
+            || existing->value.status == RESEARCH_STATUS_AVAILABLE
+            || existing->value.status == RESEARCH_STATUS_LOCKED)
+        {
+            existing->value.remaining_time = 0.0;
+        }
+        else if (existing->value.status == RESEARCH_STATUS_IN_PROGRESS
+            && existing->value.remaining_time <= 0.0)
+        {
+            existing->value.remaining_time = 0.0;
+            existing->value.status = RESEARCH_STATUS_COMPLETED;
+        }
+        applied = true;
+    }
+    this->update_availability();
+    return applied;
+}

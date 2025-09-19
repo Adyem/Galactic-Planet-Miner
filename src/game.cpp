@@ -39,6 +39,8 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _rebellion_branch_pending_assault(0),
       _last_planet_checkpoint(),
       _last_fleet_checkpoint(),
+      _last_research_checkpoint(),
+      _last_achievement_checkpoint(),
       _last_checkpoint_tag(),
       _has_checkpoint(false)
 {
@@ -740,12 +742,18 @@ void Game::checkpoint_campaign_state_internal(const ft_string &tag)
 {
     ft_string planet_json = this->_save_system.serialize_planets(this->_planets);
     ft_string fleet_json = this->_save_system.serialize_fleets(this->_fleets);
+    ft_string research_json = this->_save_system.serialize_research(this->_research);
+    ft_string achievement_json = this->_save_system.serialize_achievements(this->_achievements);
     bool planets_valid = (planet_json.size() > 0) || (this->_planets.size() == 0);
     bool fleets_valid = (fleet_json.size() > 0) || (this->_fleets.size() == 0);
-    if (!planets_valid || !fleets_valid)
+    bool research_valid = (research_json.size() > 0);
+    bool achievements_valid = (achievement_json.size() > 0);
+    if (!planets_valid || !fleets_valid || !research_valid || !achievements_valid)
         return ;
     this->_last_planet_checkpoint = planet_json;
     this->_last_fleet_checkpoint = fleet_json;
+    this->_last_research_checkpoint = research_json;
+    this->_last_achievement_checkpoint = achievement_json;
     this->_last_checkpoint_tag = tag;
     this->_has_checkpoint = true;
 }
@@ -775,25 +783,74 @@ const ft_string &Game::get_campaign_checkpoint_tag() const noexcept
     return this->_last_checkpoint_tag;
 }
 
+const ft_string &Game::get_campaign_research_checkpoint() const noexcept
+{
+    return this->_last_research_checkpoint;
+}
+
+const ft_string &Game::get_campaign_achievement_checkpoint() const noexcept
+{
+    return this->_last_achievement_checkpoint;
+}
+
 bool Game::reload_campaign_checkpoint() noexcept
 {
     if (!this->_has_checkpoint)
         return false;
-    return this->load_campaign_from_save(this->_last_planet_checkpoint, this->_last_fleet_checkpoint);
+    return this->load_campaign_from_save(this->_last_planet_checkpoint,
+        this->_last_fleet_checkpoint, this->_last_research_checkpoint,
+        this->_last_achievement_checkpoint);
 }
 
-bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json) noexcept
+bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json,
+    const ft_string &research_json, const ft_string &achievement_json) noexcept
 {
     ft_map<int, ft_sharedptr<ft_planet> > planet_snapshot;
     ft_map<int, ft_sharedptr<ft_fleet> > fleet_snapshot;
     bool planets_ok = true;
     bool fleets_ok = true;
+    bool research_ok = true;
+    bool achievements_ok = true;
+    ft_map<int, ft_research_progress> research_state;
+    double research_duration = this->_research.get_duration_scale();
+    bool research_snapshot_present = false;
+    ft_map<int, ft_achievement_progress> achievement_state;
+    bool achievement_snapshot_present = false;
     if (planet_json.size() > 0)
         planets_ok = this->_save_system.deserialize_planets(planet_json.c_str(), planet_snapshot);
     if (fleet_json.size() > 0)
         fleets_ok = this->_save_system.deserialize_fleets(fleet_json.c_str(), fleet_snapshot);
-    if (!planets_ok || !fleets_ok)
+    if (research_json.size() > 0)
+    {
+        ResearchManager research_snapshot;
+        research_ok = this->_save_system.deserialize_research(research_json.c_str(), research_snapshot);
+        if (research_ok)
+        {
+            research_snapshot.get_progress_state(research_state);
+            research_duration = research_snapshot.get_duration_scale();
+            research_snapshot_present = true;
+        }
+    }
+    if (achievement_json.size() > 0)
+    {
+        AchievementManager achievement_snapshot;
+        achievements_ok = this->_save_system.deserialize_achievements(achievement_json.c_str(), achievement_snapshot);
+        if (achievements_ok)
+        {
+            achievement_snapshot.get_progress_state(achievement_state);
+            achievement_snapshot_present = true;
+        }
+    }
+    if (!planets_ok || !fleets_ok || !research_ok || !achievements_ok)
         return false;
+    if (research_snapshot_present)
+    {
+        this->_research.set_duration_scale(research_duration);
+        this->_research.set_progress_state(research_state);
+        this->_research_duration_scale = this->_research.get_duration_scale();
+    }
+    if (achievement_snapshot_present)
+        this->_achievements.set_progress_state(achievement_state);
     this->apply_planet_snapshot(planet_snapshot);
     this->apply_fleet_snapshot(fleet_snapshot);
     return true;

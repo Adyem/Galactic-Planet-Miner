@@ -91,6 +91,9 @@ public:
     double get_remaining_time(int research_id) const;
     const ft_research_definition *get_definition(int research_id) const;
     void mark_completed(int research_id);
+
+    void get_progress_state(ft_map<int, ft_research_progress> &out) const;
+    bool set_progress_state(const ft_map<int, ft_research_progress> &state);
 };
 
 #endif
