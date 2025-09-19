@@ -11,6 +11,9 @@ namespace
         double  max_speed;
         double  acceleration;
         double  turn_speed;
+        double  optimal_range;
+        double  max_range;
+        double  base_damage;
         int     combat_behavior;
         int     outnumbered_behavior;
         int     unescorted_behavior;
@@ -19,7 +22,8 @@ namespace
 
         ship_profile()
             : armor(18), hp(180), shield(60), max_speed(18.0), acceleration(4.0),
-              turn_speed(60.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+              turn_speed(60.0), optimal_range(180.0), max_range(240.0),
+              base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
               outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
               unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
               low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
@@ -38,6 +42,9 @@ namespace
             profile.max_speed = 21.0;
             profile.acceleration = 5.5;
             profile.turn_speed = 95.0;
+            profile.optimal_range = 205.0;
+            profile.max_range = 265.0;
+            profile.base_damage = 5.5;
             profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             profile.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             break;
@@ -48,6 +55,9 @@ namespace
             profile.max_speed = 26.0;
             profile.acceleration = 6.5;
             profile.turn_speed = 110.0;
+            profile.optimal_range = 235.0;
+            profile.max_range = 320.0;
+            profile.base_damage = 4.5;
             profile.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
             profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -60,6 +70,9 @@ namespace
             profile.max_speed = 16.0;
             profile.acceleration = 3.5;
             profile.turn_speed = 70.0;
+            profile.optimal_range = 185.0;
+            profile.max_range = 225.0;
+            profile.base_damage = 4.0;
             profile.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -72,6 +85,9 @@ namespace
             profile.max_speed = 18.5;
             profile.acceleration = 3.2;
             profile.turn_speed = 48.0;
+            profile.optimal_range = 225.0;
+            profile.max_range = 290.0;
+            profile.base_damage = 15.0;
             profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
@@ -84,6 +100,9 @@ namespace
             profile.max_speed = 19.0;
             profile.acceleration = 4.2;
             profile.turn_speed = 72.0;
+            profile.optimal_range = 175.0;
+            profile.max_range = 215.0;
+            profile.base_damage = 3.0;
             profile.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
             profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -96,6 +115,9 @@ namespace
             profile.max_speed = 23.0;
             profile.acceleration = 5.8;
             profile.turn_speed = 95.0;
+            profile.optimal_range = 190.0;
+            profile.max_range = 235.0;
+            profile.base_damage = 8.0;
             profile.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
             break;
         case SHIP_INTERCEPTOR:
@@ -105,6 +127,9 @@ namespace
             profile.max_speed = 30.0;
             profile.acceleration = 7.2;
             profile.turn_speed = 130.0;
+            profile.optimal_range = 165.0;
+            profile.max_range = 210.0;
+            profile.base_damage = 9.0;
             profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
             profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
@@ -116,6 +141,9 @@ namespace
             profile.max_speed = 22.0;
             profile.acceleration = 6.8;
             profile.turn_speed = 140.0;
+            profile.optimal_range = 155.0;
+            profile.max_range = 205.0;
+            profile.base_damage = 2.5;
             profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -128,6 +156,9 @@ namespace
             profile.max_speed = 21.0;
             profile.acceleration = 5.2;
             profile.turn_speed = 110.0;
+            profile.optimal_range = 215.0;
+            profile.max_range = 275.0;
+            profile.base_damage = 4.0;
             profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
             profile.unescorted_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
@@ -141,6 +172,9 @@ namespace
             profile.max_speed = 20.0;
             profile.acceleration = 4.6;
             profile.turn_speed = 85.0;
+            profile.optimal_range = 205.0;
+            profile.max_range = 265.0;
+            profile.base_damage = 11.0;
             profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             break;
         case SHIP_FRIGATE_SUPPORT:
@@ -150,6 +184,9 @@ namespace
             profile.max_speed = 19.0;
             profile.acceleration = 4.3;
             profile.turn_speed = 80.0;
+            profile.optimal_range = 225.0;
+            profile.max_range = 285.0;
+            profile.base_damage = 7.0;
             profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -162,6 +199,9 @@ namespace
             profile.max_speed = 18.0;
             profile.acceleration = 3.0;
             profile.turn_speed = 46.0;
+            profile.optimal_range = 240.0;
+            profile.max_range = 320.0;
+            profile.base_damage = 13.5;
             profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
@@ -174,6 +214,9 @@ namespace
             profile.max_speed = 17.5;
             profile.acceleration = 2.6;
             profile.turn_speed = 42.0;
+            profile.optimal_range = 245.0;
+            profile.max_range = 330.0;
+            profile.base_damage = 18.0;
             profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
@@ -196,6 +239,9 @@ namespace
         ship.max_speed = profile.max_speed;
         ship.acceleration = profile.acceleration;
         ship.turn_speed = profile.turn_speed;
+        ship.optimal_range = profile.optimal_range;
+        ship.max_range = profile.max_range;
+        ship.base_damage = profile.base_damage;
         ship.combat_behavior = profile.combat_behavior;
         ship.outnumbered_behavior = profile.outnumbered_behavior;
         ship.unescorted_behavior = profile.unescorted_behavior;
@@ -270,75 +316,6 @@ int ft_fleet::get_total_ship_shield() const noexcept
     int total = 0;
     for (size_t i = 0; i < count; ++i)
         total += entries[i].value.shield;
-    return total;
-}
-
-double ft_fleet::get_attack_power() const noexcept
-{
-    size_t count = this->_ships.size();
-    if (count == 0)
-        return 0.0;
-    const Pair<int, ft_ship> *entries = this->_ships.end();
-    entries -= count;
-    double total = 0.0;
-    for (size_t i = 0; i < count; ++i)
-    {
-        const ft_ship &ship = entries[i].value;
-        if (ship.hp <= 0)
-            continue;
-        double base = 4.0;
-        switch (ship.type)
-        {
-        case SHIP_SHIELD:
-            base = 5.5;
-            break;
-        case SHIP_RADAR:
-            base = 4.5;
-            break;
-        case SHIP_SALVAGE:
-            base = 4.0;
-            break;
-        case SHIP_TRANSPORT:
-            base = 3.0;
-            break;
-        case SHIP_CORVETTE:
-            base = 8.0;
-            break;
-        case SHIP_INTERCEPTOR:
-            base = 9.0;
-            break;
-        case SHIP_REPAIR_DRONE:
-            base = 2.5;
-            break;
-        case SHIP_SUNFLARE_SLOOP:
-            base = 4.0;
-            break;
-        case SHIP_FRIGATE_ESCORT:
-            base = 11.0;
-            break;
-        case SHIP_FRIGATE_SUPPORT:
-            base = 7.0;
-            break;
-        case SHIP_CAPITAL_CARRIER:
-            base = 13.5;
-            break;
-        case SHIP_CAPITAL_DREADNOUGHT:
-            base = 18.0;
-            break;
-        case SHIP_CAPITAL:
-            base = 15.0;
-            break;
-        default:
-            break;
-        }
-        double hp_value = static_cast<double>(ship.hp);
-        if (hp_value > 100.0)
-            hp_value = 100.0;
-        double efficiency = hp_value / 100.0;
-        if (efficiency < 0.1)
-            efficiency = 0.1;
-        total += base * efficiency;
-    }
     return total;
 }
 
@@ -786,6 +763,42 @@ void ft_fleet::tick(double seconds) noexcept
             this->set_location_planet(this->_loc.to);
         }
     }
+}
+
+double ft_fleet::get_ship_damage_baseline(int ship_type) noexcept
+{
+    switch (ship_type)
+    {
+    case SHIP_SHIELD:
+        return 5.5;
+    case SHIP_RADAR:
+        return 4.5;
+    case SHIP_SALVAGE:
+        return 4.0;
+    case SHIP_TRANSPORT:
+        return 3.0;
+    case SHIP_CORVETTE:
+        return 8.0;
+    case SHIP_INTERCEPTOR:
+        return 9.0;
+    case SHIP_REPAIR_DRONE:
+        return 2.5;
+    case SHIP_SUNFLARE_SLOOP:
+        return 4.0;
+    case SHIP_FRIGATE_ESCORT:
+        return 11.0;
+    case SHIP_FRIGATE_SUPPORT:
+        return 7.0;
+    case SHIP_CAPITAL_CARRIER:
+        return 13.5;
+    case SHIP_CAPITAL_DREADNOUGHT:
+        return 18.0;
+    case SHIP_CAPITAL:
+        return 15.0;
+    default:
+        break;
+    }
+    return 4.0;
 }
 
 bool is_capital_ship_type(int ship_type) noexcept

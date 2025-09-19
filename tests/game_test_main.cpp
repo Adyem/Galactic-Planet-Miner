@@ -83,6 +83,10 @@ int main()
         return 0;
     if (!validate_tactical_pause_behaviors())
         return 0;
+    if (!verify_ship_range_defaults())
+        return 0;
+    if (!verify_range_aware_combat_power())
+        return 0;
     if (!compare_generator_support())
         return 0;
     if (!inspect_support_ship_positioning())

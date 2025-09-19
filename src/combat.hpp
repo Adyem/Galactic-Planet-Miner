@@ -53,6 +53,9 @@ private:
         double                acceleration;
         double                turn_speed;
         double                current_speed;
+        double                optimal_range;
+        double                max_range;
+        double                base_damage;
         bool                  flank;
         bool                  base_flank;
         bool                  requires_escort;
@@ -73,7 +76,8 @@ private:
               vertical_layer(0.0), advance_bias(0.0), drift_origin(0.0),
               drift_speed(0.6), base_preferred_radius(30.0),
               base_advance_bias(0.0), max_speed(18.0), acceleration(4.0),
-              turn_speed(60.0), current_speed(0.0), flank(false),
+              turn_speed(60.0), current_speed(0.0), optimal_range(180.0),
+              max_range(240.0), base_damage(4.0), flank(false),
               base_flank(false), requires_escort(false), role(SHIP_ROLE_LINE),
               max_hp(0), max_shield(0), normal_behavior(SHIP_BEHAVIOR_LINE_HOLD),
               outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
@@ -142,7 +146,12 @@ private:
         ft_map<int, ft_sharedptr<ft_fleet> > &planet_fleets,
         ft_vector<ft_sharedptr<ft_fleet> > &out) const;
 
-    double calculate_player_power(const ft_vector<ft_sharedptr<ft_fleet> > &defenders) const;
+    double calculate_side_power(const ft_map<int, ft_ship_tracker> &tracks,
+        double opposing_frontline, bool raider_side) const;
+    double compute_tracker_contribution(const ft_ship_tracker &tracker,
+        double distance) const;
+    double calculate_player_power(const ft_combat_encounter &encounter) const;
+    double calculate_raider_power(const ft_combat_encounter &encounter) const;
 
     int add_raider_ship(ft_fleet &fleet, int ship_type, int base_hp,
         int base_shield, int armor, double scale) const;
