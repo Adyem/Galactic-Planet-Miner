@@ -42,7 +42,8 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _last_research_checkpoint(),
       _last_achievement_checkpoint(),
       _last_checkpoint_tag(),
-      _has_checkpoint(false)
+      _has_checkpoint(false),
+      _backend_online(true)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -367,7 +368,34 @@ void Game::send_state(int planet_id, int ore_id)
     body.append(ft_to_string(planet->get_resource(ore_id)));
     body.append("}");
     ft_string response;
-    this->_backend.send_state(body, response);
+    int status = this->_backend.send_state(body, response);
+    bool offline = (status != 0);
+    if (!offline)
+    {
+        const ft_string fallback_prefix("[offline] echo=");
+        size_t prefix_size = fallback_prefix.size();
+        if (response.size() >= prefix_size)
+        {
+            const char *resp_cstr = response.c_str();
+            if (ft_strncmp(resp_cstr, fallback_prefix.c_str(), static_cast<size_t>(prefix_size)) == 0)
+                offline = true;
+        }
+    }
+    if (offline)
+    {
+        if (this->_backend_online)
+        {
+            this->_backend_online = false;
+            ft_string entry("Operations report: backend connection lost. Switching to offline mode.");
+            this->_lore_log.push_back(entry);
+        }
+    }
+    else if (!this->_backend_online)
+    {
+        this->_backend_online = true;
+        ft_string entry("Operations report: backend connection restored.");
+        this->_lore_log.push_back(entry);
+    }
 }
 
 void Game::unlock_planet(int planet_id)

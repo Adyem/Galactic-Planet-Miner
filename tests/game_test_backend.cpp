@@ -2,6 +2,7 @@
 #include "../libft/System_utils/test_runner.hpp"
 #include "backend_client.hpp"
 #include "buildings.hpp"
+#include "game.hpp"
 #include "game_test_scenarios.hpp"
 #include "planets.hpp"
 #include "research.hpp"
@@ -22,6 +23,17 @@ int verify_backend_roundtrip()
     FT_ASSERT_EQ(0, ft_strncmp(offline_cstr, fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
     FT_ASSERT_EQ(0, ft_strcmp(offline_cstr + offline_response.size() - payload_size, payload.c_str()));
 
+    Game offline_game(ft_string("127.0.0.1:65535"), ft_string("/"));
+    FT_ASSERT(offline_game.is_backend_online());
+    size_t offline_lore_before = offline_game.get_lore_log().size();
+    offline_game.add_ore(PLANET_TERRA, ORE_IRON, 1);
+    FT_ASSERT(!offline_game.is_backend_online());
+    const ft_vector<ft_string> &offline_log = offline_game.get_lore_log();
+    FT_ASSERT_EQ(offline_lore_before + 1, offline_log.size());
+    const ft_string &offline_entry = offline_log[offline_lore_before];
+    const ft_string offline_prefix("Operations report: backend connection lost");
+    FT_ASSERT_EQ(0, ft_strncmp(offline_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
+
     BackendClient client(ft_string("127.0.0.1:8080"), ft_string("/"));
     ft_string response;
     int status = client.send_state(payload, response);
@@ -33,6 +45,13 @@ int verify_backend_roundtrip()
         FT_ASSERT(response.size() >= fallback_size + payload_size);
         FT_ASSERT_EQ(0, ft_strncmp(resp, fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
     }
+
+    Game online_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    FT_ASSERT(online_game.is_backend_online());
+    size_t online_lore_before = online_game.get_lore_log().size();
+    online_game.add_ore(PLANET_TERRA, ORE_IRON, 1);
+    FT_ASSERT(online_game.is_backend_online());
+    FT_ASSERT_EQ(online_lore_before, online_game.get_lore_log().size());
     return 1;
 }
 

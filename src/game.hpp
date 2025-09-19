@@ -157,6 +157,7 @@ private:
     ft_string                                    _last_achievement_checkpoint;
     ft_string                                    _last_checkpoint_tag;
     bool                                         _has_checkpoint;
+    bool                                         _backend_online;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -278,6 +279,7 @@ public:
     bool get_assault_raider_positions(int planet_id, ft_vector<ft_ship_spatial_state> &out) const;
     bool get_assault_defender_positions(int planet_id, ft_vector<ft_ship_spatial_state> &out) const;
     const ft_vector<ft_string> &get_lore_log() const;
+    bool is_backend_online() const;
 
     int add_ore(int planet_id, int ore_id, int amount);
     int sub_ore(int planet_id, int ore_id, int amount);
