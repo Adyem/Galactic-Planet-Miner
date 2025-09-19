@@ -106,54 +106,17 @@ void Game::produce(double seconds)
                     if (this->_resource_multiplier < 1.0)
                     {
                         const double epsilon = 0.0000001;
-                        Pair<int, ft_sharedptr<ft_vector<Pair<int, double> > > > *planet_deficits = this->_resource_deficits.find(planet_id);
-                        if (planet_deficits == ft_nullptr)
-                        {
-                            ft_sharedptr<ft_vector<Pair<int, double> > > new_deficits(new ft_vector<Pair<int, double> >());
-                            this->_resource_deficits.insert(planet_id, new_deficits);
-                            planet_deficits = this->_resource_deficits.find(planet_id);
-                        }
-                        Pair<int, double> *ore_deficit = ft_nullptr;
-                        if (planet_deficits != ft_nullptr)
-                        {
-                            ft_sharedptr<ft_vector<Pair<int, double> > > &deficits_ptr = planet_deficits->value;
-                            if (!deficits_ptr)
-                            {
-                                ft_sharedptr<ft_vector<Pair<int, double> > > replacement(new ft_vector<Pair<int, double> >());
-                                planet_deficits->value = replacement;
-                                deficits_ptr = planet_deficits->value;
-                            }
-                            if (deficits_ptr)
-                            {
-                                ft_vector<Pair<int, double> > &deficits = *deficits_ptr;
-                                for (size_t deficit_index = 0; deficit_index < deficits.size(); ++deficit_index)
-                                {
-                                    if (deficits[deficit_index].key == ore_id)
-                                    {
-                                        ore_deficit = &deficits[deficit_index];
-                                        break;
-                                    }
-                                }
-                                if (ore_deficit == ft_nullptr)
-                                {
-                                    Pair<int, double> new_entry;
-                                    new_entry.key = ore_id;
-                                    new_entry.value = 0.0;
-                                    deficits.push_back(new_entry);
-                                    ore_deficit = &deficits[deficits.size() - 1];
-                                }
-                            }
-                        }
+                        Pair<int, ft_resource_accumulator> *ore_accumulator = this->get_resource_accumulator(planet_id, ore_id, true);
                         double carryover = 0.0;
-                        if (ore_deficit != ft_nullptr)
-                            carryover = ore_deficit->value;
+                        if (ore_accumulator != ft_nullptr)
+                            carryover = ore_accumulator->value.multiplier_deficit;
                         double total = scaled_amount + carryover;
                         target = static_cast<int>(total + epsilon);
                         double remainder = total - static_cast<double>(target);
                         if (remainder < 0.0)
                             remainder = 0.0;
-                        if (ore_deficit != ft_nullptr)
-                            ore_deficit->value = remainder;
+                        if (ore_accumulator != ft_nullptr)
+                            ore_accumulator->value.multiplier_deficit = remainder;
                         if (target > base_amount)
                             target = base_amount;
                         if (target < 0)
@@ -183,13 +146,26 @@ void Game::produce(double seconds)
             this->send_state(planet_id, ore_id);
             if (mine_multiplier > 1.0 && final_amount > 0)
             {
+                Pair<int, ft_resource_accumulator> *ore_accumulator = this->get_resource_accumulator(planet_id, ore_id, false);
                 double bonus_amount = (mine_multiplier - 1.0) * static_cast<double>(final_amount);
+                if (ore_accumulator != ft_nullptr)
+                    bonus_amount += ore_accumulator->value.mine_bonus_remainder;
                 int bonus = static_cast<int>(bonus_amount);
+                double remainder = bonus_amount - static_cast<double>(bonus);
+                if (remainder < 0.0)
+                    remainder = 0.0;
+                if (ore_accumulator == ft_nullptr)
+                {
+                    if (bonus > 0 || remainder > 0.0)
+                        ore_accumulator = this->get_resource_accumulator(planet_id, ore_id, true);
+                }
                 if (bonus > 0)
                 {
                     planet->add_resource(ore_id, bonus);
                     this->send_state(planet_id, ore_id);
                 }
+                if (ore_accumulator != ft_nullptr)
+                    ore_accumulator->value.mine_bonus_remainder = remainder;
             }
         }
     }
@@ -300,6 +276,45 @@ void Game::tick(double seconds)
                 this->_rebellion_branch_pending_assault = 0;
         }
     }
+}
+
+Pair<int, Game::ft_resource_accumulator> *Game::get_resource_accumulator(int planet_id, int ore_id, bool create)
+{
+    Pair<int, ft_sharedptr<ft_vector<Pair<int, ft_resource_accumulator> > > > *planet_entry = this->_resource_deficits.find(planet_id);
+    if (planet_entry == ft_nullptr)
+    {
+        if (!create)
+            return ft_nullptr;
+        ft_sharedptr<ft_vector<Pair<int, ft_resource_accumulator> > > new_accumulators(new ft_vector<Pair<int, ft_resource_accumulator> >());
+        this->_resource_deficits.insert(planet_id, new_accumulators);
+        planet_entry = this->_resource_deficits.find(planet_id);
+        if (planet_entry == ft_nullptr)
+            return ft_nullptr;
+    }
+    ft_sharedptr<ft_vector<Pair<int, ft_resource_accumulator> > > &vector_ptr = planet_entry->value;
+    if (!vector_ptr)
+    {
+        if (!create)
+            return ft_nullptr;
+        ft_sharedptr<ft_vector<Pair<int, ft_resource_accumulator> > > replacement(new ft_vector<Pair<int, ft_resource_accumulator> >());
+        planet_entry->value = replacement;
+        vector_ptr = planet_entry->value;
+    }
+    if (!vector_ptr)
+        return ft_nullptr;
+    ft_vector<Pair<int, ft_resource_accumulator> > &entries = *vector_ptr;
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        if (entries[i].key == ore_id)
+            return &entries[i];
+    }
+    if (!create)
+        return ft_nullptr;
+    Pair<int, ft_resource_accumulator> new_entry;
+    new_entry.key = ore_id;
+    new_entry.value = ft_resource_accumulator();
+    entries.push_back(new_entry);
+    return &entries[entries.size() - 1];
 }
 
 ft_sharedptr<ft_planet> Game::get_planet(int id)

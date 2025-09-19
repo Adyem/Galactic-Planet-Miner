@@ -119,6 +119,45 @@ int verify_hard_difficulty_fractional_output()
     return 1;
 }
 
+int verify_mine_upgrade_station_bonus()
+{
+    const int planet_id = PLANET_TERRA;
+    const int ore_id = ORE_IRON;
+
+    Game baseline(ft_string("127.0.0.1:8080"), ft_string("/"));
+    baseline.set_ore(planet_id, ore_id, 0);
+    baseline.set_ore(planet_id, ORE_COPPER, 0);
+    baseline.set_ore(planet_id, ORE_COAL, 0);
+
+    Game upgraded(ft_string("127.0.0.1:8080"), ft_string("/"));
+    upgraded.ensure_planet_item_slot(planet_id, ORE_MITHRIL);
+    upgraded.set_ore(planet_id, ore_id, 20);
+    upgraded.set_ore(planet_id, ORE_MITHRIL, 4);
+    FT_ASSERT(upgraded.place_building(planet_id, BUILDING_UPGRADE_STATION, 1, 0) != 0);
+    upgraded.tick(0.0);
+    upgraded.set_ore(planet_id, ore_id, 0);
+    upgraded.set_ore(planet_id, ORE_COPPER, 0);
+    upgraded.set_ore(planet_id, ORE_COAL, 0);
+    upgraded.set_ore(planet_id, ORE_MITHRIL, 0);
+
+    const int tick_count = 240;
+    for (int i = 0; i < tick_count; ++i)
+        baseline.produce(1.0);
+    for (int i = 0; i < tick_count; ++i)
+        upgraded.produce(1.0);
+
+    int baseline_output = baseline.get_ore(planet_id, ore_id);
+    int upgraded_output = upgraded.get_ore(planet_id, ore_id);
+    FT_ASSERT(baseline_output > 0);
+    FT_ASSERT(upgraded_output > baseline_output);
+
+    double ratio = static_cast<double>(upgraded_output) / static_cast<double>(baseline_output);
+    FT_ASSERT(ratio > 1.13);
+    FT_ASSERT(ratio < 1.17);
+
+    return 1;
+}
+
 int verify_supply_route_key_collisions()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));

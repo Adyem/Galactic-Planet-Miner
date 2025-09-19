@@ -29,6 +29,9 @@ int main()
     if (!verify_hard_difficulty_fractional_output())
         return 0;
 
+    if (!verify_mine_upgrade_station_bonus())
+        return 0;
+
     if (!verify_supply_route_key_collisions())
         return 0;
 
