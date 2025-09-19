@@ -146,6 +146,22 @@ const ft_vector<Pair<int, double> > &ft_planet::get_resources() const noexcept
     return this->_rates;
 }
 
+ft_vector<Pair<int, int> > ft_planet::get_items_snapshot() const noexcept
+{
+    ft_vector<Pair<int, int> > snapshot;
+    for (size_t i = 0; i < this->_items.size(); ++i)
+    {
+        Pair<int, int> entry;
+        entry.key = this->_items[i].key;
+        int amount = 0;
+        if (this->_items[i].value)
+            amount = this->_items[i].value->get_stack_size();
+        entry.value = amount;
+        snapshot.push_back(entry);
+    }
+    return snapshot;
+}
+
 const ft_vector<Pair<int, double> > &ft_planet::get_carryover() const noexcept
 {
     return this->_carryover;

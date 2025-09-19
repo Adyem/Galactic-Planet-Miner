@@ -73,6 +73,10 @@ int verify_save_system_round_trip()
     terra->register_resource(ORE_COPPER, 345.678901);
     terra->set_resource(ORE_COPPER, 9001);
     terra->set_carryover(ORE_COPPER, 0.123456);
+    terra->ensure_item_slot(ITEM_ENGINE_PART);
+    terra->set_resource(ITEM_ENGINE_PART, 37);
+    terra->ensure_item_slot(ITEM_FUSION_REACTOR);
+    terra->set_resource(ITEM_FUSION_REACTOR, 2);
     planets.insert(PLANET_TERRA, terra);
 
     ft_map<int, ft_sharedptr<ft_fleet> > fleets;
@@ -132,6 +136,8 @@ int verify_save_system_round_trip()
             iron_carry = terra_carry[i].value;
     }
     FT_ASSERT(ft_absolute(iron_carry - 0.765432) < 0.000001);
+    FT_ASSERT_EQ(37, restored_terra->get_resource(ITEM_ENGINE_PART));
+    FT_ASSERT_EQ(2, restored_terra->get_resource(ITEM_FUSION_REACTOR));
 
     Pair<int, ft_sharedptr<ft_fleet> > *fleet_entry = restored_fleets.find(88);
     FT_ASSERT(fleet_entry != ft_nullptr);

@@ -201,6 +201,15 @@ ft_string SaveSystem::serialize_planets(const ft_map<int, ft_sharedptr<ft_planet
                 if (!save_system_add_item(document, group, carry_key.c_str(), carry_value.c_str()))
                     return save_system_abort_serialization(document);
             }
+            ft_vector<Pair<int, int> > inventory_snapshot = planet->get_items_snapshot();
+            for (size_t j = 0; j < inventory_snapshot.size(); ++j)
+            {
+                ft_string item_key = "item_";
+                ft_string item_id_string = ft_to_string(inventory_snapshot[j].key);
+                item_key.append(item_id_string);
+                if (!save_system_add_item(document, group, item_key.c_str(), inventory_snapshot[j].value))
+                    return save_system_abort_serialization(document);
+            }
         }
     }
     char *serialized = document.write_to_string();
@@ -239,6 +248,7 @@ bool SaveSystem::deserialize_planets(const char *content,
         ft_vector<Pair<int, int> > resource_amounts;
         ft_vector<Pair<int, long> > resource_rates;
         ft_vector<Pair<int, long> > resource_carryover;
+        ft_vector<Pair<int, int> > inventory_items;
         json_item *item = current->items;
         while (item)
         {
@@ -266,6 +276,14 @@ bool SaveSystem::deserialize_planets(const char *content,
                 entry.value = ft_atol(item->value);
                 resource_carryover.push_back(entry);
             }
+            else if (item->key && ft_strncmp(item->key, "item_", 5) == 0)
+            {
+                int item_id = ft_atoi(item->key + 5);
+                Pair<int, int> entry;
+                entry.key = item_id;
+                entry.value = ft_atoi(item->value);
+                inventory_items.push_back(entry);
+            }
             item = item->next;
         }
         for (size_t i = 0; i < resource_rates.size(); ++i)
@@ -285,6 +303,12 @@ bool SaveSystem::deserialize_planets(const char *content,
             int ore_id = resource_carryover[i].key;
             double carry_value = this->unscale_long_to_double(resource_carryover[i].value);
             planet->set_carryover(ore_id, carry_value);
+        }
+        for (size_t i = 0; i < inventory_items.size(); ++i)
+        {
+            int item_id = inventory_items[i].key;
+            planet->ensure_item_slot(item_id);
+            planet->set_resource(item_id, inventory_items[i].value);
         }
         planets.insert(planet_id, planet);
         current = current->next;
