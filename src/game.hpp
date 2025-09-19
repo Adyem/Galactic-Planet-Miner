@@ -137,7 +137,7 @@ private:
     ft_map<int, ft_supply_convoy>                _active_convoys;
     ft_map<int, int>                             _route_convoy_escorts;
     ft_map<int, ft_supply_contract>              _supply_contracts;
-    ft_map<int, ft_map<int, double> >            _resource_deficits;
+    ft_map<int, ft_sharedptr<ft_vector<Pair<int, double> > > > _resource_deficits;
     int                                          _next_route_id;
     int                                          _next_convoy_id;
     int                                          _next_contract_id;

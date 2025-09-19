@@ -103,21 +103,42 @@ void Game::produce(double seconds)
                     if (this->_resource_multiplier < 1.0)
                     {
                         const double epsilon = 0.0000001;
-                        Pair<int, ft_map<int, double> > *planet_deficits = this->_resource_deficits.find(planet_id);
+                        Pair<int, ft_sharedptr<ft_vector<Pair<int, double> > > > *planet_deficits = this->_resource_deficits.find(planet_id);
                         if (planet_deficits == ft_nullptr)
                         {
-                            ft_map<int, double> new_deficits;
+                            ft_sharedptr<ft_vector<Pair<int, double> > > new_deficits(new ft_vector<Pair<int, double> >());
                             this->_resource_deficits.insert(planet_id, new_deficits);
                             planet_deficits = this->_resource_deficits.find(planet_id);
                         }
                         Pair<int, double> *ore_deficit = ft_nullptr;
                         if (planet_deficits != ft_nullptr)
                         {
-                            ore_deficit = planet_deficits->value.find(ore_id);
-                            if (ore_deficit == ft_nullptr)
+                            ft_sharedptr<ft_vector<Pair<int, double> > > &deficits_ptr = planet_deficits->value;
+                            if (!deficits_ptr)
                             {
-                                planet_deficits->value.insert(ore_id, 0.0);
-                                ore_deficit = planet_deficits->value.find(ore_id);
+                                ft_sharedptr<ft_vector<Pair<int, double> > > replacement(new ft_vector<Pair<int, double> >());
+                                planet_deficits->value = replacement;
+                                deficits_ptr = planet_deficits->value;
+                            }
+                            if (deficits_ptr)
+                            {
+                                ft_vector<Pair<int, double> > &deficits = *deficits_ptr;
+                                for (size_t deficit_index = 0; deficit_index < deficits.size(); ++deficit_index)
+                                {
+                                    if (deficits[deficit_index].key == ore_id)
+                                    {
+                                        ore_deficit = &deficits[deficit_index];
+                                        break;
+                                    }
+                                }
+                                if (ore_deficit == ft_nullptr)
+                                {
+                                    Pair<int, double> new_entry;
+                                    new_entry.key = ore_id;
+                                    new_entry.value = 0.0;
+                                    deficits.push_back(new_entry);
+                                    ore_deficit = &deficits[deficits.size() - 1];
+                                }
                             }
                         }
                         double carryover = 0.0;
