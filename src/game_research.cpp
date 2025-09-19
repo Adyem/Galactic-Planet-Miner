@@ -117,7 +117,8 @@ void Game::handle_research_completion(int research_id)
         this->update_combat_modifiers();
     ft_string tag("research_completed_");
     tag.append(ft_to_string(research_id));
-    this->save_campaign_checkpoint(tag);
+    if (!this->save_campaign_checkpoint(tag))
+        return ;
 }
 
 bool Game::can_start_research(int research_id) const

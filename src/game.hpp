@@ -157,6 +157,8 @@ private:
     ft_string                                    _last_achievement_checkpoint;
     ft_string                                    _last_checkpoint_tag;
     bool                                         _has_checkpoint;
+    ft_vector<ft_string>                         _failed_checkpoint_tags;
+    bool                                         _force_checkpoint_failure;
     bool                                         _backend_online;
 
     ft_sharedptr<ft_planet> get_planet(int id);
@@ -222,7 +224,8 @@ private:
     void trigger_branch_assault(int planet_id, double difficulty, bool order_branch);
     void apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &snapshot);
     void apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snapshot);
-    void checkpoint_campaign_state_internal(const ft_string &tag);
+    bool checkpoint_campaign_state_internal(const ft_string &tag);
+    void record_checkpoint_failure(const ft_string &tag) noexcept;
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -349,7 +352,9 @@ public:
     int get_planet_fleet_ship_hp(int planet_id, int ship_uid) const;
     ft_location get_planet_fleet_location(int planet_id) const;
 
-    void save_campaign_checkpoint(const ft_string &tag) noexcept;
+    bool save_campaign_checkpoint(const ft_string &tag) noexcept;
+    const ft_vector<ft_string> &get_failed_checkpoint_tags() const noexcept;
+    void set_force_checkpoint_failure(bool enabled) noexcept;
     bool has_campaign_checkpoint() const noexcept;
     const ft_string &get_campaign_planet_checkpoint() const noexcept;
     const ft_string &get_campaign_fleet_checkpoint() const noexcept;
