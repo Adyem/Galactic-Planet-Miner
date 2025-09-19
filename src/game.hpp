@@ -137,7 +137,17 @@ private:
     ft_map<int, ft_supply_convoy>                _active_convoys;
     ft_map<int, int>                             _route_convoy_escorts;
     ft_map<int, ft_supply_contract>              _supply_contracts;
-    ft_map<int, ft_sharedptr<ft_vector<Pair<int, double> > > > _resource_deficits;
+    struct ft_resource_accumulator
+    {
+        double multiplier_deficit;
+        double mine_bonus_remainder;
+
+        ft_resource_accumulator()
+            : multiplier_deficit(0.0), mine_bonus_remainder(0.0)
+        {}
+    };
+
+    ft_map<int, ft_sharedptr<ft_vector<Pair<int, ft_resource_accumulator> > > > _resource_deficits;
     int                                          _next_route_id;
     int                                          _next_convoy_id;
     int                                          _next_contract_id;
@@ -168,6 +178,7 @@ private:
     ft_sharedptr<ft_fleet> get_planet_fleet(int id);
     ft_sharedptr<const ft_fleet> get_planet_fleet(int id) const;
     void send_state(int planet_id, int ore_id);
+    Pair<int, ft_resource_accumulator> *get_resource_accumulator(int planet_id, int ore_id, bool create);
     void unlock_planet(int planet_id);
     bool can_pay_research_cost(const ft_vector<Pair<int, int> > &costs) const;
     void pay_research_cost(const ft_vector<Pair<int, int> > &costs);
