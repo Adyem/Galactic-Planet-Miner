@@ -82,7 +82,7 @@ void CombatManager::tick(double seconds, ft_map<int, ft_sharedptr<ft_fleet> > &f
             }
         }
         this->update_formations(encounter, seconds, spike_active);
-        double player_damage = this->calculate_player_power(defenders) * seconds * this->_player_weapon_multiplier;
+        double player_damage = this->calculate_player_power(encounter) * seconds * this->_player_weapon_multiplier;
         if (encounter.control_mode == ASSAULT_CONTROL_ACTIVE)
         {
             double control_bonus = 0.1;
@@ -123,9 +123,7 @@ void CombatManager::tick(double seconds, ft_map<int, ft_sharedptr<ft_fleet> > &f
                 spike_bonus += encounter.energy_pressure * 0.2;
             damage_scale += spike_bonus;
         }
-        double enemy_power = 0.0;
-        if (encounter.raider_fleet)
-            enemy_power = encounter.raider_fleet->get_attack_power();
+        double enemy_power = this->calculate_raider_power(encounter);
         double intensity = 1.0 + encounter.elapsed / 45.0;
         double raider_damage = enemy_power * intensity * damage_scale * seconds;
         if (encounter.control_mode == ASSAULT_CONTROL_ACTIVE)

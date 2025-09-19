@@ -19,6 +19,8 @@ int analyze_manual_vs_auto_assault_controls();
 int measure_assault_aggression_effects();
 int evaluate_focus_fire_cooldowns();
 int validate_tactical_pause_behaviors();
+int verify_ship_range_defaults();
+int verify_range_aware_combat_power();
 int compare_generator_support();
 int inspect_support_ship_positioning();
 int verify_difficulty_scaling();

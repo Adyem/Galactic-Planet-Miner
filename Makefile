@@ -40,6 +40,7 @@ SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_campaign.cpp \
     $(TEST_DIR)/game_test_energy.cpp \
     $(TEST_DIR)/game_test_control.cpp \
+    $(TEST_DIR)/game_test_combat.cpp \
     $(TEST_DIR)/game_test_support.cpp \
     $(TEST_DIR)/game_test_research.cpp \
     $(TEST_DIR)/game_test_difficulty.cpp \

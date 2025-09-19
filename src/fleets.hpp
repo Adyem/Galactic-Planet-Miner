@@ -79,6 +79,9 @@ struct ft_ship
     double max_speed;
     double acceleration;
     double turn_speed;
+    double optimal_range;
+    double max_range;
+    double base_damage;
     int combat_behavior;
     int outnumbered_behavior;
     int unescorted_behavior;
@@ -87,7 +90,8 @@ struct ft_ship
     ft_ship()
         : id(0), type(0), armor(0), hp(0), shield(0), max_hp(0),
           max_shield(0), max_speed(18.0), acceleration(4.0),
-          turn_speed(60.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+          turn_speed(60.0), optimal_range(180.0), max_range(240.0),
+          base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
           outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
           unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
           low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
@@ -95,7 +99,8 @@ struct ft_ship
     ft_ship(int i, int t)
         : id(i), type(t), armor(0), hp(0), shield(0), max_hp(0),
           max_shield(0), max_speed(18.0), acceleration(4.0),
-          turn_speed(60.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+          turn_speed(60.0), optimal_range(180.0), max_range(240.0),
+          base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
           outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
           unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
           low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
@@ -123,7 +128,6 @@ public:
     int get_ship_count() const noexcept;
     int get_total_ship_hp() const noexcept;
     int get_total_ship_shield() const noexcept;
-    double get_attack_power() const noexcept;
     double get_escort_veterancy() const noexcept;
     int get_escort_veterancy_bonus() const noexcept;
     bool add_escort_veterancy(double amount) noexcept;
@@ -166,6 +170,8 @@ public:
     ft_location get_location() const noexcept;
     double get_travel_time() const noexcept;
     void tick(double seconds) noexcept;
+
+    static double get_ship_damage_baseline(int ship_type) noexcept;
 };
 
 bool is_capital_ship_type(int ship_type) noexcept;

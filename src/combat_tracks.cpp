@@ -73,6 +73,11 @@ void CombatManager::sync_raider_tracks(ft_combat_encounter &encounter)
         tracker.turn_speed = ship_data->turn_speed;
         if (tracker.turn_speed < 10.0)
             tracker.turn_speed = 10.0;
+        tracker.optimal_range = ship_data->optimal_range;
+        tracker.max_range = ship_data->max_range;
+        tracker.base_damage = ship_data->base_damage;
+        if (tracker.base_damage <= 0.0)
+            tracker.base_damage = ft_fleet::get_ship_damage_baseline(ship_data->type);
         tracker.normal_behavior = ship_data->combat_behavior;
         tracker.outnumbered_behavior = ship_data->outnumbered_behavior;
         tracker.unescorted_behavior = ship_data->unescorted_behavior;
@@ -190,6 +195,11 @@ void CombatManager::sync_defender_tracks(ft_combat_encounter &encounter,
             tracker.turn_speed = ship_data->turn_speed;
             if (tracker.turn_speed < 10.0)
                 tracker.turn_speed = 10.0;
+            tracker.optimal_range = ship_data->optimal_range;
+            tracker.max_range = ship_data->max_range;
+            tracker.base_damage = ship_data->base_damage;
+            if (tracker.base_damage <= 0.0)
+                tracker.base_damage = ft_fleet::get_ship_damage_baseline(ship_data->type);
             tracker.normal_behavior = ship_data->combat_behavior;
             tracker.outnumbered_behavior = ship_data->outnumbered_behavior;
             tracker.unescorted_behavior = ship_data->unescorted_behavior;
@@ -276,6 +286,11 @@ void CombatManager::initialize_tracker(ft_ship_tracker &tracker, int ship_uid,
     tracker.role = ship.role;
     tracker.max_hp = ship.max_hp;
     tracker.max_shield = ship.max_shield;
+    tracker.optimal_range = ship.optimal_range;
+    tracker.max_range = ship.max_range;
+    tracker.base_damage = ship.base_damage;
+    if (tracker.base_damage <= 0.0)
+        tracker.base_damage = ft_fleet::get_ship_damage_baseline(ship.type);
     tracker.normal_behavior = ship.combat_behavior;
     tracker.outnumbered_behavior = ship.outnumbered_behavior;
     tracker.unescorted_behavior = ship.unescorted_behavior;
