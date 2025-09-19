@@ -98,6 +98,8 @@ int main()
         return 0;
     if (!validate_save_system_serialized_samples())
         return 0;
+    if (!verify_save_system_allocation_failures())
+        return 0;
     if (!verify_save_system_extreme_scaling())
         return 0;
     if (!verify_research_save_round_trip())
