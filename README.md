@@ -16,6 +16,10 @@ make
 The tests start a minimal HTTP server provided by `libft`, send a POST request through the backend
 client, and verify simple resource mining logic.
 
+Serialization checkpoints now guard against allocation failures inside the JSON helpers. The
+`verify_save_system_allocation_failures` test simulates failed group and item creation to confirm the
+save system aborts cleanly and reports the error back to the checkpoint flow.
+
 ## Game State
 
 The core `ft_game_state` spawns planetary characters for Terra, Mars, Zalthor,

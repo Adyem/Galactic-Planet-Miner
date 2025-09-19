@@ -12,6 +12,39 @@
 #include "save_system.hpp"
 #include "game_test_scenarios.hpp"
 
+static bool g_fail_next_json_allocation = false;
+static const char *g_fail_allocation_type = ft_nullptr;
+static const char *g_fail_allocation_identifier = ft_nullptr;
+
+static bool save_system_test_allocation_hook(const char *type, const char *identifier)
+{
+    if (!g_fail_next_json_allocation)
+        return true;
+    if (g_fail_allocation_type && (!type || ft_strcmp(type, g_fail_allocation_type) != 0))
+        return true;
+    if (g_fail_allocation_identifier && (!identifier || ft_strcmp(identifier, g_fail_allocation_identifier) != 0))
+        return true;
+    g_fail_next_json_allocation = false;
+    g_fail_allocation_type = ft_nullptr;
+    g_fail_allocation_identifier = ft_nullptr;
+    return false;
+}
+
+static void save_system_trigger_allocation_failure(const char *type, const char *identifier)
+{
+    g_fail_next_json_allocation = true;
+    g_fail_allocation_type = type;
+    g_fail_allocation_identifier = identifier;
+}
+
+static void save_system_reset_allocation_hook()
+{
+    SaveSystem::set_json_allocation_hook(ft_nullptr);
+    g_fail_next_json_allocation = false;
+    g_fail_allocation_type = ft_nullptr;
+    g_fail_allocation_identifier = ft_nullptr;
+}
+
 static double ft_absolute(double value)
 {
     if (value < 0.0)
@@ -408,6 +441,51 @@ int validate_save_system_serialized_samples()
     FT_ASSERT_EQ(dreadnought.unescorted_behavior, restored_dreadnought->unescorted_behavior);
     FT_ASSERT_EQ(dreadnought.low_hp_behavior, restored_dreadnought->low_hp_behavior);
     FT_ASSERT_EQ(dreadnought.role, restored_dreadnought->role);
+
+    return 1;
+}
+
+int verify_save_system_allocation_failures()
+{
+    SaveSystem saves;
+    SaveSystem::set_json_allocation_hook(save_system_test_allocation_hook);
+
+    ft_map<int, ft_sharedptr<ft_planet> > planets;
+    ft_sharedptr<ft_planet> terra(new ft_planet_terra());
+    terra->register_resource(ORE_IRON, 1.25);
+    terra->set_resource(ORE_IRON, 10);
+    planets.insert(PLANET_TERRA, terra);
+
+    save_system_trigger_allocation_failure("group", "planet_1");
+    ft_string planet_json = saves.serialize_planets(planets);
+    FT_ASSERT_EQ(0u, planet_json.size());
+
+    ft_string recovered_planet = saves.serialize_planets(planets);
+    FT_ASSERT(recovered_planet.size() > 0);
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    ft_sharedptr<ft_fleet> escort(new ft_fleet(31));
+    escort->set_location_planet(PLANET_TERRA);
+    ft_ship snapshot;
+    snapshot.id = 512;
+    snapshot.type = SHIP_SHIELD;
+    escort->add_ship_snapshot(snapshot);
+    fleets.insert(31, escort);
+
+    save_system_trigger_allocation_failure("item", "ship_count");
+    ft_string fleet_json = saves.serialize_fleets(fleets);
+    FT_ASSERT_EQ(0u, fleet_json.size());
+
+    ft_string recovered_fleet = saves.serialize_fleets(fleets);
+    FT_ASSERT(recovered_fleet.size() > 0);
+
+    save_system_reset_allocation_hook();
+
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    SaveSystem::set_json_allocation_hook(save_system_test_allocation_hook);
+    save_system_trigger_allocation_failure("group", "planet_1");
+    FT_ASSERT(!game.save_campaign_checkpoint(ft_string("allocation_failure")));
+    save_system_reset_allocation_hook();
 
     return 1;
 }

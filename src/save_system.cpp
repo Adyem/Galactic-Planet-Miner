@@ -1,5 +1,6 @@
 #include "save_system.hpp"
 #include "../libft/CMA/CMA.hpp"
+#include "../libft/CPP_class/class_nullptr.hpp"
 
 #include <climits>
 #include <cmath>
@@ -13,6 +14,56 @@ namespace
     const long SAVE_DOUBLE_SENTINEL_POS_INF = LONG_MAX;
     const long SAVE_DOUBLE_MIN_FINITE = LONG_MIN + 2;
     const long SAVE_DOUBLE_MAX_FINITE = LONG_MAX - 1;
+
+    SaveSystem::json_allocation_hook_t g_json_allocation_hook = ft_nullptr;
+
+    bool save_system_allocation_blocked(const char *type, const char *identifier)
+    {
+        if (!g_json_allocation_hook)
+            return false;
+        if (!g_json_allocation_hook(type, identifier))
+            return true;
+        return false;
+    }
+
+    ft_string save_system_abort_serialization(json_document &document)
+    {
+        document.clear();
+        return ft_string();
+    }
+
+    json_group *save_system_create_group(json_document &document, const char *name)
+    {
+        if (save_system_allocation_blocked("group", name))
+            return ft_nullptr;
+        json_group *group = document.create_group(name);
+        if (!group)
+            return ft_nullptr;
+        document.append_group(group);
+        return group;
+    }
+
+    bool save_system_add_item(json_document &document, json_group *group, const char *key, int value)
+    {
+        if (save_system_allocation_blocked("item", key))
+            return false;
+        json_item *item = document.create_item(key, value);
+        if (!item)
+            return false;
+        document.add_item(group, item);
+        return true;
+    }
+
+    bool save_system_add_item(json_document &document, json_group *group, const char *key, const char *value)
+    {
+        if (save_system_allocation_blocked("item", key))
+            return false;
+        json_item *item = document.create_item(key, value);
+        if (!item)
+            return false;
+        document.add_item(group, item);
+        return true;
+    }
 }
 
 SaveSystem::SaveSystem() noexcept
@@ -22,6 +73,12 @@ SaveSystem::SaveSystem() noexcept
 
 SaveSystem::~SaveSystem() noexcept
 {
+    return ;
+}
+
+void SaveSystem::set_json_allocation_hook(json_allocation_hook_t hook) noexcept
+{
+    g_json_allocation_hook = hook;
     return ;
 }
 
@@ -110,13 +167,11 @@ ft_string SaveSystem::serialize_planets(const ft_map<int, ft_sharedptr<ft_planet
             ft_string group_name = "planet_";
             ft_string id_string = ft_to_string(entries[i].key);
             group_name.append(id_string);
-            json_group *group = document.create_group(group_name.c_str());
+            json_group *group = save_system_create_group(document, group_name.c_str());
             if (!group)
-                continue;
-            document.append_group(group);
-            json_item *id_item = document.create_item("id", entries[i].key);
-            if (id_item)
-                document.add_item(group, id_item);
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
             const ft_vector<Pair<int, double> > &resources = planet->get_resources();
             for (size_t j = 0; j < resources.size(); ++j)
             {
@@ -125,16 +180,14 @@ ft_string SaveSystem::serialize_planets(const ft_map<int, ft_sharedptr<ft_planet
                 ft_string amount_key = "resource_";
                 amount_key.append(ore_string);
                 int amount = planet->get_resource(ore_id);
-                json_item *amount_item = document.create_item(amount_key.c_str(), amount);
-                if (amount_item)
-                    document.add_item(group, amount_item);
+                if (!save_system_add_item(document, group, amount_key.c_str(), amount))
+                    return save_system_abort_serialization(document);
                 ft_string rate_key = "rate_";
                 rate_key.append(ore_string);
                 long scaled_rate = this->scale_double_to_long(resources[j].value);
                 ft_string rate_value = ft_to_string(scaled_rate);
-                json_item *rate_item = document.create_item(rate_key.c_str(), rate_value.c_str());
-                if (rate_item)
-                    document.add_item(group, rate_item);
+                if (!save_system_add_item(document, group, rate_key.c_str(), rate_value.c_str()))
+                    return save_system_abort_serialization(document);
             }
             const ft_vector<Pair<int, double> > &carryover = planet->get_carryover();
             for (size_t j = 0; j < carryover.size(); ++j)
@@ -145,9 +198,8 @@ ft_string SaveSystem::serialize_planets(const ft_map<int, ft_sharedptr<ft_planet
                 carry_key.append(ore_string);
                 long scaled_carry = this->scale_double_to_long(carryover[j].value);
                 ft_string carry_value = ft_to_string(scaled_carry);
-                json_item *carry_item = document.create_item(carry_key.c_str(), carry_value.c_str());
-                if (carry_item)
-                    document.add_item(group, carry_item);
+                if (!save_system_add_item(document, group, carry_key.c_str(), carry_value.c_str()))
+                    return save_system_abort_serialization(document);
             }
         }
     }
@@ -257,40 +309,31 @@ ft_string SaveSystem::serialize_fleets(const ft_map<int, ft_sharedptr<ft_fleet> 
             ft_string group_name = "fleet_";
             ft_string id_string = ft_to_string(entries[i].key);
             group_name.append(id_string);
-            json_group *group = document.create_group(group_name.c_str());
+            json_group *group = save_system_create_group(document, group_name.c_str());
             if (!group)
-                continue;
-            document.append_group(group);
-            json_item *id_item = document.create_item("id", entries[i].key);
-            if (id_item)
-                document.add_item(group, id_item);
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
             ft_location location = fleet->get_location();
-            json_item *type_item = document.create_item("location_type", location.type);
-            if (type_item)
-                document.add_item(group, type_item);
-            json_item *from_item = document.create_item("location_from", location.from);
-            if (from_item)
-                document.add_item(group, from_item);
-            json_item *to_item = document.create_item("location_to", location.to);
-            if (to_item)
-                document.add_item(group, to_item);
-            json_item *misc_item = document.create_item("location_misc", location.misc);
-            if (misc_item)
-                document.add_item(group, misc_item);
+            if (!save_system_add_item(document, group, "location_type", location.type))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "location_from", location.from))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "location_to", location.to))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "location_misc", location.misc))
+                return save_system_abort_serialization(document);
             long travel_scaled = this->scale_double_to_long(fleet->get_travel_time());
             ft_string travel_value = ft_to_string(travel_scaled);
-            json_item *travel_item = document.create_item("travel_time", travel_value.c_str());
-            if (travel_item)
-                document.add_item(group, travel_item);
+            if (!save_system_add_item(document, group, "travel_time", travel_value.c_str()))
+                return save_system_abort_serialization(document);
             long veterancy_scaled = this->scale_double_to_long(fleet->get_escort_veterancy());
             ft_string veterancy_value = ft_to_string(veterancy_scaled);
-            json_item *veterancy_item = document.create_item("escort_veterancy", veterancy_value.c_str());
-            if (veterancy_item)
-                document.add_item(group, veterancy_item);
+            if (!save_system_add_item(document, group, "escort_veterancy", veterancy_value.c_str()))
+                return save_system_abort_serialization(document);
             int ship_total = fleet->get_ship_count();
-            json_item *ship_count_item = document.create_item("ship_count", ship_total);
-            if (ship_count_item)
-                document.add_item(group, ship_count_item);
+            if (!save_system_add_item(document, group, "ship_count", ship_total))
+                return save_system_abort_serialization(document);
             ft_vector<int> ship_ids;
             fleet->get_ship_ids(ship_ids);
             for (size_t j = 0; j < ship_ids.size(); ++j)
@@ -304,85 +347,70 @@ ft_string SaveSystem::serialize_fleets(const ft_map<int, ft_sharedptr<ft_fleet> 
                 base_key.append(index_string);
                 ft_string key = base_key;
                 key.append("_id");
-                json_item *ship_id_item = document.create_item(key.c_str(), ship->id);
-                if (ship_id_item)
-                    document.add_item(group, ship_id_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->id))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_type");
-                json_item *ship_type_item = document.create_item(key.c_str(), ship->type);
-                if (ship_type_item)
-                    document.add_item(group, ship_type_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->type))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_armor");
-                json_item *armor_item = document.create_item(key.c_str(), ship->armor);
-                if (armor_item)
-                    document.add_item(group, armor_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->armor))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_hp");
-                json_item *hp_item = document.create_item(key.c_str(), ship->hp);
-                if (hp_item)
-                    document.add_item(group, hp_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->hp))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_shield");
-                json_item *shield_item = document.create_item(key.c_str(), ship->shield);
-                if (shield_item)
-                    document.add_item(group, shield_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->shield))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_max_hp");
-                json_item *max_hp_item = document.create_item(key.c_str(), ship->max_hp);
-                if (max_hp_item)
-                    document.add_item(group, max_hp_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->max_hp))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_max_shield");
-                json_item *max_shield_item = document.create_item(key.c_str(), ship->max_shield);
-                if (max_shield_item)
-                    document.add_item(group, max_shield_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->max_shield))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_max_speed");
                 long max_speed_scaled = this->scale_double_to_long(ship->max_speed);
                 ft_string max_speed_value = ft_to_string(max_speed_scaled);
-                json_item *max_speed_item = document.create_item(key.c_str(), max_speed_value.c_str());
-                if (max_speed_item)
-                    document.add_item(group, max_speed_item);
+                if (!save_system_add_item(document, group, key.c_str(), max_speed_value.c_str()))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_acceleration");
                 long acceleration_scaled = this->scale_double_to_long(ship->acceleration);
                 ft_string acceleration_value = ft_to_string(acceleration_scaled);
-                json_item *acceleration_item = document.create_item(key.c_str(), acceleration_value.c_str());
-                if (acceleration_item)
-                    document.add_item(group, acceleration_item);
+                if (!save_system_add_item(document, group, key.c_str(), acceleration_value.c_str()))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_turn_speed");
                 long turn_speed_scaled = this->scale_double_to_long(ship->turn_speed);
                 ft_string turn_speed_value = ft_to_string(turn_speed_scaled);
-                json_item *turn_speed_item = document.create_item(key.c_str(), turn_speed_value.c_str());
-                if (turn_speed_item)
-                    document.add_item(group, turn_speed_item);
+                if (!save_system_add_item(document, group, key.c_str(), turn_speed_value.c_str()))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_behavior");
-                json_item *behavior_item = document.create_item(key.c_str(), ship->combat_behavior);
-                if (behavior_item)
-                    document.add_item(group, behavior_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->combat_behavior))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_outnumbered");
-                json_item *outnumbered_item = document.create_item(key.c_str(), ship->outnumbered_behavior);
-                if (outnumbered_item)
-                    document.add_item(group, outnumbered_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->outnumbered_behavior))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_unescorted");
-                json_item *unescorted_item = document.create_item(key.c_str(), ship->unescorted_behavior);
-                if (unescorted_item)
-                    document.add_item(group, unescorted_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->unescorted_behavior))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_low_hp");
-                json_item *low_hp_item = document.create_item(key.c_str(), ship->low_hp_behavior);
-                if (low_hp_item)
-                    document.add_item(group, low_hp_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->low_hp_behavior))
+                    return save_system_abort_serialization(document);
                 key = base_key;
                 key.append("_role");
-                json_item *role_item = document.create_item(key.c_str(), ship->role);
-                if (role_item)
-                    document.add_item(group, role_item);
+                if (!save_system_add_item(document, group, key.c_str(), ship->role))
+                    return save_system_abort_serialization(document);
             }
         }
     }
@@ -535,16 +563,13 @@ bool SaveSystem::deserialize_fleets(const char *content,
 ft_string SaveSystem::serialize_research(const ResearchManager &research) const noexcept
 {
     json_document document;
-    json_group *settings = document.create_group("research_settings");
-    if (settings)
-    {
-        document.append_group(settings);
-        long scaled = this->scale_double_to_long(research.get_duration_scale());
-        ft_string value = ft_to_string(scaled);
-        json_item *scale_item = document.create_item("duration_scale", value.c_str());
-        if (scale_item)
-            document.add_item(settings, scale_item);
-    }
+    json_group *settings = save_system_create_group(document, "research_settings");
+    if (!settings)
+        return save_system_abort_serialization(document);
+    long scaled = this->scale_double_to_long(research.get_duration_scale());
+    ft_string value = ft_to_string(scaled);
+    if (!save_system_add_item(document, settings, "duration_scale", value.c_str()))
+        return save_system_abort_serialization(document);
     ft_map<int, ft_research_progress> progress;
     research.get_progress_state(progress);
     size_t count = progress.size();
@@ -556,21 +581,17 @@ ft_string SaveSystem::serialize_research(const ResearchManager &research) const 
         {
             ft_string group_name = "research_";
             group_name.append(ft_to_string(entries[i].key));
-            json_group *group = document.create_group(group_name.c_str());
+            json_group *group = save_system_create_group(document, group_name.c_str());
             if (!group)
-                continue;
-            document.append_group(group);
-            json_item *id_item = document.create_item("id", entries[i].key);
-            if (id_item)
-                document.add_item(group, id_item);
-            json_item *status_item = document.create_item("status", entries[i].value.status);
-            if (status_item)
-                document.add_item(group, status_item);
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "status", entries[i].value.status))
+                return save_system_abort_serialization(document);
             long remaining_scaled = this->scale_double_to_long(entries[i].value.remaining_time);
             ft_string remaining_value = ft_to_string(remaining_scaled);
-            json_item *remaining_item = document.create_item("remaining_time", remaining_value.c_str());
-            if (remaining_item)
-                document.add_item(group, remaining_item);
+            if (!save_system_add_item(document, group, "remaining_time", remaining_value.c_str()))
+                return save_system_abort_serialization(document);
         }
     }
     char *serialized = document.write_to_string();
@@ -636,19 +657,16 @@ ft_string SaveSystem::serialize_achievements(const AchievementManager &achieveme
         {
             ft_string group_name = "achievement_";
             group_name.append(ft_to_string(entries[i].key));
-            json_group *group = document.create_group(group_name.c_str());
+            json_group *group = save_system_create_group(document, group_name.c_str());
             if (!group)
-                continue;
-            document.append_group(group);
-            json_item *id_item = document.create_item("id", entries[i].key);
-            if (id_item)
-                document.add_item(group, id_item);
-            json_item *value_item = document.create_item("value", entries[i].value.value);
-            if (value_item)
-                document.add_item(group, value_item);
-            json_item *completed_item = document.create_item("completed", entries[i].value.completed ? 1 : 0);
-            if (completed_item)
-                document.add_item(group, completed_item);
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "value", entries[i].value.value))
+                return save_system_abort_serialization(document);
+            int completed_flag = entries[i].value.completed ? 1 : 0;
+            if (!save_system_add_item(document, group, "completed", completed_flag))
+                return save_system_abort_serialization(document);
         }
     }
     char *serialized = document.write_to_string();

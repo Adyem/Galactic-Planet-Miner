@@ -17,6 +17,8 @@ public:
     SaveSystem() noexcept;
     ~SaveSystem() noexcept;
 
+    typedef bool (*json_allocation_hook_t)(const char *type, const char *identifier);
+
     ft_string serialize_planets(const ft_map<int, ft_sharedptr<ft_planet> > &planets) const noexcept;
     bool deserialize_planets(const char *content,
         ft_map<int, ft_sharedptr<ft_planet> > &planets) const noexcept;
@@ -30,6 +32,8 @@ public:
 
     ft_string serialize_achievements(const AchievementManager &achievements) const noexcept;
     bool deserialize_achievements(const char *content, AchievementManager &achievements) const noexcept;
+
+    static void set_json_allocation_hook(json_allocation_hook_t hook) noexcept;
 
 private:
     ft_sharedptr<ft_planet> create_planet_instance(int planet_id) const noexcept;
