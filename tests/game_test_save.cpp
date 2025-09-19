@@ -197,6 +197,66 @@ int verify_save_system_edge_cases()
     return 1;
 }
 
+int verify_save_system_invalid_inputs()
+{
+    SaveSystem saves;
+
+    ft_map<int, ft_sharedptr<ft_planet> > planets;
+    ft_sharedptr<ft_planet> terra(new ft_planet_terra());
+    terra->register_resource(ORE_IRON, 12.5);
+    terra->set_resource(ORE_IRON, 24);
+    planets.insert(PLANET_TERRA, terra);
+    FT_ASSERT(!saves.deserialize_planets(ft_nullptr, planets));
+    Pair<int, ft_sharedptr<ft_planet> > *terra_entry = planets.find(PLANET_TERRA);
+    FT_ASSERT(terra_entry != ft_nullptr);
+    FT_ASSERT_EQ(24, terra_entry->value->get_resource(ORE_IRON));
+    ft_string invalid_payload("not json");
+    FT_ASSERT(!saves.deserialize_planets(invalid_payload.c_str(), planets));
+    terra_entry = planets.find(PLANET_TERRA);
+    FT_ASSERT(terra_entry != ft_nullptr);
+    FT_ASSERT_EQ(24, terra_entry->value->get_resource(ORE_IRON));
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    ft_sharedptr<ft_fleet> escort(new ft_fleet(31));
+    escort->set_location_planet(PLANET_MARS);
+    fleets.insert(31, escort);
+    FT_ASSERT(!saves.deserialize_fleets(ft_nullptr, fleets));
+    Pair<int, ft_sharedptr<ft_fleet> > *escort_entry = fleets.find(31);
+    FT_ASSERT(escort_entry != ft_nullptr);
+    FT_ASSERT_EQ(PLANET_MARS, escort_entry->value->get_location().from);
+    FT_ASSERT(!saves.deserialize_fleets(invalid_payload.c_str(), fleets));
+    escort_entry = fleets.find(31);
+    FT_ASSERT(escort_entry != ft_nullptr);
+    FT_ASSERT_EQ(PLANET_MARS, escort_entry->value->get_location().from);
+
+    ResearchManager research;
+    research.set_duration_scale(2.0);
+    FT_ASSERT(research.start(RESEARCH_UNLOCK_MARS));
+    ft_vector<int> completed;
+    research.tick(3.0, completed);
+    double remaining_before = research.get_remaining_time(RESEARCH_UNLOCK_MARS);
+    FT_ASSERT(remaining_before > 0.0);
+    FT_ASSERT(!saves.deserialize_research(ft_nullptr, research));
+    FT_ASSERT(ft_absolute(research.get_remaining_time(RESEARCH_UNLOCK_MARS)
+        - remaining_before) < 0.000001);
+    FT_ASSERT(ft_absolute(research.get_duration_scale() - 2.0) < 0.000001);
+    FT_ASSERT(!saves.deserialize_research(invalid_payload.c_str(), research));
+    FT_ASSERT(ft_absolute(research.get_remaining_time(RESEARCH_UNLOCK_MARS)
+        - remaining_before) < 0.000001);
+
+    AchievementManager achievements;
+    achievements.record_event(ACHIEVEMENT_EVENT_PLANET_UNLOCKED, 1);
+    FT_ASSERT_EQ(ACHIEVEMENT_STATUS_COMPLETED,
+        achievements.get_status(ACHIEVEMENT_SECOND_HOME));
+    FT_ASSERT(!saves.deserialize_achievements(ft_nullptr, achievements));
+    FT_ASSERT_EQ(ACHIEVEMENT_STATUS_COMPLETED,
+        achievements.get_status(ACHIEVEMENT_SECOND_HOME));
+    FT_ASSERT(!saves.deserialize_achievements(invalid_payload.c_str(), achievements));
+    FT_ASSERT_EQ(1, achievements.get_progress(ACHIEVEMENT_SECOND_HOME));
+
+    return 1;
+}
+
 int validate_save_system_serialized_samples()
 {
     SaveSystem saves;
@@ -349,6 +409,54 @@ int validate_save_system_serialized_samples()
     return 1;
 }
 
+int verify_research_save_round_trip()
+{
+    SaveSystem saves;
+    ResearchManager research;
+    research.set_duration_scale(1.5);
+    FT_ASSERT(research.start(RESEARCH_UNLOCK_MARS));
+    ft_vector<int> completed;
+    research.tick(12.0, completed);
+    FT_ASSERT_EQ(RESEARCH_STATUS_IN_PROGRESS, research.get_status(RESEARCH_UNLOCK_MARS));
+    research.mark_completed(RESEARCH_UNLOCK_ZALTHOR);
+
+    ft_string json = saves.serialize_research(research);
+    FT_ASSERT(json.size() > 0);
+
+    ResearchManager restored;
+    FT_ASSERT(saves.deserialize_research(json.c_str(), restored));
+    FT_ASSERT(ft_absolute(restored.get_duration_scale() - 1.5) < 0.000001);
+    FT_ASSERT_EQ(RESEARCH_STATUS_IN_PROGRESS, restored.get_status(RESEARCH_UNLOCK_MARS));
+    double original_remaining = research.get_remaining_time(RESEARCH_UNLOCK_MARS);
+    double restored_remaining = restored.get_remaining_time(RESEARCH_UNLOCK_MARS);
+    FT_ASSERT(ft_absolute(restored_remaining - original_remaining) < 0.000001);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, restored.get_status(RESEARCH_UNLOCK_ZALTHOR));
+
+    return 1;
+}
+
+int verify_achievement_save_round_trip()
+{
+    SaveSystem saves;
+    AchievementManager achievements;
+    achievements.record_event(ACHIEVEMENT_EVENT_PLANET_UNLOCKED, 1);
+    achievements.record_event(ACHIEVEMENT_EVENT_CONVOY_STREAK_BEST, 3);
+    achievements.record_event(ACHIEVEMENT_EVENT_CONVOY_STREAK_BEST, 6);
+    FT_ASSERT_EQ(ACHIEVEMENT_STATUS_COMPLETED, achievements.get_status(ACHIEVEMENT_CONVOY_STREAK_GUARDIAN));
+
+    ft_string json = saves.serialize_achievements(achievements);
+    FT_ASSERT(json.size() > 0);
+
+    AchievementManager restored;
+    FT_ASSERT(saves.deserialize_achievements(json.c_str(), restored));
+    FT_ASSERT_EQ(ACHIEVEMENT_STATUS_COMPLETED, restored.get_status(ACHIEVEMENT_SECOND_HOME));
+    FT_ASSERT_EQ(ACHIEVEMENT_STATUS_COMPLETED, restored.get_status(ACHIEVEMENT_CONVOY_STREAK_GUARDIAN));
+    FT_ASSERT_EQ(6, restored.get_progress(ACHIEVEMENT_CONVOY_STREAK_GUARDIAN));
+    FT_ASSERT_EQ(1, restored.get_progress(ACHIEVEMENT_SECOND_HOME));
+
+    return 1;
+}
+
 int verify_campaign_checkpoint_flow()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
@@ -372,6 +480,14 @@ int verify_campaign_checkpoint_flow()
     game.save_campaign_checkpoint(ft_string("manual_checkpoint"));
     FT_ASSERT(game.has_campaign_checkpoint());
     FT_ASSERT(ft_strcmp(game.get_campaign_checkpoint_tag().c_str(), "manual_checkpoint") == 0);
+    ft_string checkpoint_planets = game.get_campaign_planet_checkpoint();
+    ft_string checkpoint_fleets = game.get_campaign_fleet_checkpoint();
+    ft_string checkpoint_research = game.get_campaign_research_checkpoint();
+    ft_string checkpoint_achievements = game.get_campaign_achievement_checkpoint();
+    FT_ASSERT(checkpoint_research.size() > 0);
+    FT_ASSERT(checkpoint_achievements.size() > 0);
+    int baseline_research_achievement_status = game.get_achievement_status(ACHIEVEMENT_RESEARCH_PIONEER);
+    int baseline_research_achievement_progress = game.get_achievement_progress(ACHIEVEMENT_RESEARCH_PIONEER);
 
     game.set_ore(PLANET_TERRA, ORE_IRON, 0);
     game.remove_fleet(72, -1, -1);
@@ -380,6 +496,72 @@ int verify_campaign_checkpoint_flow()
     FT_ASSERT(game.get_fleet_location(72).type != 0);
     FT_ASSERT_EQ(144, game.get_ship_hp(72, ship_id));
     FT_ASSERT_EQ(222, game.get_ship_shield(72, ship_id));
+
+    FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_UNLOCK_MARS));
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    game.save_campaign_checkpoint(ft_string("research_in_progress"));
+    ft_string progress_planets = game.get_campaign_planet_checkpoint();
+    ft_string progress_fleets = game.get_campaign_fleet_checkpoint();
+    ft_string progress_research = game.get_campaign_research_checkpoint();
+    ft_string progress_achievements = game.get_campaign_achievement_checkpoint();
+    double remaining_before_tick = game.get_research_time_remaining(RESEARCH_UNLOCK_MARS);
+    FT_ASSERT(remaining_before_tick > 0.0);
+
+    game.tick(120.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_MARS));
+    FT_ASSERT(game.get_achievement_progress(ACHIEVEMENT_RESEARCH_PIONEER)
+        >= baseline_research_achievement_progress);
+
+    FT_ASSERT(game.load_campaign_from_save(progress_planets, progress_fleets,
+        progress_research, progress_achievements));
+    FT_ASSERT_EQ(RESEARCH_STATUS_IN_PROGRESS, game.get_research_status(RESEARCH_UNLOCK_MARS));
+    double remaining_after_restore = game.get_research_time_remaining(RESEARCH_UNLOCK_MARS);
+    FT_ASSERT(remaining_after_restore > 0.0);
+    FT_ASSERT(remaining_after_restore <= remaining_before_tick);
+    FT_ASSERT_EQ(baseline_research_achievement_status,
+        game.get_achievement_status(ACHIEVEMENT_RESEARCH_PIONEER));
+    FT_ASSERT_EQ(baseline_research_achievement_progress,
+        game.get_achievement_progress(ACHIEVEMENT_RESEARCH_PIONEER));
+
+    FT_ASSERT(game.load_campaign_from_save(checkpoint_planets, checkpoint_fleets,
+        checkpoint_research, checkpoint_achievements));
+
+    return 1;
+}
+
+int verify_campaign_rejects_invalid_save()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    game.set_ore(PLANET_TERRA, ORE_IRON, 42);
+    game.create_fleet(54);
+    int ship_id = game.create_ship(54, SHIP_SHIELD);
+    FT_ASSERT(ship_id != 0);
+    game.set_ship_hp(54, ship_id, 133);
+    ft_location baseline_location = game.get_fleet_location(54);
+    int baseline_achievement_status = game.get_achievement_status(ACHIEVEMENT_SECOND_HOME);
+    int baseline_achievement_progress = game.get_achievement_progress(ACHIEVEMENT_SECOND_HOME);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    double remaining_before = game.get_research_time_remaining(RESEARCH_UNLOCK_MARS);
+    FT_ASSERT(remaining_before > 0.0);
+    int baseline_research_status = game.get_research_status(RESEARCH_UNLOCK_MARS);
+
+    ft_string invalid_payload("not json");
+    FT_ASSERT(!game.load_campaign_from_save(invalid_payload, invalid_payload,
+        invalid_payload, invalid_payload));
+
+    FT_ASSERT_EQ(42, game.get_ore(PLANET_TERRA, ORE_IRON));
+    FT_ASSERT_EQ(133, game.get_ship_hp(54, ship_id));
+    ft_location restored_location = game.get_fleet_location(54);
+    FT_ASSERT_EQ(baseline_location.type, restored_location.type);
+    FT_ASSERT_EQ(baseline_location.from, restored_location.from);
+    FT_ASSERT_EQ(baseline_location.to, restored_location.to);
+    FT_ASSERT_EQ(baseline_research_status, game.get_research_status(RESEARCH_UNLOCK_MARS));
+    double remaining_after = game.get_research_time_remaining(RESEARCH_UNLOCK_MARS);
+    FT_ASSERT(ft_absolute(remaining_after - remaining_before) < 0.000001);
+    FT_ASSERT_EQ(baseline_achievement_status,
+        game.get_achievement_status(ACHIEVEMENT_SECOND_HOME));
+    FT_ASSERT_EQ(baseline_achievement_progress,
+        game.get_achievement_progress(ACHIEVEMENT_SECOND_HOME));
 
     return 1;
 }

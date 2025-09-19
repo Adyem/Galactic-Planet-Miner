@@ -153,6 +153,8 @@ private:
     int                                          _rebellion_branch_pending_assault;
     ft_string                                    _last_planet_checkpoint;
     ft_string                                    _last_fleet_checkpoint;
+    ft_string                                    _last_research_checkpoint;
+    ft_string                                    _last_achievement_checkpoint;
     ft_string                                    _last_checkpoint_tag;
     bool                                         _has_checkpoint;
 
@@ -350,8 +352,11 @@ public:
     const ft_string &get_campaign_planet_checkpoint() const noexcept;
     const ft_string &get_campaign_fleet_checkpoint() const noexcept;
     const ft_string &get_campaign_checkpoint_tag() const noexcept;
+    const ft_string &get_campaign_research_checkpoint() const noexcept;
+    const ft_string &get_campaign_achievement_checkpoint() const noexcept;
     bool reload_campaign_checkpoint() noexcept;
-    bool load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json) noexcept;
+    bool load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json,
+                                 const ft_string &research_json, const ft_string &achievement_json) noexcept;
 };
 
 #endif
