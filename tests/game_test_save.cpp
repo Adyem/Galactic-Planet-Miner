@@ -1,4 +1,5 @@
 #include <cmath>
+#include <climits>
 #include <limits>
 
 #include "../libft/Libft/libft.hpp"
@@ -585,6 +586,524 @@ int verify_save_system_extreme_scaling()
     FT_ASSERT(found_gold);
     FT_ASSERT(std::isinf(carry_gold));
     FT_ASSERT(carry_gold < 0.0);
+
+    return 1;
+}
+
+int verify_save_system_massive_payload()
+{
+    SaveSystem saves;
+
+    const int planet_base_id = 1000;
+    const int planet_count = 18;
+    const int resource_count = 16;
+    const int item_count = 12;
+    ft_map<int, ft_sharedptr<ft_planet> > planets;
+    for (int planet_index = 0; planet_index < planet_count; ++planet_index)
+    {
+        int planet_id = planet_base_id + planet_index;
+        ft_sharedptr<ft_planet> planet(new ft_planet(planet_id));
+        FT_ASSERT(planet);
+        for (int resource_index = 0; resource_index < resource_count; ++resource_index)
+        {
+            int resource_id = 2000 + resource_index;
+            double base_rate = static_cast<double>((planet_index + 1)
+                * (resource_index + 1));
+            double rate;
+            if ((resource_index % 3) == 0)
+                rate = -base_rate * 0.5;
+            else
+                rate = base_rate * 0.125 + static_cast<double>(planet_index);
+            planet->register_resource(resource_id, rate);
+            int amount = (planet_index + 1) * (resource_index + 1) * 7;
+            planet->set_resource(resource_id, amount);
+            double carry_base = static_cast<double>((planet_index + 1)
+                * (resource_index + 1));
+            double carry;
+            if ((resource_index % 2) == 0)
+                carry = 0.25 * carry_base;
+            else
+                carry = -0.125 * carry_base;
+            planet->set_carryover(resource_id, carry);
+        }
+        for (int item_index = 0; item_index < item_count; ++item_index)
+        {
+            int item_id = 4000 + item_index;
+            planet->ensure_item_slot(item_id);
+            int amount = (planet_index + 1) * (item_index + 1) * 11;
+            planet->set_resource(item_id, amount);
+        }
+        planets.insert(planet_id, planet);
+    }
+
+    const int fleet_base_id = 900;
+    const int fleet_count = 24;
+    const int ships_per_fleet = 10;
+    const int ship_types[] = {
+        SHIP_SHIELD,
+        SHIP_RADAR,
+        SHIP_SALVAGE,
+        SHIP_CAPITAL,
+        SHIP_TRANSPORT,
+        SHIP_CORVETTE,
+        SHIP_INTERCEPTOR,
+        SHIP_FRIGATE_SUPPORT
+    };
+    const int ship_type_count = static_cast<int>(sizeof(ship_types)
+        / sizeof(ship_types[0]));
+    const int ship_roles[] = {
+        SHIP_ROLE_LINE,
+        SHIP_ROLE_SUPPORT,
+        SHIP_ROLE_TRANSPORT
+    };
+    const int ship_role_count = static_cast<int>(sizeof(ship_roles)
+        / sizeof(ship_roles[0]));
+    const int behavior_cycle[] = {
+        SHIP_BEHAVIOR_LINE_HOLD,
+        SHIP_BEHAVIOR_FLANK_SWEEP,
+        SHIP_BEHAVIOR_SCREEN_SUPPORT,
+        SHIP_BEHAVIOR_CHARGE,
+        SHIP_BEHAVIOR_RETREAT,
+        SHIP_BEHAVIOR_WITHDRAW_SUPPORT,
+        SHIP_BEHAVIOR_LAST_STAND
+    };
+    const int behavior_count = static_cast<int>(sizeof(behavior_cycle)
+        / sizeof(behavior_cycle[0]));
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    for (int fleet_index = 0; fleet_index < fleet_count; ++fleet_index)
+    {
+        int fleet_id = fleet_base_id + fleet_index;
+        ft_sharedptr<ft_fleet> fleet(new ft_fleet(fleet_id));
+        FT_ASSERT(fleet);
+        if ((fleet_index % 3) == 0)
+            fleet->set_location_planet(PLANET_TERRA);
+        else if ((fleet_index % 3) == 1)
+            fleet->set_location_travel(PLANET_TERRA, PLANET_MARS,
+                60.0 + static_cast<double>(fleet_index) * 3.5);
+        else
+            fleet->set_location_misc(MISC_OUTPOST_NEBULA_X);
+        double veterancy = static_cast<double>(fleet_index) * 0.75;
+        if ((fleet_index % 2) == 1)
+            veterancy += 1.0;
+        fleet->set_escort_veterancy(veterancy);
+        for (int ship_index = 0; ship_index < ships_per_fleet; ++ship_index)
+        {
+            ft_ship snapshot;
+            snapshot.id = 5000 + fleet_index * 100 + ship_index;
+            snapshot.type = ship_types[ship_index % ship_type_count];
+            snapshot.armor = (fleet_index + 1) * (ship_index + 1) * 3;
+            snapshot.hp = (fleet_index + 2) * (ship_index + 5);
+            snapshot.shield = (fleet_index + 3) * (ship_index + 2);
+            snapshot.max_hp = snapshot.hp + 50;
+            snapshot.max_shield = snapshot.shield + 25;
+            snapshot.max_speed = 10.0 + static_cast<double>(ship_index) * 2.5
+                + static_cast<double>(fleet_index) * 0.25;
+            snapshot.acceleration = 1.0
+                + static_cast<double>(ship_index) * 0.5
+                + static_cast<double>(fleet_index) * 0.1;
+            snapshot.turn_speed = 30.0
+                + static_cast<double>(ship_index) * 1.75
+                + static_cast<double>(fleet_index) * 0.5;
+            snapshot.combat_behavior = behavior_cycle[(ship_index + fleet_index)
+                % behavior_count];
+            snapshot.outnumbered_behavior = behavior_cycle[(ship_index
+                + fleet_index + 1) % behavior_count];
+            snapshot.unescorted_behavior = behavior_cycle[(ship_index
+                + fleet_index + 2) % behavior_count];
+            snapshot.low_hp_behavior = behavior_cycle[(ship_index + fleet_index + 3)
+                % behavior_count];
+            snapshot.role = ship_roles[(ship_index + fleet_index) % ship_role_count];
+            fleet->add_ship_snapshot(snapshot);
+        }
+        fleets.insert(fleet_id, fleet);
+    }
+
+    ft_string planet_json = saves.serialize_planets(planets);
+    ft_string fleet_json = saves.serialize_fleets(fleets);
+    FT_ASSERT(planet_json.size() > 0);
+    FT_ASSERT(fleet_json.size() > 0);
+
+    ft_map<int, ft_sharedptr<ft_planet> > restored_planets;
+    ft_map<int, ft_sharedptr<ft_fleet> > restored_fleets;
+    FT_ASSERT(saves.deserialize_planets(planet_json.c_str(), restored_planets));
+    FT_ASSERT(saves.deserialize_fleets(fleet_json.c_str(), restored_fleets));
+    FT_ASSERT_EQ(planets.size(), restored_planets.size());
+    FT_ASSERT_EQ(fleets.size(), restored_fleets.size());
+
+    size_t restored_planet_count = restored_planets.size();
+    const Pair<int, ft_sharedptr<ft_planet> > *planet_entries = restored_planets.end();
+    planet_entries -= restored_planet_count;
+    for (size_t idx = 0; idx < restored_planet_count; ++idx)
+    {
+        int planet_id = planet_entries[idx].key;
+        int planet_index = planet_id - planet_base_id;
+        FT_ASSERT(planet_index >= 0 && planet_index < planet_count);
+        ft_sharedptr<ft_planet> restored_planet = planet_entries[idx].value;
+        FT_ASSERT(restored_planet);
+        for (int resource_index = 0; resource_index < resource_count; ++resource_index)
+        {
+            int resource_id = 2000 + resource_index;
+            double base_rate = static_cast<double>((planet_index + 1)
+                * (resource_index + 1));
+            double expected_rate;
+            if ((resource_index % 3) == 0)
+                expected_rate = -base_rate * 0.5;
+            else
+                expected_rate = base_rate * 0.125
+                    + static_cast<double>(planet_index);
+            double restored_rate = restored_planet->get_rate(resource_id);
+            FT_ASSERT(ft_absolute(restored_rate - expected_rate) < 0.000001);
+            int expected_amount = (planet_index + 1) * (resource_index + 1) * 7;
+            FT_ASSERT_EQ(expected_amount, restored_planet->get_resource(resource_id));
+            double carry_base = static_cast<double>((planet_index + 1)
+                * (resource_index + 1));
+            double expected_carry;
+            if ((resource_index % 2) == 0)
+                expected_carry = 0.25 * carry_base;
+            else
+                expected_carry = -0.125 * carry_base;
+            double restored_carry = 0.0;
+            bool found_carry = false;
+            const ft_vector<Pair<int, double> > &carry_entries = restored_planet->get_carryover();
+            for (size_t carry_idx = 0; carry_idx < carry_entries.size(); ++carry_idx)
+            {
+                if (carry_entries[carry_idx].key == resource_id)
+                {
+                    restored_carry = carry_entries[carry_idx].value;
+                    found_carry = true;
+                    break;
+                }
+            }
+            FT_ASSERT(found_carry);
+            FT_ASSERT(ft_absolute(restored_carry - expected_carry) < 0.000001);
+        }
+        for (int item_index = 0; item_index < item_count; ++item_index)
+        {
+            int item_id = 4000 + item_index;
+            int expected_amount = (planet_index + 1) * (item_index + 1) * 11;
+            FT_ASSERT_EQ(expected_amount, restored_planet->get_resource(item_id));
+        }
+    }
+
+    size_t restored_fleet_count = restored_fleets.size();
+    const Pair<int, ft_sharedptr<ft_fleet> > *fleet_entries = restored_fleets.end();
+    fleet_entries -= restored_fleet_count;
+    for (size_t idx = 0; idx < restored_fleet_count; ++idx)
+    {
+        int fleet_id = fleet_entries[idx].key;
+        int fleet_index = fleet_id - fleet_base_id;
+        FT_ASSERT(fleet_index >= 0 && fleet_index < fleet_count);
+        ft_sharedptr<ft_fleet> restored_fleet = fleet_entries[idx].value;
+        FT_ASSERT(restored_fleet);
+        ft_location location = restored_fleet->get_location();
+        if ((fleet_index % 3) == 0)
+        {
+            FT_ASSERT_EQ(LOCATION_PLANET, location.type);
+            FT_ASSERT_EQ(PLANET_TERRA, location.from);
+        }
+        else if ((fleet_index % 3) == 1)
+        {
+            FT_ASSERT_EQ(LOCATION_TRAVEL, location.type);
+            FT_ASSERT_EQ(PLANET_TERRA, location.from);
+            FT_ASSERT_EQ(PLANET_MARS, location.to);
+            double expected_travel = 60.0 + static_cast<double>(fleet_index) * 3.5;
+            FT_ASSERT(ft_absolute(restored_fleet->get_travel_time() - expected_travel) < 0.000001);
+        }
+        else
+        {
+            FT_ASSERT_EQ(LOCATION_MISC, location.type);
+            FT_ASSERT_EQ(MISC_OUTPOST_NEBULA_X, location.misc);
+        }
+        double expected_veterancy = static_cast<double>(fleet_index) * 0.75;
+        if ((fleet_index % 2) == 1)
+            expected_veterancy += 1.0;
+        FT_ASSERT(ft_absolute(restored_fleet->get_escort_veterancy()
+            - expected_veterancy) < 0.000001);
+        FT_ASSERT_EQ(ships_per_fleet, restored_fleet->get_ship_count());
+        for (int ship_index = 0; ship_index < ships_per_fleet; ++ship_index)
+        {
+            int ship_id = 5000 + fleet_index * 100 + ship_index;
+            const ft_ship *restored_ship = restored_fleet->get_ship(ship_id);
+            FT_ASSERT(restored_ship != ft_nullptr);
+            int expected_type = ship_types[ship_index % ship_type_count];
+            FT_ASSERT_EQ(expected_type, restored_ship->type);
+            int expected_armor = (fleet_index + 1) * (ship_index + 1) * 3;
+            FT_ASSERT_EQ(expected_armor, restored_ship->armor);
+            int expected_hp = (fleet_index + 2) * (ship_index + 5);
+            FT_ASSERT_EQ(expected_hp, restored_ship->hp);
+            int expected_shield = (fleet_index + 3) * (ship_index + 2);
+            FT_ASSERT_EQ(expected_shield, restored_ship->shield);
+            FT_ASSERT_EQ(expected_hp + 50, restored_ship->max_hp);
+            FT_ASSERT_EQ(expected_shield + 25, restored_ship->max_shield);
+            double expected_speed = 10.0 + static_cast<double>(ship_index) * 2.5
+                + static_cast<double>(fleet_index) * 0.25;
+            FT_ASSERT(ft_absolute(restored_ship->max_speed - expected_speed) < 0.000001);
+            double expected_acceleration = 1.0
+                + static_cast<double>(ship_index) * 0.5
+                + static_cast<double>(fleet_index) * 0.1;
+            FT_ASSERT(ft_absolute(restored_ship->acceleration - expected_acceleration)
+                < 0.000001);
+            double expected_turn_speed = 30.0
+                + static_cast<double>(ship_index) * 1.75
+                + static_cast<double>(fleet_index) * 0.5;
+            FT_ASSERT(ft_absolute(restored_ship->turn_speed - expected_turn_speed)
+                < 0.000001);
+            int expected_behavior = behavior_cycle[(ship_index + fleet_index) % behavior_count];
+            FT_ASSERT_EQ(expected_behavior, restored_ship->combat_behavior);
+            int expected_outnumbered = behavior_cycle[(ship_index + fleet_index + 1)
+                % behavior_count];
+            FT_ASSERT_EQ(expected_outnumbered, restored_ship->outnumbered_behavior);
+            int expected_unescorted = behavior_cycle[(ship_index + fleet_index + 2)
+                % behavior_count];
+            FT_ASSERT_EQ(expected_unescorted, restored_ship->unescorted_behavior);
+            int expected_low_hp = behavior_cycle[(ship_index + fleet_index + 3)
+                % behavior_count];
+            FT_ASSERT_EQ(expected_low_hp, restored_ship->low_hp_behavior);
+            int expected_role = ship_roles[(ship_index + fleet_index) % ship_role_count];
+            FT_ASSERT_EQ(expected_role, restored_ship->role);
+        }
+    }
+
+    return 1;
+}
+
+int verify_save_system_sparse_entries()
+{
+    SaveSystem saves;
+
+    json_document planet_doc;
+    json_group *valid_planet = planet_doc.create_group("planet_valid");
+    FT_ASSERT(valid_planet != ft_nullptr);
+    planet_doc.append_group(valid_planet);
+    json_item *planet_id_item = planet_doc.create_item("id", 1234);
+    FT_ASSERT(planet_id_item != ft_nullptr);
+    planet_doc.add_item(valid_planet, planet_id_item);
+    json_item *planet_amount = planet_doc.create_item("resource_2000", 9001);
+    FT_ASSERT(planet_amount != ft_nullptr);
+    planet_doc.add_item(valid_planet, planet_amount);
+    json_item *planet_rate = planet_doc.create_item("rate_2000", 2500000);
+    FT_ASSERT(planet_rate != ft_nullptr);
+    planet_doc.add_item(valid_planet, planet_rate);
+    json_item *planet_carry = planet_doc.create_item("carryover_2000", -1250000);
+    FT_ASSERT(planet_carry != ft_nullptr);
+    planet_doc.add_item(valid_planet, planet_carry);
+    json_item *planet_item = planet_doc.create_item("item_4000", 33);
+    FT_ASSERT(planet_item != ft_nullptr);
+    planet_doc.add_item(valid_planet, planet_item);
+
+    json_group *missing_id = planet_doc.create_group("planet_missing_id");
+    FT_ASSERT(missing_id != ft_nullptr);
+    planet_doc.append_group(missing_id);
+    json_item *missing_amount = planet_doc.create_item("resource_1", 15);
+    FT_ASSERT(missing_amount != ft_nullptr);
+    planet_doc.add_item(missing_id, missing_amount);
+
+    json_group *invalid_planet = planet_doc.create_group("planet_invalid_values");
+    FT_ASSERT(invalid_planet != ft_nullptr);
+    planet_doc.append_group(invalid_planet);
+    json_item *invalid_id = planet_doc.create_item("id", 5678);
+    FT_ASSERT(invalid_id != ft_nullptr);
+    planet_doc.add_item(invalid_planet, invalid_id);
+    json_item *invalid_amount_item = planet_doc.create_item("resource_9000", -42);
+    FT_ASSERT(invalid_amount_item != ft_nullptr);
+    planet_doc.add_item(invalid_planet, invalid_amount_item);
+    json_item *invalid_rate_item = planet_doc.create_item("rate_9000", "invalid");
+    FT_ASSERT(invalid_rate_item != ft_nullptr);
+    planet_doc.add_item(invalid_planet, invalid_rate_item);
+    ft_string nan_sentinel = ft_to_string(LONG_MIN);
+    json_item *invalid_carry_item = planet_doc.create_item("carryover_9000",
+        nan_sentinel.c_str());
+    FT_ASSERT(invalid_carry_item != ft_nullptr);
+    planet_doc.add_item(invalid_planet, invalid_carry_item);
+
+    char *planet_raw = planet_doc.write_to_string();
+    FT_ASSERT(planet_raw != ft_nullptr);
+    ft_string planet_json(planet_raw);
+    cma_free(planet_raw);
+
+    ft_map<int, ft_sharedptr<ft_planet> > planets;
+    FT_ASSERT(saves.deserialize_planets(planet_json.c_str(), planets));
+    FT_ASSERT_EQ(2u, planets.size());
+
+    Pair<int, ft_sharedptr<ft_planet> > *valid_entry = planets.find(1234);
+    FT_ASSERT(valid_entry != ft_nullptr);
+    ft_sharedptr<ft_planet> restored_valid = valid_entry->value;
+    FT_ASSERT(restored_valid);
+    FT_ASSERT_EQ(9001, restored_valid->get_resource(2000));
+    FT_ASSERT(ft_absolute(restored_valid->get_rate(2000) - 2.5) < 0.000001);
+    const ft_vector<Pair<int, double> > &valid_carry = restored_valid->get_carryover();
+    bool found_carry = false;
+    double carry_value = 0.0;
+    for (size_t idx = 0; idx < valid_carry.size(); ++idx)
+    {
+        if (valid_carry[idx].key == 2000)
+        {
+            carry_value = valid_carry[idx].value;
+            found_carry = true;
+            break;
+        }
+    }
+    FT_ASSERT(found_carry);
+    FT_ASSERT(ft_absolute(carry_value + 1.25) < 0.000001);
+    FT_ASSERT_EQ(33, restored_valid->get_resource(4000));
+
+    Pair<int, ft_sharedptr<ft_planet> > *invalid_entry = planets.find(5678);
+    FT_ASSERT(invalid_entry != ft_nullptr);
+    ft_sharedptr<ft_planet> restored_invalid = invalid_entry->value;
+    FT_ASSERT(restored_invalid);
+    FT_ASSERT_EQ(-42, restored_invalid->get_resource(9000));
+    FT_ASSERT(ft_absolute(restored_invalid->get_rate(9000)) < 0.000001);
+    const ft_vector<Pair<int, double> > &invalid_carry = restored_invalid->get_carryover();
+    bool found_invalid_carry = false;
+    double invalid_carry_value = 0.0;
+    for (size_t idx = 0; idx < invalid_carry.size(); ++idx)
+    {
+        if (invalid_carry[idx].key == 9000)
+        {
+            invalid_carry_value = invalid_carry[idx].value;
+            found_invalid_carry = true;
+            break;
+        }
+    }
+    FT_ASSERT(found_invalid_carry);
+    FT_ASSERT(std::isnan(invalid_carry_value));
+
+    json_document fleet_doc;
+    json_group *valid_fleet = fleet_doc.create_group("fleet_valid");
+    FT_ASSERT(valid_fleet != ft_nullptr);
+    fleet_doc.append_group(valid_fleet);
+    json_item *fleet_id_item = fleet_doc.create_item("id", 2500);
+    FT_ASSERT(fleet_id_item != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_id_item);
+    json_item *fleet_type_item = fleet_doc.create_item("location_type", LOCATION_TRAVEL);
+    FT_ASSERT(fleet_type_item != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_type_item);
+    json_item *fleet_from_item = fleet_doc.create_item("location_from", PLANET_TERRA);
+    FT_ASSERT(fleet_from_item != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_from_item);
+    json_item *fleet_to_item = fleet_doc.create_item("location_to", PLANET_MARS);
+    FT_ASSERT(fleet_to_item != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_to_item);
+    json_item *fleet_travel_item = fleet_doc.create_item("travel_time", 12750000);
+    FT_ASSERT(fleet_travel_item != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_travel_item);
+    json_item *fleet_veterancy_item = fleet_doc.create_item("escort_veterancy", 18500000);
+    FT_ASSERT(fleet_veterancy_item != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_veterancy_item);
+    json_item *fleet_ship_count = fleet_doc.create_item("ship_count", 3);
+    FT_ASSERT(fleet_ship_count != ft_nullptr);
+    fleet_doc.add_item(valid_fleet, fleet_ship_count);
+
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_id", 9100));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_type", SHIP_CAPITAL));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_armor", 450));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_hp", 620));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_shield", 500));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_max_hp", 700));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_max_shield", 560));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_max_speed", 24750000));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_acceleration", 4500000));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_turn_speed", 32500000));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_behavior", SHIP_BEHAVIOR_LAST_STAND));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_outnumbered", SHIP_BEHAVIOR_CHARGE));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_unescorted", SHIP_BEHAVIOR_WITHDRAW_SUPPORT));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_low_hp", SHIP_BEHAVIOR_RETREAT));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_0_role", SHIP_ROLE_SUPPORT));
+
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_1_id", 9101));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_1_type", SHIP_SHIELD));
+
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_2_id", 9102));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_2_type", SHIP_RADAR));
+    fleet_doc.add_item(valid_fleet, fleet_doc.create_item("ship_2_max_speed", 16250000));
+
+    json_group *missing_fleet = fleet_doc.create_group("fleet_missing_id");
+    FT_ASSERT(missing_fleet != ft_nullptr);
+    fleet_doc.append_group(missing_fleet);
+    fleet_doc.add_item(missing_fleet, fleet_doc.create_item("ship_count", 1));
+    fleet_doc.add_item(missing_fleet, fleet_doc.create_item("ship_0_id", 9999));
+
+    json_group *sparse_fleet = fleet_doc.create_group("fleet_sparse");
+    FT_ASSERT(sparse_fleet != ft_nullptr);
+    fleet_doc.append_group(sparse_fleet);
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("id", 2600));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("location_type", LOCATION_MISC));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("location_misc", MISC_ASTEROID_HIDEOUT));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("escort_veterancy", -5000));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_count", 4));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_0_id", 9200));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_0_type", SHIP_TRANSPORT));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_0_hp", 180));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_0_behavior", SHIP_BEHAVIOR_SCREEN_SUPPORT));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_0_role", SHIP_ROLE_TRANSPORT));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_3_id", 9203));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_3_type", SHIP_INTERCEPTOR));
+    fleet_doc.add_item(sparse_fleet, fleet_doc.create_item("ship_3_max_speed", 36500000));
+
+    char *fleet_raw = fleet_doc.write_to_string();
+    FT_ASSERT(fleet_raw != ft_nullptr);
+    ft_string fleet_json(fleet_raw);
+    cma_free(fleet_raw);
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    FT_ASSERT(saves.deserialize_fleets(fleet_json.c_str(), fleets));
+    FT_ASSERT_EQ(2u, fleets.size());
+
+    Pair<int, ft_sharedptr<ft_fleet> > *valid_fleet_entry = fleets.find(2500);
+    FT_ASSERT(valid_fleet_entry != ft_nullptr);
+    ft_sharedptr<ft_fleet> restored_fleet_valid = valid_fleet_entry->value;
+    FT_ASSERT(restored_fleet_valid);
+    ft_location valid_location = restored_fleet_valid->get_location();
+    FT_ASSERT_EQ(LOCATION_TRAVEL, valid_location.type);
+    FT_ASSERT_EQ(PLANET_TERRA, valid_location.from);
+    FT_ASSERT_EQ(PLANET_MARS, valid_location.to);
+    FT_ASSERT(ft_absolute(restored_fleet_valid->get_travel_time() - 12.75) < 0.000001);
+    FT_ASSERT(ft_absolute(restored_fleet_valid->get_escort_veterancy() - 18.5) < 0.000001);
+    FT_ASSERT_EQ(3, restored_fleet_valid->get_ship_count());
+    const ft_ship *valid_ship_zero = restored_fleet_valid->get_ship(9100);
+    FT_ASSERT(valid_ship_zero != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_CAPITAL, valid_ship_zero->type);
+    FT_ASSERT_EQ(450, valid_ship_zero->armor);
+    FT_ASSERT_EQ(620, valid_ship_zero->hp);
+    FT_ASSERT_EQ(500, valid_ship_zero->shield);
+    FT_ASSERT_EQ(700, valid_ship_zero->max_hp);
+    FT_ASSERT_EQ(560, valid_ship_zero->max_shield);
+    FT_ASSERT(ft_absolute(valid_ship_zero->max_speed - 24.75) < 0.000001);
+    FT_ASSERT(ft_absolute(valid_ship_zero->acceleration - 4.5) < 0.000001);
+    FT_ASSERT(ft_absolute(valid_ship_zero->turn_speed - 32.5) < 0.000001);
+    FT_ASSERT_EQ(SHIP_BEHAVIOR_LAST_STAND, valid_ship_zero->combat_behavior);
+    FT_ASSERT_EQ(SHIP_BEHAVIOR_CHARGE, valid_ship_zero->outnumbered_behavior);
+    FT_ASSERT_EQ(SHIP_BEHAVIOR_WITHDRAW_SUPPORT, valid_ship_zero->unescorted_behavior);
+    FT_ASSERT_EQ(SHIP_BEHAVIOR_RETREAT, valid_ship_zero->low_hp_behavior);
+    FT_ASSERT_EQ(SHIP_ROLE_SUPPORT, valid_ship_zero->role);
+    const ft_ship *valid_ship_one = restored_fleet_valid->get_ship(9101);
+    FT_ASSERT(valid_ship_one != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_SHIELD, valid_ship_one->type);
+    FT_ASSERT_EQ(0, valid_ship_one->hp);
+    const ft_ship *valid_ship_two = restored_fleet_valid->get_ship(9102);
+    FT_ASSERT(valid_ship_two != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_RADAR, valid_ship_two->type);
+    FT_ASSERT(ft_absolute(valid_ship_two->max_speed - 16.25) < 0.000001);
+
+    Pair<int, ft_sharedptr<ft_fleet> > *sparse_fleet_entry = fleets.find(2600);
+    FT_ASSERT(sparse_fleet_entry != ft_nullptr);
+    ft_sharedptr<ft_fleet> restored_sparse = sparse_fleet_entry->value;
+    FT_ASSERT(restored_sparse);
+    ft_location sparse_location = restored_sparse->get_location();
+    FT_ASSERT_EQ(LOCATION_MISC, sparse_location.type);
+    FT_ASSERT_EQ(MISC_ASTEROID_HIDEOUT, sparse_location.misc);
+    FT_ASSERT(ft_absolute(restored_sparse->get_escort_veterancy()) < 0.000001);
+    FT_ASSERT_EQ(2, restored_sparse->get_ship_count());
+    const ft_ship *sparse_ship_zero = restored_sparse->get_ship(9200);
+    FT_ASSERT(sparse_ship_zero != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_TRANSPORT, sparse_ship_zero->type);
+    FT_ASSERT_EQ(180, sparse_ship_zero->hp);
+    FT_ASSERT_EQ(SHIP_BEHAVIOR_SCREEN_SUPPORT, sparse_ship_zero->combat_behavior);
+    FT_ASSERT_EQ(SHIP_ROLE_TRANSPORT, sparse_ship_zero->role);
+    const ft_ship *sparse_ship_three = restored_sparse->get_ship(9203);
+    FT_ASSERT(sparse_ship_three != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_INTERCEPTOR, sparse_ship_three->type);
+    FT_ASSERT(ft_absolute(sparse_ship_three->max_speed - 36.5) < 0.000001);
 
     return 1;
 }

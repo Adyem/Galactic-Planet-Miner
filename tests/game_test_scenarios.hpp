@@ -39,6 +39,8 @@ int verify_save_system_invalid_inputs();
 int validate_save_system_serialized_samples();
 int verify_save_system_allocation_failures();
 int verify_save_system_extreme_scaling();
+int verify_save_system_massive_payload();
+int verify_save_system_sparse_entries();
 int verify_research_save_round_trip();
 int verify_achievement_save_round_trip();
 int verify_campaign_checkpoint_flow();
