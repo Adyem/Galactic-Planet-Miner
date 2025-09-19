@@ -182,7 +182,8 @@ void Game::handle_quest_completion(int quest_id)
     this->record_quest_achievement(quest_id);
     ft_string tag("quest_completed_");
     tag.append(ft_to_string(quest_id));
-    this->save_campaign_checkpoint(tag);
+    if (!this->save_campaign_checkpoint(tag))
+        return ;
 }
 
 void Game::handle_quest_failure(int quest_id)

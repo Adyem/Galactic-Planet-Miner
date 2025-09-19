@@ -43,6 +43,8 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _last_achievement_checkpoint(),
       _last_checkpoint_tag(),
       _has_checkpoint(false),
+      _failed_checkpoint_tags(),
+      _force_checkpoint_failure(false),
       _backend_online(true)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
@@ -787,8 +789,10 @@ void Game::apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snap
     }
 }
 
-void Game::checkpoint_campaign_state_internal(const ft_string &tag)
+bool Game::checkpoint_campaign_state_internal(const ft_string &tag)
 {
+    if (this->_force_checkpoint_failure)
+        return false;
     ft_string planet_json = this->_save_system.serialize_planets(this->_planets);
     ft_string fleet_json = this->_save_system.serialize_fleets(this->_fleets);
     ft_string research_json = this->_save_system.serialize_research(this->_research);
@@ -798,18 +802,40 @@ void Game::checkpoint_campaign_state_internal(const ft_string &tag)
     bool research_valid = (research_json.size() > 0);
     bool achievements_valid = (achievement_json.size() > 0);
     if (!planets_valid || !fleets_valid || !research_valid || !achievements_valid)
-        return ;
+        return false;
     this->_last_planet_checkpoint = planet_json;
     this->_last_fleet_checkpoint = fleet_json;
     this->_last_research_checkpoint = research_json;
     this->_last_achievement_checkpoint = achievement_json;
     this->_last_checkpoint_tag = tag;
     this->_has_checkpoint = true;
+    return true;
 }
 
-void Game::save_campaign_checkpoint(const ft_string &tag) noexcept
+void Game::record_checkpoint_failure(const ft_string &tag) noexcept
 {
-    this->checkpoint_campaign_state_internal(tag);
+    this->_failed_checkpoint_tags.push_back(tag);
+    ft_string failure_message("Checkpoint save failed: ");
+    failure_message.append(tag);
+    this->_lore_log.push_back(failure_message);
+}
+
+bool Game::save_campaign_checkpoint(const ft_string &tag) noexcept
+{
+    bool saved = this->checkpoint_campaign_state_internal(tag);
+    if (!saved)
+        this->record_checkpoint_failure(tag);
+    return saved;
+}
+
+const ft_vector<ft_string> &Game::get_failed_checkpoint_tags() const noexcept
+{
+    return this->_failed_checkpoint_tags;
+}
+
+void Game::set_force_checkpoint_failure(bool enabled) noexcept
+{
+    this->_force_checkpoint_failure = enabled;
 }
 
 bool Game::has_campaign_checkpoint() const noexcept

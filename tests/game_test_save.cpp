@@ -573,7 +573,7 @@ int verify_campaign_checkpoint_flow()
     game.set_ship_hp(72, ship_id, 144);
     game.set_ship_shield(72, ship_id, 222);
     game.set_ore(PLANET_TERRA, ORE_IRON, 85);
-    game.save_campaign_checkpoint(ft_string("manual_checkpoint"));
+    FT_ASSERT(game.save_campaign_checkpoint(ft_string("manual_checkpoint")));
     FT_ASSERT(game.has_campaign_checkpoint());
     FT_ASSERT(ft_strcmp(game.get_campaign_checkpoint_tag().c_str(), "manual_checkpoint") == 0);
     ft_string checkpoint_planets = game.get_campaign_planet_checkpoint();
@@ -595,7 +595,7 @@ int verify_campaign_checkpoint_flow()
 
     FT_ASSERT_EQ(RESEARCH_STATUS_AVAILABLE, game.get_research_status(RESEARCH_UNLOCK_MARS));
     FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
-    game.save_campaign_checkpoint(ft_string("research_in_progress"));
+    FT_ASSERT(game.save_campaign_checkpoint(ft_string("research_in_progress")));
     ft_string progress_planets = game.get_campaign_planet_checkpoint();
     ft_string progress_fleets = game.get_campaign_fleet_checkpoint();
     ft_string progress_research = game.get_campaign_research_checkpoint();
@@ -621,6 +621,27 @@ int verify_campaign_checkpoint_flow()
 
     FT_ASSERT(game.load_campaign_from_save(checkpoint_planets, checkpoint_fleets,
         checkpoint_research, checkpoint_achievements));
+
+    game.set_force_checkpoint_failure(true);
+    ft_string forced_tag("forced_checkpoint_failure");
+    FT_ASSERT(!game.save_campaign_checkpoint(forced_tag));
+    game.set_force_checkpoint_failure(false);
+    const ft_vector<ft_string> &failures = game.get_failed_checkpoint_tags();
+    size_t failure_count = failures.size();
+    FT_ASSERT(failure_count > 0);
+    const ft_string &last_failure = failures[failure_count - 1];
+    FT_ASSERT(ft_strcmp(last_failure.c_str(), forced_tag.c_str()) == 0);
+    FT_ASSERT(ft_strcmp(game.get_campaign_checkpoint_tag().c_str(), "research_in_progress") == 0);
+    const ft_vector<ft_string> &lore_log = game.get_lore_log();
+    size_t lore_count = lore_log.size();
+    FT_ASSERT(lore_count > 0);
+    const ft_string &failure_entry = lore_log[lore_count - 1];
+    ft_string expected_message("Checkpoint save failed: ");
+    expected_message.append(forced_tag);
+    FT_ASSERT(ft_strcmp(failure_entry.c_str(), expected_message.c_str()) == 0);
+    FT_ASSERT(game.has_campaign_checkpoint());
+    FT_ASSERT(game.save_campaign_checkpoint(ft_string("recovered_checkpoint")));
+    FT_ASSERT(ft_strcmp(game.get_campaign_checkpoint_tag().c_str(), "recovered_checkpoint") == 0);
 
     return 1;
 }
