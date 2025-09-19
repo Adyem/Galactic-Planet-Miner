@@ -5,20 +5,50 @@ basic game state management and communication with a backend server using the `l
 
 ## Building and Testing
 
-The project depends on the bundled `libft` static library. To build the test binary and run the
-demonstration tests:
+Before compiling, make sure the `libft` submodule is available so the custom containers, JSON
+helpers, and test harness can link correctly:
+
+```sh
+git submodule update --init --recursive
+```
+
+### Running the suite
+
+The default `make` target builds both the game binary and the consolidated `test` executable. After
+the build finishes, run the automated regression tests:
 
 ```sh
 make
 ./test
 ```
 
-The tests start a minimal HTTP server provided by `libft`, send a POST request through the backend
-client, and verify simple resource mining logic.
+The harness boots the lightweight HTTP server that ships with `libft`, drives the backend client,
+and executes the scenario helpers under `tests/`.
 
-Serialization checkpoints now guard against allocation failures inside the JSON helpers. The
-`verify_save_system_allocation_failures` test simulates failed group and item creation to confirm the
-save system aborts cleanly and reports the error back to the checkpoint flow.
+### Coverage highlights
+
+The campaign regression in `validate_initial_campaign_flow` plays through early quests, research
+unlocks, convoy shipments, and assault triggers to ensure normal pacing still works end-to-end after
+logic changes.【F:tests/game_test_campaign.cpp†L40-L195】 Additional suites in `game_test_backend.cpp`,
+`game_test_support.cpp`, `game_test_energy.cpp`, and friends probe combat hooks, building
+requirements, and resource accounting so broad gameplay changes surface immediately when the suite is
+run.
+
+### Edge cases and extreme scenarios
+
+* `verify_save_system_edge_cases` round-trips empty planet and fleet maps, then feeds sparsely
+  populated JSON blobs to confirm deserializers synthesize default values without crashing.【F:tests/game_test_save.cpp†L158-L233】
+* `verify_save_system_invalid_inputs` protects against null pointers and malformed payloads across
+  planets, fleets, research, and achievements so bad data never mutates live state.【F:tests/game_test_save.cpp†L236-L291】
+* `validate_save_system_serialized_samples` stress-tests serialization scaling by packing enormous
+  stockpiles, veteran fleets, and precision timing into JSON and then verifying every scaled field on
+  restore.【F:tests/game_test_save.cpp†L296-L445】
+* `verify_save_system_allocation_failures` injects allocation hooks that force the JSON writers to
+  fail and proves the save system cleans up and reports the error without leaving stale checkpoint
+  blobs behind.【F:tests/game_test_save.cpp†L448-L491】
+* `verify_save_system_extreme_scaling` pushes the serializers with values near floating-point limits,
+  plus explicit NaN and infinity carryovers, and confirms the restored state preserves those
+  boundary semantics safely.【F:tests/game_test_save.cpp†L493-L583】
 
 ## Game State
 
