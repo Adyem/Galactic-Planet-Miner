@@ -8,12 +8,31 @@
 
 int verify_backend_roundtrip()
 {
+    const ft_string payload("test");
+    const ft_string fallback_prefix("[offline] echo=");
+    const size_t payload_size = payload.size();
+    const size_t fallback_size = fallback_prefix.size();
+
+    BackendClient offline_client(ft_string("127.0.0.1:65535"), ft_string("/"));
+    ft_string offline_response;
+    int offline_status = offline_client.send_state(payload, offline_response);
+    const char *offline_cstr = offline_response.c_str();
+    FT_ASSERT(offline_status != 0);
+    FT_ASSERT(offline_response.size() >= fallback_size + payload_size);
+    FT_ASSERT_EQ(0, ft_strncmp(offline_cstr, fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
+    FT_ASSERT_EQ(0, ft_strcmp(offline_cstr + offline_response.size() - payload_size, payload.c_str()));
+
     BackendClient client(ft_string("127.0.0.1:8080"), ft_string("/"));
     ft_string response;
-    client.send_state(ft_string("test"), response);
+    int status = client.send_state(payload, response);
     const char *resp = response.c_str();
-    FT_ASSERT(response.size() >= 4);
-    FT_ASSERT_EQ(0, ft_strcmp(resp + response.size() - 4, "test"));
+    FT_ASSERT(response.size() >= payload_size);
+    FT_ASSERT_EQ(0, ft_strcmp(resp + response.size() - payload_size, payload.c_str()));
+    if (status != 0)
+    {
+        FT_ASSERT(response.size() >= fallback_size + payload_size);
+        FT_ASSERT_EQ(0, ft_strncmp(resp, fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
+    }
     return 1;
 }
 

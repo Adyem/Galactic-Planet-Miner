@@ -1,4 +1,3 @@
 # Test failure log
 # Outstanding failures:
-# 2025-09-18: tests/game_test_backend.cpp:15: response.size() >= 4
-# 2025-09-19: tests/game_test_backend.cpp:15: response.size() >= 4
+# 2025-09-19: make test: missing libft/Full_Libft.a (libft dependency not available in container)
