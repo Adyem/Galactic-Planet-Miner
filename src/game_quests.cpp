@@ -308,3 +308,8 @@ const ft_vector<ft_string> &Game::get_lore_log() const
     return this->_lore_log;
 }
 
+bool Game::is_backend_online() const
+{
+    return this->_backend_online;
+}
+
