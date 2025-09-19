@@ -1,9 +1,18 @@
 #include "save_system.hpp"
 #include "../libft/CMA/CMA.hpp"
 
+#include <climits>
+#include <cmath>
+#include <limits>
+
 namespace
 {
     const long SAVE_DOUBLE_SCALE = 1000000;
+    const long SAVE_DOUBLE_SENTINEL_NAN = LONG_MIN;
+    const long SAVE_DOUBLE_SENTINEL_NEG_INF = LONG_MIN + 1;
+    const long SAVE_DOUBLE_SENTINEL_POS_INF = LONG_MAX;
+    const long SAVE_DOUBLE_MIN_FINITE = LONG_MIN + 2;
+    const long SAVE_DOUBLE_MAX_FINITE = LONG_MAX - 1;
 }
 
 SaveSystem::SaveSystem() noexcept
@@ -18,17 +27,39 @@ SaveSystem::~SaveSystem() noexcept
 
 long SaveSystem::scale_double_to_long(double value) const noexcept
 {
+    if (std::isnan(value))
+        return SAVE_DOUBLE_SENTINEL_NAN;
+    if (std::isinf(value))
+        return value > 0.0 ? SAVE_DOUBLE_SENTINEL_POS_INF : SAVE_DOUBLE_SENTINEL_NEG_INF;
+    if (SAVE_DOUBLE_SCALE == 0)
+        return 0;
     double scaled = value * static_cast<double>(SAVE_DOUBLE_SCALE);
+    if (!std::isfinite(scaled))
+        return value >= 0.0 ? SAVE_DOUBLE_MAX_FINITE : SAVE_DOUBLE_MIN_FINITE;
     if (scaled >= 0.0)
         scaled += 0.5;
     else
         scaled -= 0.5;
+    if (scaled > static_cast<double>(SAVE_DOUBLE_MAX_FINITE))
+        return SAVE_DOUBLE_MAX_FINITE;
+    if (scaled < static_cast<double>(SAVE_DOUBLE_MIN_FINITE))
+        return SAVE_DOUBLE_MIN_FINITE;
     long result = static_cast<long>(scaled);
     return result;
 }
 
 double SaveSystem::unscale_long_to_double(long value) const noexcept
 {
+    if (value == SAVE_DOUBLE_SENTINEL_NAN)
+        return std::numeric_limits<double>::quiet_NaN();
+    if (value == SAVE_DOUBLE_SENTINEL_POS_INF)
+        return std::numeric_limits<double>::infinity();
+    if (value == SAVE_DOUBLE_SENTINEL_NEG_INF)
+        return -std::numeric_limits<double>::infinity();
+    if (value > SAVE_DOUBLE_MAX_FINITE)
+        value = SAVE_DOUBLE_MAX_FINITE;
+    else if (value < SAVE_DOUBLE_MIN_FINITE)
+        value = SAVE_DOUBLE_MIN_FINITE;
     if (SAVE_DOUBLE_SCALE == 0)
         return 0.0;
     double numerator = static_cast<double>(value);

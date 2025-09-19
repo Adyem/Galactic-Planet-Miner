@@ -1,3 +1,6 @@
+#include <cmath>
+#include <limits>
+
 #include "../libft/Libft/libft.hpp"
 #include "../libft/System_utils/test_runner.hpp"
 #include "../libft/Template/vector.hpp"
@@ -405,6 +408,99 @@ int validate_save_system_serialized_samples()
     FT_ASSERT_EQ(dreadnought.unescorted_behavior, restored_dreadnought->unescorted_behavior);
     FT_ASSERT_EQ(dreadnought.low_hp_behavior, restored_dreadnought->low_hp_behavior);
     FT_ASSERT_EQ(dreadnought.role, restored_dreadnought->role);
+
+    return 1;
+}
+
+int verify_save_system_extreme_scaling()
+{
+    SaveSystem saves;
+
+    ft_map<int, ft_sharedptr<ft_planet> > planets;
+    ft_sharedptr<ft_planet> terra(new ft_planet_terra());
+    double huge_positive = std::numeric_limits<double>::max() / 4.0;
+    double huge_negative = -std::numeric_limits<double>::max() / 4.0;
+    double nan_value = std::numeric_limits<double>::quiet_NaN();
+    double positive_infinity = std::numeric_limits<double>::infinity();
+    double negative_infinity = -std::numeric_limits<double>::infinity();
+
+    terra->register_resource(ORE_IRON, huge_positive);
+    terra->set_carryover(ORE_IRON, nan_value);
+    terra->register_resource(ORE_COPPER, huge_negative);
+    terra->set_carryover(ORE_COPPER, positive_infinity);
+    terra->register_resource(ORE_GOLD, positive_infinity);
+    terra->set_carryover(ORE_GOLD, negative_infinity);
+    terra->register_resource(ORE_COAL, negative_infinity);
+    planets.insert(PLANET_TERRA, terra);
+
+    ft_string planet_json = saves.serialize_planets(planets);
+    FT_ASSERT(planet_json.size() > 0);
+
+    ft_map<int, ft_sharedptr<ft_planet> > restored_planets;
+    FT_ASSERT(saves.deserialize_planets(planet_json.c_str(), restored_planets));
+
+    Pair<int, ft_sharedptr<ft_planet> > *terra_entry = restored_planets.find(PLANET_TERRA);
+    FT_ASSERT(terra_entry != ft_nullptr);
+    ft_sharedptr<ft_planet> restored_terra = terra_entry->value;
+    FT_ASSERT(restored_terra);
+
+    const long scale = 1000000;
+    const double scale_double = static_cast<double>(scale);
+    double expected_max = static_cast<double>(std::numeric_limits<long>::max() - 1)
+        / scale_double;
+    double expected_min = static_cast<double>(std::numeric_limits<long>::min() + 2)
+        / scale_double;
+
+    double restored_large_positive = restored_terra->get_rate(ORE_IRON);
+    FT_ASSERT(ft_absolute(restored_large_positive - expected_max) < 0.000001);
+
+    double restored_large_negative = restored_terra->get_rate(ORE_COPPER);
+    FT_ASSERT(ft_absolute(restored_large_negative - expected_min) < 0.000001);
+
+    double restored_positive_inf = restored_terra->get_rate(ORE_GOLD);
+    FT_ASSERT(std::isinf(restored_positive_inf));
+    FT_ASSERT(restored_positive_inf > 0.0);
+
+    double restored_negative_inf = restored_terra->get_rate(ORE_COAL);
+    FT_ASSERT(std::isinf(restored_negative_inf));
+    FT_ASSERT(restored_negative_inf < 0.0);
+
+    const ft_vector<Pair<int, double> > &carry = restored_terra->get_carryover();
+    bool found_iron = false;
+    bool found_copper = false;
+    bool found_gold = false;
+    double carry_iron = 0.0;
+    double carry_copper = 0.0;
+    double carry_gold = 0.0;
+    for (size_t i = 0; i < carry.size(); ++i)
+    {
+        if (carry[i].key == ORE_IRON)
+        {
+            carry_iron = carry[i].value;
+            found_iron = true;
+        }
+        else if (carry[i].key == ORE_COPPER)
+        {
+            carry_copper = carry[i].value;
+            found_copper = true;
+        }
+        else if (carry[i].key == ORE_GOLD)
+        {
+            carry_gold = carry[i].value;
+            found_gold = true;
+        }
+    }
+
+    FT_ASSERT(found_iron);
+    FT_ASSERT(std::isnan(carry_iron));
+
+    FT_ASSERT(found_copper);
+    FT_ASSERT(std::isinf(carry_copper));
+    FT_ASSERT(carry_copper > 0.0);
+
+    FT_ASSERT(found_gold);
+    FT_ASSERT(std::isinf(carry_gold));
+    FT_ASSERT(carry_gold < 0.0);
 
     return 1;
 }
