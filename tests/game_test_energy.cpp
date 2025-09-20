@@ -124,6 +124,37 @@ int compare_energy_pressure_scenarios()
     return 1;
 }
 
+int verify_crafting_resume_requires_full_cycle()
+{
+    Game production_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    production_game.set_ore(PLANET_TERRA, ORE_IRON, 200);
+    production_game.set_ore(PLANET_TERRA, ORE_COPPER, 200);
+    production_game.set_ore(PLANET_TERRA, ORE_COAL, 200);
+    production_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 10);
+    production_game.set_ore(PLANET_TERRA, ITEM_COPPER_BAR, 10);
+    production_game.set_ore(PLANET_TERRA, ITEM_ENGINE_PART, 0);
+
+    FT_ASSERT(production_game.place_building(PLANET_TERRA, BUILDING_POWER_GENERATOR, 2, 0) != 0);
+    FT_ASSERT(production_game.place_building(PLANET_TERRA, BUILDING_CRAFTING_BAY, 0, 2) != 0);
+    production_game.tick(1.0);
+
+    int initial_parts = production_game.get_ore(PLANET_TERRA, ITEM_ENGINE_PART);
+    FT_ASSERT_EQ(0, initial_parts);
+
+    FT_ASSERT(production_game.place_building(PLANET_TERRA, BUILDING_CONVEYOR, 3, 2) != 0);
+
+    production_game.tick(0.0);
+    FT_ASSERT_EQ(initial_parts, production_game.get_ore(PLANET_TERRA, ITEM_ENGINE_PART));
+
+    production_game.tick(7.5);
+    FT_ASSERT_EQ(initial_parts, production_game.get_ore(PLANET_TERRA, ITEM_ENGINE_PART));
+
+    production_game.tick(1.0);
+    int after_resume = production_game.get_ore(PLANET_TERRA, ITEM_ENGINE_PART);
+    FT_ASSERT(after_resume >= initial_parts + 1);
+    return 1;
+}
+
 int compare_storyline_assaults()
 {
     Game early_game(ft_string("127.0.0.1:8080"), ft_string("/"));

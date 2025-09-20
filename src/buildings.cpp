@@ -579,7 +579,8 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
         }
         if (!can_run)
         {
-            instance.progress = definition->cycle_time;
+            if (instance.progress > definition->cycle_time)
+                instance.progress = definition->cycle_time;
             continue;
         }
         instance.active = true;

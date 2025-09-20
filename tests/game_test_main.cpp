@@ -73,6 +73,8 @@ int main()
 
     if (!compare_energy_pressure_scenarios())
         return 0;
+    if (!verify_crafting_resume_requires_full_cycle())
+        return 0;
     if (!compare_storyline_assaults())
         return 0;
     if (!analyze_manual_vs_auto_assault_controls())
