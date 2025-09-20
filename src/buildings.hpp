@@ -134,6 +134,8 @@ private:
 public:
     BuildingManager();
 
+    void clone_from(const BuildingManager &other);
+
     void initialize_planet(Game &game, int planet_id);
     void add_planet_logistic_bonus(int planet_id, int amount);
     void apply_research_unlock(int research_id);

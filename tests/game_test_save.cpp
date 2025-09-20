@@ -1738,3 +1738,36 @@ int verify_campaign_rejects_invalid_save()
 
     return 1;
 }
+
+int verify_buildings_unchanged_on_failed_load()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    game.set_ore(PLANET_TERRA, ORE_IRON, 120);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 120);
+
+    int smelter_uid = game.place_building(PLANET_TERRA, BUILDING_SMELTER, 0, 1);
+    FT_ASSERT(smelter_uid != 0);
+    game.tick(0.0);
+
+    FT_ASSERT(game.save_campaign_checkpoint(ft_string("buildings_snapshot")));
+    ft_string checkpoint_research = game.get_campaign_research_checkpoint();
+    ft_string checkpoint_achievements = game.get_campaign_achievement_checkpoint();
+    ft_string checkpoint_buildings = game.get_campaign_building_checkpoint();
+    FT_ASSERT(checkpoint_buildings.size() > 0);
+
+    int logistic_with_building = game.get_planet_logistic_usage(PLANET_TERRA);
+    FT_ASSERT(logistic_with_building > 0);
+
+    FT_ASSERT(game.remove_building(PLANET_TERRA, smelter_uid));
+    int logistic_after_removal = game.get_planet_logistic_usage(PLANET_TERRA);
+    FT_ASSERT(logistic_after_removal < logistic_with_building);
+
+    ft_string invalid_payload("not json");
+    FT_ASSERT(!game.load_campaign_from_save(invalid_payload, invalid_payload,
+        checkpoint_research, checkpoint_achievements, checkpoint_buildings));
+
+    FT_ASSERT_EQ(logistic_after_removal, game.get_planet_logistic_usage(PLANET_TERRA));
+    FT_ASSERT_EQ(0, game.get_building_count(PLANET_TERRA, BUILDING_SMELTER));
+
+    return 1;
+}

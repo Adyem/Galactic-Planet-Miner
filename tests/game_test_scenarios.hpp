@@ -55,5 +55,6 @@ int verify_research_save_round_trip();
 int verify_achievement_save_round_trip();
 int verify_campaign_checkpoint_flow();
 int verify_campaign_rejects_invalid_save();
+int verify_buildings_unchanged_on_failed_load();
 
 #endif
