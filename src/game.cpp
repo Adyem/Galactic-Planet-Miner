@@ -1,6 +1,7 @@
 #include "game.hpp"
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
+#include "../libft/Template/set.hpp"
 
 Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     : _backend(host, path),
@@ -742,6 +743,18 @@ void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &sn
         for (size_t j = 0; j < saved_carryover.size(); ++j)
             planet->set_carryover(saved_carryover[j].key, saved_carryover[j].value);
         ft_vector<Pair<int, int> > inventory_snapshot = saved_planet->get_items_snapshot();
+        ft_set<int> saved_item_ids(inventory_snapshot.size());
+        for (size_t j = 0; j < inventory_snapshot.size(); ++j)
+            saved_item_ids.insert(inventory_snapshot[j].key);
+        ft_vector<Pair<int, int> > current_inventory = planet->get_items_snapshot();
+        for (size_t j = 0; j < current_inventory.size(); ++j)
+        {
+            int existing_item_id = current_inventory[j].key;
+            if (saved_item_ids.find(existing_item_id) != ft_nullptr)
+                continue;
+            planet->set_resource(existing_item_id, 0);
+            this->send_state(planet_id, existing_item_id);
+        }
         for (size_t j = 0; j < inventory_snapshot.size(); ++j)
         {
             int item_id = inventory_snapshot[j].key;

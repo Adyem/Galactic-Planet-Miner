@@ -1577,6 +1577,31 @@ int verify_planet_inventory_save_round_trip()
     return 1;
 }
 
+int verify_planet_inventory_resets_unsaved_items()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    game.set_ore(PLANET_TERRA, ORE_IRON, 88);
+
+    FT_ASSERT(game.save_campaign_checkpoint(ft_string("inventory_cleanup")));
+    ft_string planet_json = game.get_campaign_planet_checkpoint();
+    ft_string fleet_json = game.get_campaign_fleet_checkpoint();
+    ft_string research_json = game.get_campaign_research_checkpoint();
+    ft_string achievement_json = game.get_campaign_achievement_checkpoint();
+    ft_string building_json = game.get_campaign_building_checkpoint();
+
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 5);
+    FT_ASSERT_EQ(5, game.get_ore(PLANET_TERRA, ITEM_FUSION_REACTOR));
+
+    FT_ASSERT(game.load_campaign_from_save(planet_json, fleet_json, research_json,
+        achievement_json, building_json));
+
+    FT_ASSERT_EQ(88, game.get_ore(PLANET_TERRA, ORE_IRON));
+    FT_ASSERT_EQ(0, game.get_ore(PLANET_TERRA, ITEM_FUSION_REACTOR));
+
+    return 1;
+}
+
 int verify_building_save_round_trip()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
