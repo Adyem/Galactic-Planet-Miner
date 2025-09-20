@@ -145,7 +145,8 @@ static long reference_scale_double(double value)
 }
 
 static ft_string save_system_building_payload(int width, int height,
-    int used_plots = 0, int logistic_capacity = 0, int logistic_usage = 0)
+    int used_plots = 0, int logistic_capacity = 0, int logistic_usage = 0,
+    int next_instance_id = 1, int planet_id = 99)
 {
     json_document document;
     json_group *manager_group = document.create_group("buildings_manager");
@@ -167,10 +168,10 @@ static ft_string save_system_building_payload(int width, int height,
         return ft_string();
     document.add_item(planet_group, planet_type);
 
-    json_item *planet_id = document.create_item("id", 99);
-    if (planet_id == ft_nullptr)
+    json_item *planet_id_item = document.create_item("id", planet_id);
+    if (planet_id_item == ft_nullptr)
         return ft_string();
-    document.add_item(planet_group, planet_id);
+    document.add_item(planet_group, planet_id_item);
 
     json_item *width_item = document.create_item("width", width);
     if (width_item == ft_nullptr)
@@ -197,7 +198,7 @@ static ft_string save_system_building_payload(int width, int height,
         return ft_string();
     document.add_item(planet_group, usage_item);
 
-    json_item *next_instance = document.create_item("next_instance_id", 1);
+    json_item *next_instance = document.create_item("next_instance_id", next_instance_id);
     if (next_instance == ft_nullptr)
         return ft_string();
     document.add_item(planet_group, next_instance);
@@ -474,6 +475,37 @@ int verify_save_system_rejects_oversized_building_grids()
     FT_ASSERT_EQ(16, buildings.get_planet_plot_usage(99));
     FT_ASSERT_EQ(5, buildings.get_planet_logistic_capacity(99));
     FT_ASSERT_EQ(5, buildings.get_planet_logistic_usage(99));
+
+    return 1;
+}
+
+int verify_save_system_prevents_building_instance_wraparound()
+{
+    SaveSystem saves;
+    BuildingManager buildings;
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    ft_string near_limit_payload = save_system_building_payload(4, 4, 0, 0, 0,
+        FT_INT_MAX, PLANET_TERRA);
+    FT_ASSERT(near_limit_payload.size() > 0);
+    FT_ASSERT(saves.deserialize_buildings(near_limit_payload.c_str(), buildings));
+
+    game.set_ore(PLANET_TERRA, ORE_COAL, 120);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 120);
+
+    FT_ASSERT_EQ(0, buildings.get_building_count(PLANET_TERRA, BUILDING_POWER_GENERATOR));
+
+    int logistic_before = buildings.get_planet_logistic_usage(PLANET_TERRA);
+    int coal_before = game.get_ore(PLANET_TERRA, ORE_COAL);
+    int copper_before = game.get_ore(PLANET_TERRA, ORE_COPPER);
+
+    int attempt = buildings.place_building(game, PLANET_TERRA,
+        BUILDING_POWER_GENERATOR, 0, 0);
+    FT_ASSERT_EQ(0, attempt);
+    FT_ASSERT_EQ(logistic_before, buildings.get_planet_logistic_usage(PLANET_TERRA));
+    FT_ASSERT_EQ(coal_before, game.get_ore(PLANET_TERRA, ORE_COAL));
+    FT_ASSERT_EQ(copper_before, game.get_ore(PLANET_TERRA, ORE_COPPER));
+    FT_ASSERT_EQ(0, buildings.get_building_count(PLANET_TERRA, BUILDING_POWER_GENERATOR));
 
     return 1;
 }

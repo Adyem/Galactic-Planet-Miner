@@ -420,6 +420,8 @@ int BuildingManager::place_building(Game &game, int planet_id, int building_id, 
         return 0;
     if (!this->is_building_unlocked(building_id))
         return 0;
+    if (state->next_instance_id >= FT_BUILDING_INSTANCE_ID_MAX)
+        return 0;
     if (definition->unique && this->get_building_count(planet_id, building_id) > 0)
         return 0;
     if (definition->occupies_grid && !this->is_area_free(*state, x, y, definition->width, definition->height))

@@ -1190,7 +1190,11 @@ bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &bui
                 else if (ft_strcmp(item->key, "energy_deficit_pressure") == 0)
                     state.energy_deficit_pressure = this->unscale_long_to_double(ft_atol(item->value));
                 else if (ft_strcmp(item->key, "next_instance_id") == 0)
+                {
                     state.next_instance_id = ft_atoi(item->value);
+                    if (state.next_instance_id >= FT_BUILDING_INSTANCE_ID_MAX)
+                        state.next_instance_id = FT_BUILDING_INSTANCE_ID_MAX;
+                }
                 else if (ft_strncmp(item->key, "cell_", 5) == 0)
                 {
                     Pair<int, int> entry;

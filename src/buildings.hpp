@@ -7,6 +7,9 @@
 #include "../libft/Template/pair.hpp"
 #include "../libft/Template/shared_ptr.hpp"
 #include "../libft/CPP_class/class_string_class.hpp"
+#include "../libft/Libft/limits.hpp"
+
+static const int FT_BUILDING_INSTANCE_ID_MAX = FT_INT_MAX - 1;
 
 class Game;
 class SaveSystem;
