@@ -122,6 +122,8 @@ int main()
         return 0;
     if (!verify_save_system_sparse_entries())
         return 0;
+    if (!verify_building_save_round_trip())
+        return 0;
     if (!verify_research_save_round_trip())
         return 0;
     if (!verify_achievement_save_round_trip())

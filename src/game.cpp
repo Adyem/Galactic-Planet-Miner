@@ -41,6 +41,7 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _last_fleet_checkpoint(),
       _last_research_checkpoint(),
       _last_achievement_checkpoint(),
+      _last_building_checkpoint(),
       _last_checkpoint_tag(),
       _has_checkpoint(false),
       _failed_checkpoint_tags(),
@@ -813,16 +814,19 @@ bool Game::checkpoint_campaign_state_internal(const ft_string &tag)
     ft_string fleet_json = this->_save_system.serialize_fleets(this->_fleets);
     ft_string research_json = this->_save_system.serialize_research(this->_research);
     ft_string achievement_json = this->_save_system.serialize_achievements(this->_achievements);
+    ft_string building_json = this->_save_system.serialize_buildings(this->_buildings);
     bool planets_valid = (planet_json.size() > 0) || (this->_planets.size() == 0);
     bool fleets_valid = (fleet_json.size() > 0) || (this->_fleets.size() == 0);
     bool research_valid = (research_json.size() > 0);
     bool achievements_valid = (achievement_json.size() > 0);
-    if (!planets_valid || !fleets_valid || !research_valid || !achievements_valid)
+    bool buildings_valid = (building_json.size() > 0);
+    if (!planets_valid || !fleets_valid || !research_valid || !achievements_valid || !buildings_valid)
         return false;
     this->_last_planet_checkpoint = planet_json;
     this->_last_fleet_checkpoint = fleet_json;
     this->_last_research_checkpoint = research_json;
     this->_last_achievement_checkpoint = achievement_json;
+    this->_last_building_checkpoint = building_json;
     this->_last_checkpoint_tag = tag;
     this->_has_checkpoint = true;
     return true;
@@ -884,17 +888,23 @@ const ft_string &Game::get_campaign_achievement_checkpoint() const noexcept
     return this->_last_achievement_checkpoint;
 }
 
+const ft_string &Game::get_campaign_building_checkpoint() const noexcept
+{
+    return this->_last_building_checkpoint;
+}
+
 bool Game::reload_campaign_checkpoint() noexcept
 {
     if (!this->_has_checkpoint)
         return false;
     return this->load_campaign_from_save(this->_last_planet_checkpoint,
         this->_last_fleet_checkpoint, this->_last_research_checkpoint,
-        this->_last_achievement_checkpoint);
+        this->_last_achievement_checkpoint, this->_last_building_checkpoint);
 }
 
 bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json,
-    const ft_string &research_json, const ft_string &achievement_json) noexcept
+    const ft_string &research_json, const ft_string &achievement_json,
+    const ft_string &building_json) noexcept
 {
     ft_map<int, ft_sharedptr<ft_planet> > planet_snapshot;
     ft_map<int, ft_sharedptr<ft_fleet> > fleet_snapshot;
@@ -902,6 +912,7 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
     bool fleets_ok = true;
     bool research_ok = true;
     bool achievements_ok = true;
+    bool buildings_ok = true;
     ft_map<int, ft_research_progress> research_state;
     double research_duration = this->_research.get_duration_scale();
     bool research_snapshot_present = false;
@@ -932,7 +943,11 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
             achievement_snapshot_present = true;
         }
     }
-    if (!planets_ok || !fleets_ok || !research_ok || !achievements_ok)
+    if (building_json.size() > 0)
+        buildings_ok = this->_save_system.deserialize_buildings(building_json.c_str(), this->_buildings);
+    else
+        buildings_ok = false;
+    if (!planets_ok || !fleets_ok || !research_ok || !achievements_ok || !buildings_ok)
         return false;
     if (research_snapshot_present)
     {
