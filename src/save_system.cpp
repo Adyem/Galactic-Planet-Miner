@@ -1,19 +1,20 @@
 #include "save_system.hpp"
 #include "../libft/CMA/CMA.hpp"
 #include "../libft/CPP_class/class_nullptr.hpp"
-
-#include <climits>
+#include "../libft/Libft/limits.hpp"
 #include <cmath>
 #include <limits>
 
 namespace
 {
     const long SAVE_DOUBLE_SCALE = 1000000;
-    const long SAVE_DOUBLE_SENTINEL_NAN = LONG_MIN;
-    const long SAVE_DOUBLE_SENTINEL_NEG_INF = LONG_MIN + 1;
-    const long SAVE_DOUBLE_SENTINEL_POS_INF = LONG_MAX;
-    const long SAVE_DOUBLE_MIN_FINITE = LONG_MIN + 2;
-    const long SAVE_DOUBLE_MAX_FINITE = LONG_MAX - 1;
+    const long SAVE_DOUBLE_SENTINEL_NAN = FT_LONG_MIN;
+    const long SAVE_DOUBLE_SENTINEL_NEG_INF = FT_LONG_MIN + 1;
+    const long SAVE_DOUBLE_SENTINEL_POS_INF = FT_LONG_MAX;
+    const long SAVE_DOUBLE_MIN_FINITE = FT_LONG_MIN + 2;
+    const long SAVE_DOUBLE_MAX_FINITE = FT_LONG_MAX - 1;
+    const int  SAVE_SHIP_ID_MIN = 1;
+    const int  SAVE_SHIP_ID_MAX = FT_INT_MAX - 1;
 
     SaveSystem::json_allocation_hook_t g_json_allocation_hook = ft_nullptr;
 
@@ -505,6 +506,12 @@ bool SaveSystem::deserialize_fleets(const char *content,
                 continue;
             ft_ship ship_snapshot;
             ship_snapshot.id = ft_atoi(ship_id_item->value);
+            if (ship_snapshot.id < SAVE_SHIP_ID_MIN
+                || ship_snapshot.id > SAVE_SHIP_ID_MAX)
+            {
+                json_free_groups(groups);
+                return false;
+            }
             key = base_key;
             key.append("_type");
             json_item *ship_type_item = json_find_item(current, key.c_str());
