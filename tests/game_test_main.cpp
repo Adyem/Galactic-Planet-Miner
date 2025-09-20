@@ -138,6 +138,8 @@ int main()
         return 0;
     if (!verify_campaign_rejects_invalid_save())
         return 0;
+    if (!verify_buildings_unchanged_on_failed_load())
+        return 0;
 
     server_thread.join();
     return 0;

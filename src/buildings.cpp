@@ -3,6 +3,73 @@
 #include "research.hpp"
 #include "../libft/Libft/libft.hpp"
 
+void BuildingManager::clone_from(const BuildingManager &other)
+{
+    if (this == &other)
+        return ;
+    this->_crafting_energy_multiplier = other._crafting_energy_multiplier;
+    this->_crafting_speed_multiplier = other._crafting_speed_multiplier;
+    this->_global_energy_multiplier = other._global_energy_multiplier;
+    this->_building_unlocks.clear();
+    size_t unlock_count = other._building_unlocks.size();
+    if (unlock_count > 0)
+    {
+        const Pair<int, bool> *unlock_entries = other._building_unlocks.end();
+        unlock_entries -= unlock_count;
+        for (size_t i = 0; i < unlock_count; ++i)
+            this->_building_unlocks.insert(unlock_entries[i].key, unlock_entries[i].value);
+    }
+    this->_planets.clear();
+    size_t planet_count = other._planets.size();
+    if (planet_count == 0)
+        return ;
+    const Pair<int, ft_planet_build_state> *entries = other._planets.end();
+    entries -= planet_count;
+    for (size_t i = 0; i < planet_count; ++i)
+    {
+        const ft_planet_build_state &source = entries[i].value;
+        this->_planets.insert(entries[i].key, ft_planet_build_state());
+        Pair<int, ft_planet_build_state> *destination = this->_planets.find(entries[i].key);
+        if (destination == ft_nullptr)
+            continue;
+        ft_planet_build_state &state = destination->value;
+        state.planet_id = source.planet_id;
+        state.width = source.width;
+        state.height = source.height;
+        state.base_logistic = source.base_logistic;
+        state.research_logistic_bonus = source.research_logistic_bonus;
+        state.used_plots = source.used_plots;
+        state.logistic_capacity = source.logistic_capacity;
+        state.logistic_usage = source.logistic_usage;
+        state.base_energy_generation = source.base_energy_generation;
+        state.energy_generation = source.energy_generation;
+        state.energy_consumption = source.energy_consumption;
+        state.support_energy = source.support_energy;
+        state.mine_multiplier = source.mine_multiplier;
+        state.convoy_speed_bonus = source.convoy_speed_bonus;
+        state.convoy_raid_risk_modifier = source.convoy_raid_risk_modifier;
+        state.energy_deficit_pressure = source.energy_deficit_pressure;
+        state.next_instance_id = source.next_instance_id;
+        state.grid.clear();
+        size_t grid_size = source.grid.size();
+        if (grid_size > 0)
+        {
+            state.grid.reserve(grid_size);
+            for (size_t j = 0; j < grid_size; ++j)
+                state.grid.push_back(source.grid[j]);
+        }
+        state.instances.clear();
+        size_t instance_count = source.instances.size();
+        if (instance_count > 0)
+        {
+            const Pair<int, ft_building_instance> *inst_entries = source.instances.end();
+            inst_entries -= instance_count;
+            for (size_t j = 0; j < instance_count; ++j)
+                state.instances.insert(inst_entries[j].key, inst_entries[j].value);
+        }
+    }
+}
+
 void BuildingManager::register_definition(const ft_sharedptr<ft_building_definition> &definition)
 {
     this->_definitions.insert(definition->id, definition);
