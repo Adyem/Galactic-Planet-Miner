@@ -921,6 +921,7 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
     ft_map<int, ft_achievement_progress> achievement_state;
     bool achievement_snapshot_present = false;
     BuildingManager building_snapshot;
+    bool building_snapshot_present = false;
     if (planet_json.size() > 0)
         planets_ok = this->_save_system.deserialize_planets(planet_json.c_str(), planet_snapshot);
     if (fleet_json.size() > 0)
@@ -947,9 +948,11 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
         }
     }
     if (building_json.size() > 0)
+    {
         buildings_ok = this->_save_system.deserialize_buildings(building_json.c_str(), building_snapshot);
-    else
-        buildings_ok = false;
+        if (buildings_ok)
+            building_snapshot_present = true;
+    }
     if (!planets_ok || !fleets_ok || !research_ok || !achievements_ok || !buildings_ok)
         return false;
     if (research_snapshot_present)
@@ -960,7 +963,8 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
     }
     if (achievement_snapshot_present)
         this->_achievements.set_progress_state(achievement_state);
-    this->_buildings.clone_from(building_snapshot);
+    if (building_snapshot_present)
+        this->_buildings.clone_from(building_snapshot);
     this->apply_planet_snapshot(planet_snapshot);
     this->apply_fleet_snapshot(fleet_snapshot);
     return true;
