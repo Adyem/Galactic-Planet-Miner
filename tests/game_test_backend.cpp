@@ -127,6 +127,34 @@ int verify_backend_roundtrip()
     const ft_string &malformed_entry = malformed_log[malformed_lore_before];
     FT_ASSERT_EQ(0, ft_strncmp(malformed_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
 
+    const uint16_t redirect_port = 80;
+    const ft_string redirect_payload("HTTP/1.1 302 Found\r\nLocation: /redirect\r\nContent-Length: 0\r\n\r\n");
+    MalformedResponseServerConfig redirect_backend_config(redirect_port, redirect_payload);
+    ft_thread redirect_backend_thread = start_malformed_response_server(redirect_backend_config);
+    wait_for_server_start();
+    BackendClient redirect_client(build_loopback_host(redirect_port), ft_string("/"));
+    ft_string redirect_response;
+    int redirect_status = redirect_client.send_state(payload, redirect_response);
+    redirect_backend_thread.join();
+    FT_ASSERT(redirect_status >= 400);
+    FT_ASSERT_EQ(fallback_size + payload_size, redirect_response.size());
+    FT_ASSERT_EQ(0, ft_strncmp(redirect_response.c_str(), fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
+    FT_ASSERT_EQ(0, ft_strcmp(redirect_response.c_str() + fallback_size, payload.c_str()));
+
+    MalformedResponseServerConfig redirect_game_config(redirect_port, redirect_payload);
+    ft_thread redirect_game_thread = start_malformed_response_server(redirect_game_config);
+    wait_for_server_start();
+    Game redirect_game(build_loopback_host(redirect_port), ft_string("/"));
+    FT_ASSERT(redirect_game.is_backend_online());
+    size_t redirect_lore_before = redirect_game.get_lore_log().size();
+    redirect_game.add_ore(PLANET_TERRA, ORE_IRON, 1);
+    redirect_game_thread.join();
+    FT_ASSERT(!redirect_game.is_backend_online());
+    const ft_vector<ft_string> &redirect_log = redirect_game.get_lore_log();
+    FT_ASSERT_EQ(redirect_lore_before + 1, redirect_log.size());
+    const ft_string &redirect_entry = redirect_log[redirect_lore_before];
+    FT_ASSERT_EQ(0, ft_strncmp(redirect_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
+
     BackendClient client(ft_string("127.0.0.1:8080"), ft_string("/"));
     ft_string response;
     int status = client.send_state(payload, response);

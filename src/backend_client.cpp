@@ -59,16 +59,14 @@ int BackendClient::send_state(const ft_string &state, ft_string &response)
     }
 
     int http_status = extract_http_status_code(response);
-    if (http_status == 0)
-    {
-        set_offline_echo_response(response, state);
-        return (503);
-    }
+    const int fallback_status = 503;
     if (http_status >= 200 && http_status < 300)
         return (http_status);
-    if (http_status < 200 || http_status >= 400)
-    {
-        set_offline_echo_response(response, state);
-    }
-    return (http_status);
+
+    set_offline_echo_response(response, state);
+    if (http_status == 0)
+        return (fallback_status);
+    if (http_status >= 400)
+        return (http_status);
+    return (fallback_status);
 }
