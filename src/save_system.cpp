@@ -616,8 +616,14 @@ bool SaveSystem::deserialize_fleets(const char *content,
             ship_count = SAVE_MAX_SHIPS_PER_FLEET;
         if (highest_ship_slot < 0)
             ship_count = 0;
-        else if (ship_count > highest_ship_slot + 1)
-            ship_count = highest_ship_slot + 1;
+        else
+        {
+            int minimum_ship_count = highest_ship_slot + 1;
+            if (minimum_ship_count > SAVE_MAX_SHIPS_PER_FLEET)
+                minimum_ship_count = SAVE_MAX_SHIPS_PER_FLEET;
+            if (ship_count < minimum_ship_count)
+                ship_count = minimum_ship_count;
+        }
         int missing_streak = 0;
         bool saw_ship = false;
         for (int i = 0; i < ship_count; ++i)
