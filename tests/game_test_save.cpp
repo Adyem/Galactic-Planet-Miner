@@ -569,6 +569,54 @@ int verify_save_system_limits_inflated_ship_counts()
     return 1;
 }
 
+int verify_save_system_prevents_ship_id_wraparound()
+{
+    SaveSystem saves;
+
+    json_document fleet_doc;
+    json_group *fleet_group = fleet_doc.create_group("fleet_max_ship_id");
+    FT_ASSERT(fleet_group != ft_nullptr);
+    fleet_doc.append_group(fleet_group);
+
+    json_item *fleet_id_item = fleet_doc.create_item("id", 7100);
+    FT_ASSERT(fleet_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, fleet_id_item);
+    json_item *ship_count_item = fleet_doc.create_item("ship_count", 1);
+    FT_ASSERT(ship_count_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_count_item);
+
+    int max_valid_ship_id = FT_INT_MAX - 1;
+    json_item *ship_id_item = fleet_doc.create_item("ship_0_id", max_valid_ship_id);
+    FT_ASSERT(ship_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_id_item);
+    json_item *ship_type_item = fleet_doc.create_item("ship_0_type", SHIP_CAPITAL);
+    FT_ASSERT(ship_type_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_type_item);
+
+    char *fleet_raw = fleet_doc.write_to_string();
+    FT_ASSERT(fleet_raw != ft_nullptr);
+    ft_string fleet_json(fleet_raw);
+    cma_free(fleet_raw);
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    FT_ASSERT(saves.deserialize_fleets(fleet_json.c_str(), fleets));
+    FT_ASSERT_EQ(1u, fleets.size());
+
+    Pair<int, ft_sharedptr<ft_fleet> > *fleet_entry = fleets.find(7100);
+    FT_ASSERT(fleet_entry != ft_nullptr);
+    ft_sharedptr<ft_fleet> restored_fleet = fleet_entry->value;
+    FT_ASSERT(restored_fleet);
+    FT_ASSERT_EQ(1, restored_fleet->get_ship_count());
+    const ft_ship *loaded_ship = restored_fleet->get_ship(max_valid_ship_id);
+    FT_ASSERT(loaded_ship != ft_nullptr);
+    FT_ASSERT_EQ(max_valid_ship_id, loaded_ship->id);
+
+    int wrapped_id = restored_fleet->create_ship(SHIP_SHIELD);
+    FT_ASSERT_EQ(0, wrapped_id);
+
+    return 1;
+}
+
 int validate_save_system_serialized_samples()
 {
     SaveSystem saves;

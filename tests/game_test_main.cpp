@@ -142,6 +142,8 @@ int main()
         return 0;
     if (!verify_buildings_unchanged_on_failed_load())
         return 0;
+    if (!verify_save_system_prevents_ship_id_wraparound())
+        return 0;
 
     server_thread.join();
     return 0;
