@@ -9,6 +9,7 @@
 #include "../libft/CPP_class/class_string_class.hpp"
 
 class Game;
+class SaveSystem;
 
 enum e_building_id
 {
@@ -104,6 +105,8 @@ struct ft_planet_build_state
 class BuildingManager
 {
 private:
+    friend class SaveSystem;
+
     ft_map<int, ft_sharedptr<ft_building_definition> > _definitions;
     ft_map<int, ft_planet_build_state>                  _planets;
     ft_map<int, bool>                                   _building_unlocks;

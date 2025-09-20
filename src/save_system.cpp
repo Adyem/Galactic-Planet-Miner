@@ -870,3 +870,468 @@ bool SaveSystem::deserialize_achievements(const char *content, AchievementManage
     json_free_groups(groups);
     return true;
 }
+
+ft_string SaveSystem::serialize_buildings(const BuildingManager &buildings) const noexcept
+{
+    json_document document;
+    json_group *manager_group = save_system_create_group(document, "buildings_manager");
+    if (!manager_group)
+        return save_system_abort_serialization(document);
+    if (!save_system_add_item(document, manager_group, "type", "manager"))
+        return save_system_abort_serialization(document);
+
+    long crafting_energy_scaled = this->scale_double_to_long(buildings._crafting_energy_multiplier);
+    ft_string crafting_energy_value = ft_to_string(crafting_energy_scaled);
+    if (!save_system_add_item(document, manager_group, "crafting_energy_multiplier",
+        crafting_energy_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+    long crafting_speed_scaled = this->scale_double_to_long(buildings._crafting_speed_multiplier);
+    ft_string crafting_speed_value = ft_to_string(crafting_speed_scaled);
+    if (!save_system_add_item(document, manager_group, "crafting_speed_multiplier",
+        crafting_speed_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+    long global_energy_scaled = this->scale_double_to_long(buildings._global_energy_multiplier);
+    ft_string global_energy_value = ft_to_string(global_energy_scaled);
+    if (!save_system_add_item(document, manager_group, "global_energy_multiplier",
+        global_energy_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+
+    size_t unlock_count = buildings._building_unlocks.size();
+    if (unlock_count > 0)
+    {
+        const Pair<int, bool> *unlock_entries = buildings._building_unlocks.end();
+        unlock_entries -= unlock_count;
+        for (size_t i = 0; i < unlock_count; ++i)
+        {
+            ft_string key("unlock_");
+            key.append(ft_to_string(unlock_entries[i].key));
+            int unlocked = unlock_entries[i].value ? 1 : 0;
+            if (!save_system_add_item(document, manager_group, key.c_str(), unlocked))
+                return save_system_abort_serialization(document);
+        }
+    }
+
+    size_t planet_count = buildings._planets.size();
+    if (planet_count > 0)
+    {
+        const Pair<int, ft_planet_build_state> *entries = buildings._planets.end();
+        entries -= planet_count;
+        for (size_t i = 0; i < planet_count; ++i)
+        {
+            const ft_planet_build_state &state = entries[i].value;
+            ft_string group_name = "building_planet_";
+            group_name.append(ft_to_string(entries[i].key));
+            json_group *group = save_system_create_group(document, group_name.c_str());
+            if (!group)
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "type", "planet"))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "width", state.width))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "height", state.height))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "base_logistic", state.base_logistic))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "research_logistic_bonus",
+                state.research_logistic_bonus))
+            {
+                return save_system_abort_serialization(document);
+            }
+            if (!save_system_add_item(document, group, "used_plots", state.used_plots))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "logistic_capacity", state.logistic_capacity))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "logistic_usage", state.logistic_usage))
+                return save_system_abort_serialization(document);
+            long base_energy_scaled = this->scale_double_to_long(state.base_energy_generation);
+            ft_string base_energy_value = ft_to_string(base_energy_scaled);
+            if (!save_system_add_item(document, group, "base_energy_generation",
+                base_energy_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long energy_generation_scaled = this->scale_double_to_long(state.energy_generation);
+            ft_string energy_generation_value = ft_to_string(energy_generation_scaled);
+            if (!save_system_add_item(document, group, "energy_generation",
+                energy_generation_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long energy_consumption_scaled = this->scale_double_to_long(state.energy_consumption);
+            ft_string energy_consumption_value = ft_to_string(energy_consumption_scaled);
+            if (!save_system_add_item(document, group, "energy_consumption",
+                energy_consumption_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long support_energy_scaled = this->scale_double_to_long(state.support_energy);
+            ft_string support_energy_value = ft_to_string(support_energy_scaled);
+            if (!save_system_add_item(document, group, "support_energy", support_energy_value.c_str()))
+                return save_system_abort_serialization(document);
+            long mine_multiplier_scaled = this->scale_double_to_long(state.mine_multiplier);
+            ft_string mine_multiplier_value = ft_to_string(mine_multiplier_scaled);
+            if (!save_system_add_item(document, group, "mine_multiplier",
+                mine_multiplier_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long convoy_speed_scaled = this->scale_double_to_long(state.convoy_speed_bonus);
+            ft_string convoy_speed_value = ft_to_string(convoy_speed_scaled);
+            if (!save_system_add_item(document, group, "convoy_speed_bonus",
+                convoy_speed_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long convoy_risk_scaled = this->scale_double_to_long(state.convoy_raid_risk_modifier);
+            ft_string convoy_risk_value = ft_to_string(convoy_risk_scaled);
+            if (!save_system_add_item(document, group, "convoy_raid_risk_modifier",
+                convoy_risk_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long deficit_scaled = this->scale_double_to_long(state.energy_deficit_pressure);
+            ft_string deficit_value = ft_to_string(deficit_scaled);
+            if (!save_system_add_item(document, group, "energy_deficit_pressure",
+                deficit_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            if (!save_system_add_item(document, group, "next_instance_id", state.next_instance_id))
+                return save_system_abort_serialization(document);
+
+            size_t grid_size = state.grid.size();
+            for (size_t j = 0; j < grid_size; ++j)
+            {
+                ft_string cell_key("cell_");
+                cell_key.append(ft_to_string(static_cast<long>(j)));
+                if (!save_system_add_item(document, group, cell_key.c_str(), state.grid[j]))
+                    return save_system_abort_serialization(document);
+            }
+
+            size_t instance_count = state.instances.size();
+            if (instance_count > 0)
+            {
+                const Pair<int, ft_building_instance> *inst_entries = state.instances.end();
+                inst_entries -= instance_count;
+                for (size_t j = 0; j < instance_count; ++j)
+                {
+                    const ft_building_instance &instance = inst_entries[j].value;
+                    ft_string base_key("instance_");
+                    base_key.append(ft_to_string(instance.uid));
+                    ft_string key = base_key;
+                    key.append("_uid");
+                    if (!save_system_add_item(document, group, key.c_str(), instance.uid))
+                        return save_system_abort_serialization(document);
+                    key = base_key;
+                    key.append("_definition");
+                    if (!save_system_add_item(document, group, key.c_str(), instance.definition_id))
+                        return save_system_abort_serialization(document);
+                    key = base_key;
+                    key.append("_x");
+                    if (!save_system_add_item(document, group, key.c_str(), instance.x))
+                        return save_system_abort_serialization(document);
+                    key = base_key;
+                    key.append("_y");
+                    if (!save_system_add_item(document, group, key.c_str(), instance.y))
+                        return save_system_abort_serialization(document);
+                    key = base_key;
+                    key.append("_progress");
+                    long progress_scaled = this->scale_double_to_long(instance.progress);
+                    ft_string progress_value = ft_to_string(progress_scaled);
+                    if (!save_system_add_item(document, group, key.c_str(), progress_value.c_str()))
+                        return save_system_abort_serialization(document);
+                    key = base_key;
+                    key.append("_active");
+                    int active_flag = instance.active ? 1 : 0;
+                    if (!save_system_add_item(document, group, key.c_str(), active_flag))
+                        return save_system_abort_serialization(document);
+                }
+            }
+        }
+    }
+
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &buildings) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+
+    ft_map<int, ft_planet_build_state> parsed_planets;
+    ft_map<int, bool> parsed_unlocks;
+    double parsed_crafting_energy = 1.0;
+    double parsed_crafting_speed = 1.0;
+    double parsed_global_energy = 1.0;
+
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *type_item = json_find_item(current, "type");
+        const char *type_value = ft_nullptr;
+        if (type_item)
+            type_value = type_item->value;
+        if (type_value && ft_strcmp(type_value, "manager") == 0)
+        {
+            json_item *item = current->items;
+            while (item)
+            {
+                if (!item->key)
+                {
+                    item = item->next;
+                    continue;
+                }
+                if (ft_strcmp(item->key, "crafting_energy_multiplier") == 0)
+                {
+                    parsed_crafting_energy = this->unscale_long_to_double(ft_atol(item->value));
+                    if (parsed_crafting_energy <= 0.0)
+                        parsed_crafting_energy = 1.0;
+                }
+                else if (ft_strcmp(item->key, "crafting_speed_multiplier") == 0)
+                {
+                    parsed_crafting_speed = this->unscale_long_to_double(ft_atol(item->value));
+                    if (parsed_crafting_speed <= 0.0)
+                        parsed_crafting_speed = 1.0;
+                }
+                else if (ft_strcmp(item->key, "global_energy_multiplier") == 0)
+                {
+                    parsed_global_energy = this->unscale_long_to_double(ft_atol(item->value));
+                    if (parsed_global_energy <= 0.0)
+                        parsed_global_energy = 1.0;
+                }
+                else if (ft_strncmp(item->key, "unlock_", 7) == 0)
+                {
+                    int building_id = ft_atoi(item->key + 7);
+                    bool unlocked = ft_atoi(item->value) != 0;
+                    Pair<int, bool> *entry = parsed_unlocks.find(building_id);
+                    if (entry == ft_nullptr)
+                        parsed_unlocks.insert(building_id, unlocked);
+                    else
+                        entry->value = unlocked;
+                }
+                item = item->next;
+            }
+        }
+        else
+        {
+            json_item *id_item = json_find_item(current, "id");
+            if (!id_item)
+            {
+                current = current->next;
+                continue;
+            }
+            int planet_id = ft_atoi(id_item->value);
+            ft_planet_build_state state;
+            state.planet_id = planet_id;
+            ft_vector<Pair<int, int> > grid_entries;
+            ft_map<int, ft_building_instance> instance_lookup;
+            json_item *item = current->items;
+            while (item)
+            {
+                if (!item->key)
+                {
+                    item = item->next;
+                    continue;
+                }
+                if (ft_strcmp(item->key, "type") == 0)
+                {
+                    item = item->next;
+                    continue;
+                }
+                if (ft_strcmp(item->key, "width") == 0)
+                    state.width = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "height") == 0)
+                    state.height = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "base_logistic") == 0)
+                    state.base_logistic = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "research_logistic_bonus") == 0)
+                    state.research_logistic_bonus = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "used_plots") == 0)
+                    state.used_plots = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "logistic_capacity") == 0)
+                    state.logistic_capacity = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "logistic_usage") == 0)
+                    state.logistic_usage = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "base_energy_generation") == 0)
+                    state.base_energy_generation = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "energy_generation") == 0)
+                    state.energy_generation = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "energy_consumption") == 0)
+                    state.energy_consumption = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "support_energy") == 0)
+                    state.support_energy = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "mine_multiplier") == 0)
+                    state.mine_multiplier = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "convoy_speed_bonus") == 0)
+                    state.convoy_speed_bonus = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "convoy_raid_risk_modifier") == 0)
+                    state.convoy_raid_risk_modifier = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "energy_deficit_pressure") == 0)
+                    state.energy_deficit_pressure = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "next_instance_id") == 0)
+                    state.next_instance_id = ft_atoi(item->value);
+                else if (ft_strncmp(item->key, "cell_", 5) == 0)
+                {
+                    Pair<int, int> entry;
+                    entry.key = ft_atoi(item->key + 5);
+                    entry.value = ft_atoi(item->value);
+                    grid_entries.push_back(entry);
+                }
+                else if (ft_strncmp(item->key, "instance_", 9) == 0)
+                {
+                    int uid = ft_atoi(item->key + 9);
+                    const char *suffix = ft_strchr(item->key + 9, '_');
+                    if (!suffix)
+                    {
+                        item = item->next;
+                        continue;
+                    }
+                    suffix += 1;
+                    Pair<int, ft_building_instance> *entry = instance_lookup.find(uid);
+                    if (entry == ft_nullptr)
+                    {
+                        ft_building_instance instance;
+                        instance.uid = uid;
+                        instance_lookup.insert(uid, instance);
+                        entry = instance_lookup.find(uid);
+                    }
+                    if (entry == ft_nullptr)
+                    {
+                        item = item->next;
+                        continue;
+                    }
+                    ft_building_instance &instance = entry->value;
+                    if (ft_strcmp(suffix, "uid") == 0)
+                        instance.uid = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "definition") == 0)
+                        instance.definition_id = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "x") == 0)
+                        instance.x = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "y") == 0)
+                        instance.y = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "progress") == 0)
+                        instance.progress = this->unscale_long_to_double(ft_atol(item->value));
+                    else if (ft_strcmp(suffix, "active") == 0)
+                        instance.active = ft_atoi(item->value) != 0;
+                }
+                item = item->next;
+            }
+
+            if (state.width < 0)
+                state.width = 0;
+            if (state.height < 0)
+                state.height = 0;
+            if (state.base_logistic < 0)
+                state.base_logistic = 0;
+            if (state.research_logistic_bonus < 0)
+                state.research_logistic_bonus = 0;
+            if (state.logistic_capacity < 0)
+                state.logistic_capacity = 0;
+            if (state.logistic_usage < 0)
+                state.logistic_usage = 0;
+            if (state.logistic_usage > state.logistic_capacity)
+                state.logistic_usage = state.logistic_capacity;
+            if (state.next_instance_id <= 0)
+                state.next_instance_id = 1;
+            if (state.mine_multiplier < 1.0)
+                state.mine_multiplier = 1.0;
+            if (state.convoy_speed_bonus < 0.0)
+                state.convoy_speed_bonus = 0.0;
+            if (state.convoy_raid_risk_modifier < 0.0)
+                state.convoy_raid_risk_modifier = 0.0;
+            if (state.support_energy < 0.0)
+                state.support_energy = 0.0;
+            if (state.energy_deficit_pressure < 0.0)
+                state.energy_deficit_pressure = 0.0;
+
+            long total_cells_long = static_cast<long>(state.width) * static_cast<long>(state.height);
+            if (total_cells_long < 0)
+                total_cells_long = 0;
+            size_t total_cells = static_cast<size_t>(total_cells_long);
+            state.grid.clear();
+            if (total_cells > 0)
+            {
+                state.grid.resize(total_cells, 0);
+                for (size_t j = 0; j < grid_entries.size(); ++j)
+                {
+                    int index = grid_entries[j].key;
+                    if (index < 0)
+                        continue;
+                    size_t cell_index = static_cast<size_t>(index);
+                    if (cell_index >= total_cells)
+                        continue;
+                    state.grid[cell_index] = grid_entries[j].value;
+                }
+            }
+
+            int max_plots = state.width * state.height;
+            if (max_plots < 0)
+                max_plots = 0;
+            if (state.used_plots < 0)
+                state.used_plots = 0;
+            if (state.used_plots > max_plots)
+                state.used_plots = max_plots;
+
+            state.instances.clear();
+            size_t instance_count = instance_lookup.size();
+            if (instance_count > 0)
+            {
+                const Pair<int, ft_building_instance> *inst_entries = instance_lookup.end();
+                inst_entries -= instance_count;
+                for (size_t j = 0; j < instance_count; ++j)
+                {
+                    ft_building_instance instance = inst_entries[j].value;
+                    if (instance.uid == 0)
+                        instance.uid = inst_entries[j].key;
+                    state.instances.insert(inst_entries[j].key, instance);
+                }
+            }
+
+            parsed_planets.remove(planet_id);
+            parsed_planets.insert(planet_id, ft_move(state));
+        }
+        current = current->next;
+    }
+
+    json_free_groups(groups);
+    buildings._planets.clear();
+    buildings._building_unlocks.clear();
+    buildings._crafting_energy_multiplier = parsed_crafting_energy;
+    buildings._crafting_speed_multiplier = parsed_crafting_speed;
+    buildings._global_energy_multiplier = parsed_global_energy;
+
+    size_t unlock_count = parsed_unlocks.size();
+    if (unlock_count > 0)
+    {
+        const Pair<int, bool> *unlock_entries = parsed_unlocks.end();
+        unlock_entries -= unlock_count;
+        for (size_t i = 0; i < unlock_count; ++i)
+            buildings._building_unlocks.insert(unlock_entries[i].key, unlock_entries[i].value);
+    }
+
+    size_t planet_count = parsed_planets.size();
+    if (planet_count > 0)
+    {
+        Pair<int, ft_planet_build_state> *entries = parsed_planets.end();
+        entries -= planet_count;
+        for (size_t i = 0; i < planet_count; ++i)
+            buildings._planets.insert(entries[i].key, ft_move(entries[i].value));
+    }
+    return true;
+}

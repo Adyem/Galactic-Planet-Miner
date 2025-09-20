@@ -5,6 +5,7 @@
 #include "fleets.hpp"
 #include "research.hpp"
 #include "achievements.hpp"
+#include "buildings.hpp"
 #include "../libft/JSon/document.hpp"
 #include "../libft/JSon/json.hpp"
 #include "../libft/CPP_class/class_string_class.hpp"
@@ -32,6 +33,9 @@ public:
 
     ft_string serialize_achievements(const AchievementManager &achievements) const noexcept;
     bool deserialize_achievements(const char *content, AchievementManager &achievements) const noexcept;
+
+    ft_string serialize_buildings(const BuildingManager &buildings) const noexcept;
+    bool deserialize_buildings(const char *content, BuildingManager &buildings) const noexcept;
 
     static void set_json_allocation_hook(json_allocation_hook_t hook) noexcept;
 
