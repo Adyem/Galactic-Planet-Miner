@@ -32,6 +32,9 @@ int main()
     if (!verify_mine_upgrade_station_bonus())
         return 0;
 
+    if (!verify_set_ore_creates_missing_resource())
+        return 0;
+
     if (!verify_supply_route_key_collisions())
         return 0;
 
