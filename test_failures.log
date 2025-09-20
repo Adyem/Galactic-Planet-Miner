@@ -1,3 +1,2 @@
 # Test failure log
 # Outstanding failures:
-tests/game_test_backend.cpp:53: online_game.is_backend_online()

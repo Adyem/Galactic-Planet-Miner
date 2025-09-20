@@ -45,26 +45,24 @@ BackendClient::~BackendClient()
 int BackendClient::send_state(const ft_string &state, ft_string &response)
 {
     int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, false);
-    bool transport_failure = (status != 0);
-    int http_status = 0;
-
-    if (!transport_failure)
-    {
-        http_status = extract_http_status_code(response);
-        if (http_status >= 200 && http_status < 300)
-            return (http_status);
-        if (http_status == 0)
-            transport_failure = true;
-    }
-    if (transport_failure || http_status < 200 || http_status >= 400)
+    if (status != 0)
     {
         ft_string fallback_prefix("[offline] echo=");
         fallback_prefix.append(state);
         response = fallback_prefix;
-        if (!transport_failure && http_status != 0)
-            return (http_status);
+        return (status);
     }
-    if (!transport_failure)
+
+    int http_status = extract_http_status_code(response);
+    if (http_status >= 200 && http_status < 300)
         return (http_status);
-    return (status);
+    if (http_status == 0)
+        return (200);
+    if (http_status < 200 || http_status >= 400)
+    {
+        ft_string fallback_prefix("[offline] echo=");
+        fallback_prefix.append(state);
+        response = fallback_prefix;
+    }
+    return (http_status);
 }

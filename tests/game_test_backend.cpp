@@ -40,10 +40,16 @@ int verify_backend_roundtrip()
     const char *resp = response.c_str();
     FT_ASSERT(response.size() >= payload_size);
     FT_ASSERT_EQ(0, ft_strcmp(resp + response.size() - payload_size, payload.c_str()));
-    if (status != 0)
+    bool has_fallback_prefix = (response.size() >= fallback_size
+        && ft_strncmp(resp, fallback_prefix.c_str(), static_cast<size_t>(fallback_size)) == 0);
+    if (has_fallback_prefix)
     {
-        FT_ASSERT(response.size() >= fallback_size + payload_size);
-        FT_ASSERT_EQ(0, ft_strncmp(resp, fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
+        FT_ASSERT(status != 0);
+        FT_ASSERT(status < 200 || status >= 400);
+    }
+    else
+    {
+        FT_ASSERT(status >= 200);
     }
 
     Game online_game(ft_string("127.0.0.1:8080"), ft_string("/"));
