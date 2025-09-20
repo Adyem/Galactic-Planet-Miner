@@ -14,6 +14,7 @@ namespace
     const int  SAVE_SHIP_ID_MIN = 1;
     const int  SAVE_SHIP_ID_MAX = FT_INT_MAX - 1;
     const int  SAVE_MAX_SHIPS_PER_FLEET = 4096;
+    const long BUILDING_GRID_MAX_CELLS = 1048576;
 
     union save_system_double_converter
     {
@@ -1237,6 +1238,20 @@ bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &bui
                 state.width = 0;
             if (state.height < 0)
                 state.height = 0;
+
+            size_t sanitized_width = static_cast<size_t>(state.width);
+            size_t sanitized_height = static_cast<size_t>(state.height);
+            size_t max_cells_limit = static_cast<size_t>(BUILDING_GRID_MAX_CELLS);
+            if (sanitized_width > max_cells_limit || sanitized_height > max_cells_limit)
+            {
+                json_free_groups(groups);
+                return false;
+            }
+            if (sanitized_width > 0 && sanitized_height > max_cells_limit / sanitized_width)
+            {
+                json_free_groups(groups);
+                return false;
+            }
             if (state.base_logistic < 0)
                 state.base_logistic = 0;
             if (state.research_logistic_bonus < 0)
