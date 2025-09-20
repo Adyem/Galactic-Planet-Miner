@@ -34,6 +34,7 @@ int verify_set_ore_creates_missing_resource();
 int verify_supply_route_key_collisions();
 int verify_trade_relay_convoy_modifiers();
 int verify_convoy_escort_travel_speed();
+int verify_convoy_escort_assignment_persistence();
 int verify_achievement_catalog();
 int verify_achievement_progression();
 int verify_quest_achievement_failures();
