@@ -1,11 +1,75 @@
 #include "../libft/Libft/libft.hpp"
 #include "../libft/System_utils/test_runner.hpp"
+#include "../libft/Networking/socket_class.hpp"
+#include "../libft/PThread/thread.hpp"
+#include "../libft/Concurrency/this_thread.hpp"
 #include "backend_client.hpp"
 #include "buildings.hpp"
 #include "game.hpp"
 #include "game_test_scenarios.hpp"
 #include "planets.hpp"
 #include "research.hpp"
+#include <chrono>
+#include <cstdint>
+
+struct MalformedResponseServerConfig
+{
+    uint16_t port;
+    ft_string payload;
+
+    MalformedResponseServerConfig(uint16_t port_value, const ft_string &body)
+        : port(port_value), payload(body)
+    {}
+};
+
+static void run_malformed_response_server(MalformedResponseServerConfig *config)
+{
+    if (config == ft_nullptr)
+        return ;
+
+    SocketConfig server_config;
+    server_config._type = SocketType::SERVER;
+    server_config._ip = ft_string("127.0.0.1");
+    server_config._port = config->port;
+    server_config._backlog = 1;
+    server_config._recv_timeout = 0;
+    server_config._send_timeout = 0;
+
+    ft_socket server_socket(server_config);
+    if (server_socket.get_error() != ER_SUCCESS)
+        return ;
+
+    int listen_fd = server_socket.get_fd();
+    if (listen_fd < 0)
+        return ;
+
+    struct sockaddr_storage client_addr;
+    socklen_t addr_len = sizeof(client_addr);
+    int client_fd = nw_accept(listen_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len);
+    if (client_fd >= 0)
+    {
+        ssize_t sent = nw_send(client_fd, config->payload.c_str(), config->payload.size(), 0);
+        (void)sent;
+        FT_CLOSE_SOCKET(client_fd);
+    }
+    server_socket.close_socket();
+}
+
+static ft_string build_loopback_host(uint16_t port)
+{
+    (void)port;
+    return ft_string("127.0.0.1");
+}
+
+static ft_thread start_malformed_response_server(MalformedResponseServerConfig &config)
+{
+    return ft_thread(run_malformed_response_server, &config);
+}
+
+static void wait_for_server_start()
+{
+    ft_this_thread_sleep_for(std::chrono::milliseconds(50));
+}
 
 int verify_backend_roundtrip()
 {
@@ -33,6 +97,35 @@ int verify_backend_roundtrip()
     const ft_string &offline_entry = offline_log[offline_lore_before];
     const ft_string offline_prefix("Operations report: backend connection lost");
     FT_ASSERT_EQ(0, ft_strncmp(offline_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
+
+    const uint16_t malformed_port = 80;
+    MalformedResponseServerConfig malformed_backend_config(malformed_port, ft_string("garbled-response"));
+    ft_thread malformed_backend_thread = start_malformed_response_server(malformed_backend_config);
+    wait_for_server_start();
+    BackendClient malformed_client(build_loopback_host(malformed_port), ft_string("/"));
+    ft_string malformed_response;
+    int malformed_status = malformed_client.send_state(payload, malformed_response);
+    malformed_backend_thread.join();
+    FT_ASSERT(malformed_status < 200 || malformed_status >= 400);
+    FT_ASSERT(malformed_status != 0);
+    FT_ASSERT(malformed_response.size() >= fallback_size + payload_size);
+    FT_ASSERT_EQ(0, ft_strncmp(malformed_response.c_str(), fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
+    FT_ASSERT_EQ(0, ft_strcmp(malformed_response.c_str() + malformed_response.size() - payload_size, payload.c_str()));
+
+    const uint16_t malformed_game_port = 80;
+    MalformedResponseServerConfig malformed_game_config(malformed_game_port, ft_string("garbled-response"));
+    ft_thread malformed_game_thread = start_malformed_response_server(malformed_game_config);
+    wait_for_server_start();
+    Game malformed_game(build_loopback_host(malformed_game_port), ft_string("/"));
+    FT_ASSERT(malformed_game.is_backend_online());
+    size_t malformed_lore_before = malformed_game.get_lore_log().size();
+    malformed_game.add_ore(PLANET_TERRA, ORE_IRON, 1);
+    malformed_game_thread.join();
+    FT_ASSERT(!malformed_game.is_backend_online());
+    const ft_vector<ft_string> &malformed_log = malformed_game.get_lore_log();
+    FT_ASSERT_EQ(malformed_lore_before + 1, malformed_log.size());
+    const ft_string &malformed_entry = malformed_log[malformed_lore_before];
+    FT_ASSERT_EQ(0, ft_strncmp(malformed_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
 
     BackendClient client(ft_string("127.0.0.1:8080"), ft_string("/"));
     ft_string response;
