@@ -386,7 +386,7 @@ void Game::send_state(int planet_id, int ore_id)
     body.append("}");
     ft_string response;
     int status = this->_backend.send_state(body, response);
-    bool offline = (status != 0);
+    bool offline = (status < 200 || status >= 400);
     if (!offline)
     {
         const ft_string fallback_prefix("[offline] echo=");
