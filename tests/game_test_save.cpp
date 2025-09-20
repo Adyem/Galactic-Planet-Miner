@@ -144,6 +144,72 @@ static long reference_scale_double(double value)
     return static_cast<long>(scaled);
 }
 
+static ft_string save_system_building_payload(int width, int height,
+    int used_plots = 0, int logistic_capacity = 0, int logistic_usage = 0)
+{
+    json_document document;
+    json_group *manager_group = document.create_group("buildings_manager");
+    if (manager_group == ft_nullptr)
+        return ft_string();
+    document.append_group(manager_group);
+    json_item *manager_type = document.create_item("type", "manager");
+    if (manager_type == ft_nullptr)
+        return ft_string();
+    document.add_item(manager_group, manager_type);
+
+    json_group *planet_group = document.create_group("building_planet_test");
+    if (planet_group == ft_nullptr)
+        return ft_string();
+    document.append_group(planet_group);
+
+    json_item *planet_type = document.create_item("type", "planet");
+    if (planet_type == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, planet_type);
+
+    json_item *planet_id = document.create_item("id", 99);
+    if (planet_id == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, planet_id);
+
+    json_item *width_item = document.create_item("width", width);
+    if (width_item == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, width_item);
+
+    json_item *height_item = document.create_item("height", height);
+    if (height_item == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, height_item);
+
+    json_item *used_item = document.create_item("used_plots", used_plots);
+    if (used_item == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, used_item);
+
+    json_item *capacity_item = document.create_item("logistic_capacity", logistic_capacity);
+    if (capacity_item == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, capacity_item);
+
+    json_item *usage_item = document.create_item("logistic_usage", logistic_usage);
+    if (usage_item == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, usage_item);
+
+    json_item *next_instance = document.create_item("next_instance_id", 1);
+    if (next_instance == ft_nullptr)
+        return ft_string();
+    document.add_item(planet_group, next_instance);
+
+    char *raw = document.write_to_string();
+    if (raw == ft_nullptr)
+        return ft_string();
+    ft_string payload(raw);
+    cma_free(raw);
+    return payload;
+}
+
 int verify_save_system_round_trip()
 {
     SaveSystem saves;
@@ -377,6 +443,37 @@ int verify_save_system_invalid_inputs()
         achievements.get_status(ACHIEVEMENT_SECOND_HOME));
     FT_ASSERT(!saves.deserialize_achievements(invalid_payload.c_str(), achievements));
     FT_ASSERT_EQ(1, achievements.get_progress(ACHIEVEMENT_SECOND_HOME));
+
+    return 1;
+}
+
+int verify_save_system_rejects_oversized_building_grids()
+{
+    SaveSystem saves;
+    BuildingManager buildings;
+
+    ft_string excessive_width = save_system_building_payload(2000000, 1);
+    FT_ASSERT(excessive_width.size() > 0);
+    FT_ASSERT(!saves.deserialize_buildings(excessive_width.c_str(), buildings));
+    FT_ASSERT_EQ(0, buildings.get_planet_plot_capacity(99));
+
+    ft_string excessive_height = save_system_building_payload(1, 2000000);
+    FT_ASSERT(excessive_height.size() > 0);
+    FT_ASSERT(!saves.deserialize_buildings(excessive_height.c_str(), buildings));
+    FT_ASSERT_EQ(0, buildings.get_planet_plot_capacity(99));
+
+    ft_string excessive_area = save_system_building_payload(2048, 2048);
+    FT_ASSERT(excessive_area.size() > 0);
+    FT_ASSERT(!saves.deserialize_buildings(excessive_area.c_str(), buildings));
+    FT_ASSERT_EQ(0, buildings.get_planet_plot_capacity(99));
+
+    ft_string valid_payload = save_system_building_payload(4, 4, 37, 5, 12);
+    FT_ASSERT(valid_payload.size() > 0);
+    FT_ASSERT(saves.deserialize_buildings(valid_payload.c_str(), buildings));
+    FT_ASSERT_EQ(16, buildings.get_planet_plot_capacity(99));
+    FT_ASSERT_EQ(16, buildings.get_planet_plot_usage(99));
+    FT_ASSERT_EQ(5, buildings.get_planet_logistic_capacity(99));
+    FT_ASSERT_EQ(5, buildings.get_planet_logistic_usage(99));
 
     return 1;
 }
