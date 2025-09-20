@@ -1280,6 +1280,37 @@ int verify_save_system_sparse_entries()
     return 1;
 }
 
+int verify_planet_inventory_save_round_trip()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_FUSION_REACTOR);
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART);
+    game.set_ore(PLANET_TERRA, ORE_IRON, 135);
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 7);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 11);
+
+    FT_ASSERT(game.save_campaign_checkpoint(ft_string("inventory_roundtrip")));
+    ft_string planet_json = game.get_campaign_planet_checkpoint();
+    ft_string fleet_json = game.get_campaign_fleet_checkpoint();
+    ft_string research_json = game.get_campaign_research_checkpoint();
+    ft_string achievement_json = game.get_campaign_achievement_checkpoint();
+    ft_string building_json = game.get_campaign_building_checkpoint();
+
+    game.set_ore(PLANET_TERRA, ORE_IRON, 0);
+    game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 0);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 0);
+
+    FT_ASSERT(game.load_campaign_from_save(planet_json, fleet_json, research_json,
+        achievement_json, building_json));
+
+    FT_ASSERT_EQ(135, game.get_ore(PLANET_TERRA, ORE_IRON));
+    FT_ASSERT_EQ(7, game.get_ore(PLANET_TERRA, ITEM_FUSION_REACTOR));
+    FT_ASSERT_EQ(11, game.get_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART));
+
+    return 1;
+}
+
 int verify_building_save_round_trip()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));

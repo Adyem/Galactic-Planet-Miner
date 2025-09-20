@@ -741,11 +741,13 @@ void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &sn
         const ft_vector<Pair<int, double> > &saved_carryover = saved_planet->get_carryover();
         for (size_t j = 0; j < saved_carryover.size(); ++j)
             planet->set_carryover(saved_carryover[j].key, saved_carryover[j].value);
-        for (size_t j = 0; j < saved_rates.size(); ++j)
+        ft_vector<Pair<int, int> > inventory_snapshot = saved_planet->get_items_snapshot();
+        for (size_t j = 0; j < inventory_snapshot.size(); ++j)
         {
-            int ore_id = saved_rates[j].key;
-            planet->set_resource(ore_id, saved_planet->get_resource(ore_id));
-            this->send_state(planet_id, ore_id);
+            int item_id = inventory_snapshot[j].key;
+            this->ensure_planet_item_slot(planet_id, item_id);
+            planet->set_resource(item_id, inventory_snapshot[j].value);
+            this->send_state(planet_id, item_id);
         }
         this->_resource_deficits.remove(planet_id);
     }
