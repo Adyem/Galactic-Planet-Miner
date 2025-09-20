@@ -46,6 +46,7 @@ int verify_save_system_limits_inflated_ship_counts();
 int validate_save_system_serialized_samples();
 int verify_save_system_allocation_failures();
 int verify_save_system_extreme_scaling();
+int verify_save_system_normalizes_non_finite_planet_values();
 int verify_save_system_massive_payload();
 int verify_save_system_sparse_entries();
 int verify_planet_inventory_save_round_trip();

@@ -374,6 +374,8 @@ bool SaveSystem::deserialize_planets(const char *content,
         {
             int ore_id = resource_rates[i].key;
             double rate = this->unscale_long_to_double(resource_rates[i].value);
+            if (!save_system_is_finite(rate))
+                rate = 0.0;
             planet->register_resource(ore_id, rate);
         }
         for (size_t i = 0; i < resource_amounts.size(); ++i)
@@ -386,6 +388,8 @@ bool SaveSystem::deserialize_planets(const char *content,
         {
             int ore_id = resource_carryover[i].key;
             double carry_value = this->unscale_long_to_double(resource_carryover[i].value);
+            if (!save_system_is_finite(carry_value))
+                carry_value = 0.0;
             planet->set_carryover(ore_id, carry_value);
         }
         for (size_t i = 0; i < inventory_items.size(); ++i)

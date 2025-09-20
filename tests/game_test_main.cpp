@@ -120,6 +120,8 @@ int main()
         return 0;
     if (!verify_save_system_extreme_scaling())
         return 0;
+    if (!verify_save_system_normalizes_non_finite_planet_values())
+        return 0;
     if (!verify_save_system_massive_payload())
         return 0;
     if (!verify_save_system_sparse_entries())

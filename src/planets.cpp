@@ -1,4 +1,18 @@
 #include "planets.hpp"
+#include "../libft/Math/math.hpp"
+
+namespace
+{
+    static bool planet_is_finite(double value) noexcept
+    {
+        if (math_isnan(value))
+            return false;
+        double difference = value - value;
+        if (math_isnan(difference))
+            return false;
+        return true;
+    }
+}
 
 ft_planet::ft_planet(int id) noexcept : _id(id)
 {
@@ -189,6 +203,8 @@ ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
     {
         int ore_id = this->_rates[i].key;
         double rate = this->_rates[i].value;
+        if (!planet_is_finite(rate))
+            rate = 0.0;
         Pair<int, double> *carry = this->find_carryover(ore_id);
         if (carry == ft_nullptr)
         {
@@ -198,9 +214,17 @@ ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
             this->_carryover.push_back(entry);
             carry = this->find_carryover(ore_id);
         }
+        if (carry && !planet_is_finite(carry->value))
+            carry->value = 0.0;
         double total = rate * seconds;
+        if (!planet_is_finite(total))
+            total = 0.0;
         if (carry)
+        {
             total += carry->value;
+            if (!planet_is_finite(total))
+                total = 0.0;
+        }
         int amount = static_cast<int>(total + epsilon);
         double remainder = total - static_cast<double>(amount);
         if (remainder < 0.0)

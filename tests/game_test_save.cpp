@@ -91,7 +91,7 @@ static double save_system_test_double_max()
     return converter.double_value;
 }
 
-static bool save_system_test_is_infinite(double value)
+[[maybe_unused]] static bool save_system_test_is_infinite(double value)
 {
     union
     {
@@ -109,7 +109,7 @@ static bool save_system_test_is_infinite(double value)
     return false;
 }
 
-static bool save_system_test_is_nan(double value)
+[[maybe_unused]] static bool save_system_test_is_nan(double value)
 {
     union
     {
@@ -812,12 +812,10 @@ int verify_save_system_extreme_scaling()
     FT_ASSERT(ft_absolute(restored_large_negative - expected_min) < 0.000001);
 
     double restored_positive_inf = restored_terra->get_rate(ORE_GOLD);
-    FT_ASSERT(save_system_test_is_infinite(restored_positive_inf));
-    FT_ASSERT(restored_positive_inf > 0.0);
+    FT_ASSERT(ft_absolute(restored_positive_inf) < 0.000001);
 
     double restored_negative_inf = restored_terra->get_rate(ORE_COAL);
-    FT_ASSERT(save_system_test_is_infinite(restored_negative_inf));
-    FT_ASSERT(restored_negative_inf < 0.0);
+    FT_ASSERT(ft_absolute(restored_negative_inf) < 0.000001);
 
     const ft_vector<Pair<int, double> > &carry = restored_terra->get_carryover();
     bool found_iron = false;
@@ -846,15 +844,106 @@ int verify_save_system_extreme_scaling()
     }
 
     FT_ASSERT(found_iron);
-    FT_ASSERT(save_system_test_is_nan(carry_iron));
+    FT_ASSERT(ft_absolute(carry_iron) < 0.000001);
 
     FT_ASSERT(found_copper);
-    FT_ASSERT(save_system_test_is_infinite(carry_copper));
-    FT_ASSERT(carry_copper > 0.0);
+    FT_ASSERT(ft_absolute(carry_copper) < 0.000001);
 
     FT_ASSERT(found_gold);
-    FT_ASSERT(save_system_test_is_infinite(carry_gold));
-    FT_ASSERT(carry_gold < 0.0);
+    FT_ASSERT(ft_absolute(carry_gold) < 0.000001);
+
+    return 1;
+}
+
+int verify_save_system_normalizes_non_finite_planet_values()
+{
+    SaveSystem saves;
+
+    json_document document;
+    json_group *planet_group = document.create_group("planet_non_finite");
+    FT_ASSERT(planet_group != ft_nullptr);
+    document.append_group(planet_group);
+
+    json_item *id_item = document.create_item("id", 7777);
+    FT_ASSERT(id_item != ft_nullptr);
+    document.add_item(planet_group, id_item);
+
+    json_item *resource_nan_item = document.create_item("resource_500", 10);
+    FT_ASSERT(resource_nan_item != ft_nullptr);
+    document.add_item(planet_group, resource_nan_item);
+
+    json_item *resource_inf_item = document.create_item("resource_501", 5);
+    FT_ASSERT(resource_inf_item != ft_nullptr);
+    document.add_item(planet_group, resource_inf_item);
+
+    ft_string rate_nan_string = ft_to_string(FT_LONG_MIN);
+    json_item *rate_nan_item = document.create_item("rate_500",
+        rate_nan_string.c_str());
+    FT_ASSERT(rate_nan_item != ft_nullptr);
+    document.add_item(planet_group, rate_nan_item);
+
+    ft_string rate_infinite_string = ft_to_string(FT_LONG_MAX);
+    json_item *rate_infinite_item = document.create_item("rate_501",
+        rate_infinite_string.c_str());
+    FT_ASSERT(rate_infinite_item != ft_nullptr);
+    document.add_item(planet_group, rate_infinite_item);
+
+    long negative_infinity_sentinel = FT_LONG_MIN + 1L;
+    ft_string carry_nan_string = ft_to_string(FT_LONG_MIN);
+    ft_string carry_negative_inf_string = ft_to_string(negative_infinity_sentinel);
+
+    json_item *carry_nan_item = document.create_item("carryover_500",
+        carry_nan_string.c_str());
+    FT_ASSERT(carry_nan_item != ft_nullptr);
+    document.add_item(planet_group, carry_nan_item);
+
+    json_item *carry_negative_inf_item = document.create_item("carryover_501",
+        carry_negative_inf_string.c_str());
+    FT_ASSERT(carry_negative_inf_item != ft_nullptr);
+    document.add_item(planet_group, carry_negative_inf_item);
+
+    char *serialized_planet = document.write_to_string();
+    FT_ASSERT(serialized_planet != ft_nullptr);
+    ft_string planet_json(serialized_planet);
+    cma_free(serialized_planet);
+
+    ft_map<int, ft_sharedptr<ft_planet> > planets;
+    FT_ASSERT(saves.deserialize_planets(planet_json.c_str(), planets));
+
+    Pair<int, ft_sharedptr<ft_planet> > *planet_entry = planets.find(7777);
+    FT_ASSERT(planet_entry != ft_nullptr);
+    ft_sharedptr<ft_planet> planet = planet_entry->value;
+    FT_ASSERT(planet);
+
+    FT_ASSERT(ft_absolute(planet->get_rate(500)) < 0.000001);
+    FT_ASSERT(ft_absolute(planet->get_rate(501)) < 0.000001);
+
+    const ft_vector<Pair<int, double> > &carry = planet->get_carryover();
+    bool found_nan_resource = false;
+    bool found_inf_resource = false;
+    double carry_nan_resource = 0.0;
+    double carry_inf_resource = 0.0;
+    for (size_t idx = 0; idx < carry.size(); ++idx)
+    {
+        if (carry[idx].key == 500)
+        {
+            carry_nan_resource = carry[idx].value;
+            found_nan_resource = true;
+        }
+        else if (carry[idx].key == 501)
+        {
+            carry_inf_resource = carry[idx].value;
+            found_inf_resource = true;
+        }
+    }
+
+    FT_ASSERT(found_nan_resource);
+    FT_ASSERT(ft_absolute(carry_nan_resource) < 0.000001);
+    FT_ASSERT(found_inf_resource);
+    FT_ASSERT(ft_absolute(carry_inf_resource) < 0.000001);
+
+    ft_vector<Pair<int, int> > produced = planet->produce(5.0);
+    FT_ASSERT_EQ(0u, produced.size());
 
     return 1;
 }
@@ -1235,7 +1324,7 @@ int verify_save_system_sparse_entries()
         }
     }
     FT_ASSERT(found_invalid_carry);
-    FT_ASSERT(save_system_test_is_nan(invalid_carry_value));
+    FT_ASSERT(ft_absolute(invalid_carry_value) < 0.000001);
 
     json_document fleet_doc;
     json_group *valid_fleet = fleet_doc.create_group("fleet_valid");
