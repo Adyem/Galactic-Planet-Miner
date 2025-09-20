@@ -4,6 +4,13 @@
 
 namespace
 {
+    void set_offline_echo_response(ft_string &response, const ft_string &state)
+    {
+        ft_string fallback_prefix("[offline] echo=");
+        fallback_prefix.append(state);
+        response = fallback_prefix;
+    }
+
     int extract_http_status_code(const ft_string &response)
     {
         const char *cstr = response.c_str();
@@ -47,22 +54,21 @@ int BackendClient::send_state(const ft_string &state, ft_string &response)
     int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, false);
     if (status != 0)
     {
-        ft_string fallback_prefix("[offline] echo=");
-        fallback_prefix.append(state);
-        response = fallback_prefix;
+        set_offline_echo_response(response, state);
         return (status);
     }
 
     int http_status = extract_http_status_code(response);
+    if (http_status == 0)
+    {
+        set_offline_echo_response(response, state);
+        return (503);
+    }
     if (http_status >= 200 && http_status < 300)
         return (http_status);
-    if (http_status == 0)
-        return (200);
     if (http_status < 200 || http_status >= 400)
     {
-        ft_string fallback_prefix("[offline] echo=");
-        fallback_prefix.append(state);
-        response = fallback_prefix;
+        set_offline_echo_response(response, state);
     }
     return (http_status);
 }
