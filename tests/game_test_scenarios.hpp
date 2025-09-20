@@ -14,6 +14,7 @@ int verify_multiple_convoy_raids();
 int verify_supply_route_escalation();
 int verify_escort_veterancy_progression();
 int compare_energy_pressure_scenarios();
+int verify_crafting_resume_requires_full_cycle();
 int compare_storyline_assaults();
 int analyze_manual_vs_auto_assault_controls();
 int measure_assault_aggression_effects();
