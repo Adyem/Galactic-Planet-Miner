@@ -119,6 +119,8 @@ int main()
         return 0;
     if (!verify_save_system_limits_inflated_ship_counts())
         return 0;
+    if (!verify_save_system_recovers_underreported_ship_counts())
+        return 0;
     if (!validate_save_system_serialized_samples())
         return 0;
     if (!verify_save_system_allocation_failures())
