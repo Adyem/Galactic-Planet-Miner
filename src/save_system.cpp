@@ -2,8 +2,6 @@
 #include "../libft/CMA/CMA.hpp"
 #include "../libft/CPP_class/class_nullptr.hpp"
 #include "../libft/Libft/limits.hpp"
-#include <cmath>
-#include <limits>
 
 namespace
 {
@@ -15,6 +13,85 @@ namespace
     const long SAVE_DOUBLE_MAX_FINITE = FT_LONG_MAX - 1;
     const int  SAVE_SHIP_ID_MIN = 1;
     const int  SAVE_SHIP_ID_MAX = FT_INT_MAX - 1;
+    const int  SAVE_MAX_SHIPS_PER_FLEET = 4096;
+
+    union save_system_double_converter
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    };
+
+    bool save_system_is_nan(double value)
+    {
+        save_system_double_converter converter;
+        unsigned long long exponent_bits;
+        unsigned long long mantissa_bits;
+
+        converter.double_value = value;
+        exponent_bits = converter.bit_pattern & 0x7ff0000000000000ULL;
+        mantissa_bits = converter.bit_pattern & 0x000fffffffffffffULL;
+        if (exponent_bits == 0x7ff0000000000000ULL && mantissa_bits != 0ULL)
+            return true;
+        return false;
+    }
+
+    int save_system_infinity_direction(double value)
+    {
+        save_system_double_converter converter;
+        unsigned long long exponent_bits;
+        unsigned long long mantissa_bits;
+
+        converter.double_value = value;
+        exponent_bits = converter.bit_pattern & 0x7ff0000000000000ULL;
+        mantissa_bits = converter.bit_pattern & 0x000fffffffffffffULL;
+        if (exponent_bits == 0x7ff0000000000000ULL && mantissa_bits == 0ULL)
+        {
+            if ((converter.bit_pattern & 0x8000000000000000ULL) != 0ULL)
+                return -1;
+            return 1;
+        }
+        return 0;
+    }
+
+    bool save_system_is_infinite(double value)
+    {
+        if (save_system_infinity_direction(value) != 0)
+            return true;
+        return false;
+    }
+
+    bool save_system_is_finite(double value)
+    {
+        if (save_system_is_nan(value))
+            return false;
+        if (save_system_is_infinite(value))
+            return false;
+        return true;
+    }
+
+    double save_system_positive_infinity()
+    {
+        save_system_double_converter converter;
+
+        converter.bit_pattern = 0x7ff0000000000000ULL;
+        return converter.double_value;
+    }
+
+    double save_system_negative_infinity()
+    {
+        save_system_double_converter converter;
+
+        converter.bit_pattern = 0xfff0000000000000ULL;
+        return converter.double_value;
+    }
+
+    double save_system_quiet_nan()
+    {
+        save_system_double_converter converter;
+
+        converter.bit_pattern = 0x7ff8000000000000ULL;
+        return converter.double_value;
+    }
 
     SaveSystem::json_allocation_hook_t g_json_allocation_hook = ft_nullptr;
 
@@ -85,14 +162,19 @@ void SaveSystem::set_json_allocation_hook(json_allocation_hook_t hook) noexcept
 
 long SaveSystem::scale_double_to_long(double value) const noexcept
 {
-    if (std::isnan(value))
+    int infinity_direction;
+
+    if (save_system_is_nan(value))
         return SAVE_DOUBLE_SENTINEL_NAN;
-    if (std::isinf(value))
-        return value > 0.0 ? SAVE_DOUBLE_SENTINEL_POS_INF : SAVE_DOUBLE_SENTINEL_NEG_INF;
+    infinity_direction = save_system_infinity_direction(value);
+    if (infinity_direction > 0)
+        return SAVE_DOUBLE_SENTINEL_POS_INF;
+    if (infinity_direction < 0)
+        return SAVE_DOUBLE_SENTINEL_NEG_INF;
     if (SAVE_DOUBLE_SCALE == 0)
         return 0;
     double scaled = value * static_cast<double>(SAVE_DOUBLE_SCALE);
-    if (!std::isfinite(scaled))
+    if (!save_system_is_finite(scaled))
         return value >= 0.0 ? SAVE_DOUBLE_MAX_FINITE : SAVE_DOUBLE_MIN_FINITE;
     if (scaled >= 0.0)
         scaled += 0.5;
@@ -109,11 +191,11 @@ long SaveSystem::scale_double_to_long(double value) const noexcept
 double SaveSystem::unscale_long_to_double(long value) const noexcept
 {
     if (value == SAVE_DOUBLE_SENTINEL_NAN)
-        return std::numeric_limits<double>::quiet_NaN();
+        return save_system_quiet_nan();
     if (value == SAVE_DOUBLE_SENTINEL_POS_INF)
-        return std::numeric_limits<double>::infinity();
+        return save_system_positive_infinity();
     if (value == SAVE_DOUBLE_SENTINEL_NEG_INF)
-        return -std::numeric_limits<double>::infinity();
+        return save_system_negative_infinity();
     if (value > SAVE_DOUBLE_MAX_FINITE)
         value = SAVE_DOUBLE_MAX_FINITE;
     else if (value < SAVE_DOUBLE_MIN_FINITE)
@@ -494,6 +576,45 @@ bool SaveSystem::deserialize_fleets(const char *content,
         fleet->set_escort_veterancy(this->unscale_long_to_double(veterancy_scaled));
         json_item *ship_count_item = json_find_item(current, "ship_count");
         int ship_count = ship_count_item ? ft_atoi(ship_count_item->value) : 0;
+        if (ship_count < 0)
+            ship_count = 0;
+        int highest_ship_slot = -1;
+        json_item *ship_entry = current->items;
+        while (ship_entry)
+        {
+            if (ship_entry->key && ft_strncmp(ship_entry->key, "ship_", 5) == 0)
+            {
+                const char *index_start = ship_entry->key + 5;
+                const char *cursor = index_start;
+                while (*cursor && *cursor >= '0' && *cursor <= '9')
+                    ++cursor;
+                if (cursor != index_start && ft_strncmp(cursor, "_id", 3) == 0)
+                {
+                    int slot = ft_atoi(index_start);
+                    if (slot < 0)
+                    {
+                        json_free_groups(groups);
+                        return false;
+                    }
+                    if (slot > highest_ship_slot)
+                        highest_ship_slot = slot;
+                    if (slot >= SAVE_MAX_SHIPS_PER_FLEET)
+                    {
+                        json_free_groups(groups);
+                        return false;
+                    }
+                }
+            }
+            ship_entry = ship_entry->next;
+        }
+        if (ship_count > SAVE_MAX_SHIPS_PER_FLEET)
+            ship_count = SAVE_MAX_SHIPS_PER_FLEET;
+        if (highest_ship_slot < 0)
+            ship_count = 0;
+        else if (ship_count > highest_ship_slot + 1)
+            ship_count = highest_ship_slot + 1;
+        int missing_streak = 0;
+        bool saw_ship = false;
         for (int i = 0; i < ship_count; ++i)
         {
             ft_string index_string = ft_to_string(static_cast<long>(i));
@@ -503,7 +624,14 @@ bool SaveSystem::deserialize_fleets(const char *content,
             key.append("_id");
             json_item *ship_id_item = json_find_item(current, key.c_str());
             if (!ship_id_item)
+            {
+                ++missing_streak;
+                if (saw_ship && missing_streak >= 2)
+                    break;
                 continue;
+            }
+            missing_streak = 0;
+            saw_ship = true;
             ft_ship ship_snapshot;
             ship_snapshot.id = ft_atoi(ship_id_item->value);
             if (ship_snapshot.id < SAVE_SHIP_ID_MIN

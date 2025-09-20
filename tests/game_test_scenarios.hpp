@@ -41,6 +41,7 @@ int verify_save_system_round_trip();
 int verify_save_system_edge_cases();
 int verify_save_system_invalid_inputs();
 int verify_save_system_rejects_overlarge_ship_ids();
+int verify_save_system_limits_inflated_ship_counts();
 int validate_save_system_serialized_samples();
 int verify_save_system_allocation_failures();
 int verify_save_system_extreme_scaling();

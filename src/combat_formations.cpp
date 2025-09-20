@@ -1,6 +1,6 @@
 #include "combat.hpp"
 
-#include <cmath>
+#include "libft_math_bridge.hpp"
 
 void CombatManager::update_formations(ft_combat_encounter &encounter, double seconds,
     bool spike_active)
@@ -11,7 +11,7 @@ void CombatManager::update_formations(ft_combat_encounter &encounter, double sec
         return ;
     encounter.formation_time += seconds;
     if (encounter.formation_time > 4096.0)
-        encounter.formation_time = std::fmod(encounter.formation_time, FT_TWO_PI);
+        encounter.formation_time = math_fmod(encounter.formation_time, FT_TWO_PI);
     double push = 18.0 + encounter.attack_multiplier * 4.0;
     push += encounter.energy_pressure * 6.0;
     push += encounter.narrative_pressure * 5.0;
@@ -67,8 +67,8 @@ void CombatManager::compute_target(const ft_combat_encounter &encounter,
     double &out_x, double &out_y, double &out_z) const
 {
     double phase = encounter.formation_time * tracker.drift_speed + tracker.drift_origin;
-    double sway = std::sin(phase);
-    double lift = std::cos(phase * 0.6);
+    double sway = ft_sin(phase);
+    double lift = math_cos(phase * 0.6);
     double flank_scale = tracker.flank ? 13.0 : 6.5;
     out_x = tracker.lane_offset + sway * flank_scale;
     out_y = tracker.vertical_layer + lift * (tracker.flank ? 3.5 : 1.8);

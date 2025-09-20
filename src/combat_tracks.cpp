@@ -1,6 +1,6 @@
 #include "combat.hpp"
 
-#include <cmath>
+#include "libft_math_bridge.hpp"
 
 void CombatManager::sync_raider_tracks(ft_combat_encounter &encounter)
 {
@@ -457,7 +457,7 @@ void CombatManager::update_tracks(ft_map<int, ft_ship_tracker> &tracks,
             tracker.spatial.z = target_z;
             continue;
         }
-        double distance = std::sqrt(distance_sq);
+        double distance = math_sqrt(distance_sq);
         double speed_step = tracker.acceleration * seconds;
         if (speed_step < 0.0)
             speed_step = 0.0;
@@ -481,7 +481,7 @@ void CombatManager::update_tracks(ft_map<int, ft_ship_tracker> &tracks,
         double desired_x = dx / distance;
         double desired_y = dy / distance;
         double desired_z = dz / distance;
-        double heading_length = std::sqrt(tracker.heading_x * tracker.heading_x
+        double heading_length = math_sqrt(tracker.heading_x * tracker.heading_x
             + tracker.heading_y * tracker.heading_y
             + tracker.heading_z * tracker.heading_z);
         double max_turn_rad = tracker.turn_speed * seconds * FT_DEG_TO_RAD;
@@ -494,7 +494,7 @@ void CombatManager::update_tracks(ft_map<int, ft_ship_tracker> &tracks,
                 dot = 1.0;
             else if (dot < -1.0)
                 dot = -1.0;
-            double angle = std::acos(dot);
+            double angle = math_acos(dot);
             if (angle > max_turn_rad)
             {
                 double ratio_limit = max_turn_rad / angle;

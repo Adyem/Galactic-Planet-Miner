@@ -1,8 +1,7 @@
-#include <cmath>
-
 #include "../libft/Libft/libft.hpp"
 #include "../libft/System_utils/test_runner.hpp"
 #include "../libft/Template/vector.hpp"
+#include "../src/libft_math_bridge.hpp"
 #include "fleets.hpp"
 #include "buildings.hpp"
 #include "game_test_scenarios.hpp"
@@ -121,8 +120,8 @@ int analyze_manual_vs_auto_assault_controls()
         {
             if (manual_defender_positions_start[j].ship_uid == after_state.ship_uid)
             {
-                double delta_x = std::fabs(after_state.x - manual_defender_positions_start[j].x);
-                double delta_z = std::fabs(after_state.z - manual_defender_positions_start[j].z);
+                double delta_x = math_fabs(after_state.x - manual_defender_positions_start[j].x);
+                double delta_z = math_fabs(after_state.z - manual_defender_positions_start[j].z);
                 if (delta_x > 0.05 || delta_z > 0.05)
                     defender_shifted = true;
                 break;
@@ -275,8 +274,8 @@ int evaluate_focus_fire_cooldowns()
     FT_ASSERT(focus_burst.start_raider_assault(PLANET_TERRA, 1.0, ASSAULT_CONTROL_ACTIVE));
     double burst_focus_shield_start = focus_burst.get_assault_raider_shield(PLANET_TERRA);
     double burst_focus_hull_start = focus_burst.get_assault_raider_hull(PLANET_TERRA);
-    FT_ASSERT(std::fabs(burst_focus_shield_start - baseline_focus_shield_start) < 0.01);
-    FT_ASSERT(std::fabs(burst_focus_hull_start - baseline_focus_hull_start) < 0.01);
+    FT_ASSERT(math_fabs(burst_focus_shield_start - baseline_focus_shield_start) < 0.01);
+    FT_ASSERT(math_fabs(burst_focus_hull_start - baseline_focus_hull_start) < 0.01);
     FT_ASSERT(focus_burst.assign_fleet_to_assault(PLANET_TERRA, 1));
     FT_ASSERT(focus_burst.assign_fleet_to_assault(PLANET_TERRA, 2));
     FT_ASSERT(focus_burst.set_assault_support(PLANET_TERRA, false, false, false));

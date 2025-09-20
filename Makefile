@@ -67,6 +67,12 @@ COMPILE_FLAGS = -std=c++17 -Wall -Werror -Wextra -Wmissing-declarations -Wold-st
                 -Wzero-as-null-pointer-constant -Wmaybe-uninitialized $(OPT_FLAGS) \
                 -I$(SRC_DIR) -I$(LIBFT_DIR)
 
+LIBFT_COMPILE_FLAGS = -Wall -Werror -Wextra -std=c++17 -Wmissing-declarations \
+                -Wold-style-cast -Wshadow -Wconversion -Wformat=2 -Wundef \
+                -Wfloat-equal -Wconversion -Wodr -Wuseless-cast \
+                -Wzero-as-null-pointer-constant -Wmaybe-uninitialized \
+                -Wno-error=float-equal $(OPT_FLAGS)
+
 CFLAGS = $(COMPILE_FLAGS)
 
 ifeq ($(OS),Windows_NT)
@@ -141,7 +147,7 @@ test: $(LIBFT) $(TEST_OBJS)
 	$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(LDFLAGS)
 
 $(LIBFT):
-	$(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT))
+	$(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"
 
 clean:
 	$(RMDIR) $(OBJ_DIR) $(OBJ_DIR_DEBUG)

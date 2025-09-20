@@ -1,6 +1,3 @@
-#include <cmath>
-#include <limits>
-
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Libft/limits.hpp"
 #include "../libft/System_utils/test_runner.hpp"
@@ -44,6 +41,90 @@ static void save_system_reset_allocation_hook()
     g_fail_next_json_allocation = false;
     g_fail_allocation_type = ft_nullptr;
     g_fail_allocation_identifier = ft_nullptr;
+}
+
+static double save_system_test_positive_infinity()
+{
+    union
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    } converter;
+
+    converter.bit_pattern = 0x7ff0000000000000ULL;
+    return converter.double_value;
+}
+
+static double save_system_test_negative_infinity()
+{
+    union
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    } converter;
+
+    converter.bit_pattern = 0xfff0000000000000ULL;
+    return converter.double_value;
+}
+
+static double save_system_test_quiet_nan()
+{
+    union
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    } converter;
+
+    converter.bit_pattern = 0x7ff8000000000000ULL;
+    return converter.double_value;
+}
+
+static double save_system_test_double_max()
+{
+    union
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    } converter;
+
+    converter.bit_pattern = 0x7fefffffffffffffULL;
+    return converter.double_value;
+}
+
+static bool save_system_test_is_infinite(double value)
+{
+    union
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    } converter;
+    unsigned long long exponent_bits;
+    unsigned long long mantissa_bits;
+
+    converter.double_value = value;
+    exponent_bits = converter.bit_pattern & 0x7ff0000000000000ULL;
+    mantissa_bits = converter.bit_pattern & 0x000fffffffffffffULL;
+    if (exponent_bits == 0x7ff0000000000000ULL && mantissa_bits == 0ULL)
+        return true;
+    return false;
+}
+
+static bool save_system_test_is_nan(double value)
+{
+    union
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    } converter;
+    unsigned long long exponent_bits;
+    unsigned long long mantissa_bits;
+
+    converter.double_value = value;
+    exponent_bits = converter.bit_pattern & 0x7ff0000000000000ULL;
+    mantissa_bits = converter.bit_pattern & 0x000fffffffffffffULL;
+    if (exponent_bits == 0x7ff0000000000000ULL && mantissa_bits != 0ULL)
+        return true;
+    return false;
 }
 
 static double ft_absolute(double value)
@@ -339,6 +420,58 @@ int verify_save_system_rejects_overlarge_ship_ids()
     return 1;
 }
 
+int verify_save_system_limits_inflated_ship_counts()
+{
+    SaveSystem saves;
+
+    json_document fleet_doc;
+    json_group *fleet_group = fleet_doc.create_group("fleet_inflated");
+    FT_ASSERT(fleet_group != ft_nullptr);
+    fleet_doc.append_group(fleet_group);
+
+    json_item *fleet_id_item = fleet_doc.create_item("id", 612);
+    FT_ASSERT(fleet_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, fleet_id_item);
+    json_item *ship_count_item = fleet_doc.create_item("ship_count", 512);
+    FT_ASSERT(ship_count_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_count_item);
+
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_0_id", 3100));
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_0_type", SHIP_CAPITAL));
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_0_hp", 300));
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_1_id", 3200));
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_1_type", SHIP_SHIELD));
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_1_role", SHIP_ROLE_SUPPORT));
+    fleet_doc.add_item(fleet_group, fleet_doc.create_item("ship_90_id", FT_INT_MAX));
+
+    char *fleet_raw = fleet_doc.write_to_string();
+    FT_ASSERT(fleet_raw != ft_nullptr);
+    ft_string fleet_json(fleet_raw);
+    cma_free(fleet_raw);
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    FT_ASSERT(saves.deserialize_fleets(fleet_json.c_str(), fleets));
+    FT_ASSERT_EQ(1u, fleets.size());
+
+    Pair<int, ft_sharedptr<ft_fleet> > *fleet_entry = fleets.find(612);
+    FT_ASSERT(fleet_entry != ft_nullptr);
+    ft_sharedptr<ft_fleet> restored_fleet = fleet_entry->value;
+    FT_ASSERT(restored_fleet);
+    FT_ASSERT_EQ(2, restored_fleet->get_ship_count());
+    const ft_ship *ship_zero = restored_fleet->get_ship(3100);
+    FT_ASSERT(ship_zero != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_CAPITAL, ship_zero->type);
+    FT_ASSERT_EQ(300, ship_zero->hp);
+    const ft_ship *ship_one = restored_fleet->get_ship(3200);
+    FT_ASSERT(ship_one != ft_nullptr);
+    FT_ASSERT_EQ(SHIP_SHIELD, ship_one->type);
+    FT_ASSERT_EQ(SHIP_ROLE_SUPPORT, ship_one->role);
+    const ft_ship *missing_ship = restored_fleet->get_ship(FT_INT_MAX);
+    FT_ASSERT(missing_ship == ft_nullptr);
+
+    return 1;
+}
+
 int validate_save_system_serialized_samples()
 {
     SaveSystem saves;
@@ -542,11 +675,11 @@ int verify_save_system_extreme_scaling()
 
     ft_map<int, ft_sharedptr<ft_planet> > planets;
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
-    double huge_positive = std::numeric_limits<double>::max() / 4.0;
-    double huge_negative = -std::numeric_limits<double>::max() / 4.0;
-    double nan_value = std::numeric_limits<double>::quiet_NaN();
-    double positive_infinity = std::numeric_limits<double>::infinity();
-    double negative_infinity = -std::numeric_limits<double>::infinity();
+    double huge_positive = save_system_test_double_max() / 4.0;
+    double huge_negative = -save_system_test_double_max() / 4.0;
+    double nan_value = save_system_test_quiet_nan();
+    double positive_infinity = save_system_test_positive_infinity();
+    double negative_infinity = save_system_test_negative_infinity();
 
     terra->register_resource(ORE_IRON, huge_positive);
     terra->set_carryover(ORE_IRON, nan_value);
@@ -570,9 +703,9 @@ int verify_save_system_extreme_scaling()
 
     const long scale = 1000000;
     const double scale_double = static_cast<double>(scale);
-    double expected_max = static_cast<double>(std::numeric_limits<long>::max() - 1)
+    double expected_max = static_cast<double>(FT_LONG_MAX - 1L)
         / scale_double;
-    double expected_min = static_cast<double>(std::numeric_limits<long>::min() + 2)
+    double expected_min = static_cast<double>(FT_LONG_MIN + 2L)
         / scale_double;
 
     double restored_large_positive = restored_terra->get_rate(ORE_IRON);
@@ -582,11 +715,11 @@ int verify_save_system_extreme_scaling()
     FT_ASSERT(ft_absolute(restored_large_negative - expected_min) < 0.000001);
 
     double restored_positive_inf = restored_terra->get_rate(ORE_GOLD);
-    FT_ASSERT(std::isinf(restored_positive_inf));
+    FT_ASSERT(save_system_test_is_infinite(restored_positive_inf));
     FT_ASSERT(restored_positive_inf > 0.0);
 
     double restored_negative_inf = restored_terra->get_rate(ORE_COAL);
-    FT_ASSERT(std::isinf(restored_negative_inf));
+    FT_ASSERT(save_system_test_is_infinite(restored_negative_inf));
     FT_ASSERT(restored_negative_inf < 0.0);
 
     const ft_vector<Pair<int, double> > &carry = restored_terra->get_carryover();
@@ -616,14 +749,14 @@ int verify_save_system_extreme_scaling()
     }
 
     FT_ASSERT(found_iron);
-    FT_ASSERT(std::isnan(carry_iron));
+    FT_ASSERT(save_system_test_is_nan(carry_iron));
 
     FT_ASSERT(found_copper);
-    FT_ASSERT(std::isinf(carry_copper));
+    FT_ASSERT(save_system_test_is_infinite(carry_copper));
     FT_ASSERT(carry_copper > 0.0);
 
     FT_ASSERT(found_gold);
-    FT_ASSERT(std::isinf(carry_gold));
+    FT_ASSERT(save_system_test_is_infinite(carry_gold));
     FT_ASSERT(carry_gold < 0.0);
 
     return 1;
@@ -1005,7 +1138,7 @@ int verify_save_system_sparse_entries()
         }
     }
     FT_ASSERT(found_invalid_carry);
-    FT_ASSERT(std::isnan(invalid_carry_value));
+    FT_ASSERT(save_system_test_is_nan(invalid_carry_value));
 
     json_document fleet_doc;
     json_group *valid_fleet = fleet_doc.create_group("fleet_valid");
