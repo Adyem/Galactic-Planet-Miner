@@ -43,6 +43,7 @@ int verify_save_system_invalid_inputs();
 int verify_save_system_rejects_oversized_building_grids();
 int verify_save_system_rejects_overlarge_ship_ids();
 int verify_save_system_limits_inflated_ship_counts();
+int verify_save_system_prevents_ship_id_wraparound();
 int validate_save_system_serialized_samples();
 int verify_save_system_allocation_failures();
 int verify_save_system_extreme_scaling();

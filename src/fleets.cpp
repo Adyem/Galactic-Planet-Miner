@@ -377,6 +377,8 @@ bool ft_fleet::decay_escort_veterancy(double amount) noexcept
 
 int ft_fleet::create_ship(int ship_type) noexcept
 {
+    if (_next_ship_id >= FT_INT_MAX)
+        return 0;
     int uid = _next_ship_id++;
     ft_ship ship(uid, ship_type);
     assign_ship_defaults(ship);
@@ -394,12 +396,12 @@ void ft_fleet::add_ship_snapshot(const ft_ship &ship) noexcept
     this->_ships.insert(ship.id, ship);
     if (ship.id >= _next_ship_id)
     {
-        if (ship.id >= FT_INT_MAX)
+        if (ship.id >= FT_INT_MAX - 1)
             _next_ship_id = FT_INT_MAX;
         else
         {
             int next_id = ship.id + 1;
-            if (next_id <= ship.id)
+            if (next_id <= ship.id || next_id >= FT_INT_MAX)
                 _next_ship_id = FT_INT_MAX;
             else
                 _next_ship_id = next_id;
