@@ -1,8 +1,8 @@
 #include <cmath>
-#include <climits>
 #include <limits>
 
 #include "../libft/Libft/libft.hpp"
+#include "../libft/Libft/limits.hpp"
 #include "../libft/System_utils/test_runner.hpp"
 #include "../libft/Template/vector.hpp"
 #include "../libft/Template/map.hpp"
@@ -296,6 +296,45 @@ int verify_save_system_invalid_inputs()
         achievements.get_status(ACHIEVEMENT_SECOND_HOME));
     FT_ASSERT(!saves.deserialize_achievements(invalid_payload.c_str(), achievements));
     FT_ASSERT_EQ(1, achievements.get_progress(ACHIEVEMENT_SECOND_HOME));
+
+    return 1;
+}
+
+int verify_save_system_rejects_overlarge_ship_ids()
+{
+    SaveSystem saves;
+
+    ft_fleet baseline;
+    int baseline_id = baseline.create_ship(SHIP_SHIELD);
+    FT_ASSERT(baseline_id > 0);
+    FT_ASSERT(baseline_id < FT_INT_MAX);
+
+    json_document fleet_doc;
+    json_group *fleet_group = fleet_doc.create_group("fleet_overlarge_ship");
+    FT_ASSERT(fleet_group != ft_nullptr);
+    fleet_doc.append_group(fleet_group);
+
+    json_item *fleet_id_item = fleet_doc.create_item("id", 5100);
+    FT_ASSERT(fleet_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, fleet_id_item);
+    json_item *ship_count_item = fleet_doc.create_item("ship_count", 1);
+    FT_ASSERT(ship_count_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_count_item);
+    json_item *ship_id_item = fleet_doc.create_item("ship_0_id", FT_INT_MAX);
+    FT_ASSERT(ship_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_id_item);
+
+    char *fleet_raw = fleet_doc.write_to_string();
+    FT_ASSERT(fleet_raw != ft_nullptr);
+    ft_string fleet_json(fleet_raw);
+    cma_free(fleet_raw);
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    FT_ASSERT(!saves.deserialize_fleets(fleet_json.c_str(), fleets));
+
+    ft_fleet followup;
+    int next_id = followup.create_ship(SHIP_SHIELD);
+    FT_ASSERT_EQ(baseline_id + 1, next_id);
 
     return 1;
 }
@@ -910,7 +949,7 @@ int verify_save_system_sparse_entries()
     json_item *invalid_rate_item = planet_doc.create_item("rate_9000", "invalid");
     FT_ASSERT(invalid_rate_item != ft_nullptr);
     planet_doc.add_item(invalid_planet, invalid_rate_item);
-    ft_string nan_sentinel = ft_to_string(LONG_MIN);
+    ft_string nan_sentinel = ft_to_string(FT_LONG_MIN);
     json_item *invalid_carry_item = planet_doc.create_item("carryover_9000",
         nan_sentinel.c_str());
     FT_ASSERT(invalid_carry_item != ft_nullptr);

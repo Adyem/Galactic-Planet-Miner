@@ -1,5 +1,6 @@
 #include "fleets.hpp"
 #include "../libft/Template/vector.hpp"
+#include "../libft/Libft/limits.hpp"
 
 namespace
 {
@@ -392,7 +393,18 @@ void ft_fleet::add_ship_snapshot(const ft_ship &ship) noexcept
 {
     this->_ships.insert(ship.id, ship);
     if (ship.id >= _next_ship_id)
-        _next_ship_id = ship.id + 1;
+    {
+        if (ship.id >= FT_INT_MAX)
+            _next_ship_id = FT_INT_MAX;
+        else
+        {
+            int next_id = ship.id + 1;
+            if (next_id <= ship.id)
+                _next_ship_id = FT_INT_MAX;
+            else
+                _next_ship_id = next_id;
+        }
+    }
 }
 
 void ft_fleet::remove_ship(int ship_uid) noexcept
