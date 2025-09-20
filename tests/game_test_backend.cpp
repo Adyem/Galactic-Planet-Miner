@@ -486,3 +486,70 @@ int verify_convoy_escort_travel_speed()
 
     return 1;
 }
+
+int verify_convoy_escort_assignment_persistence()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    game.tick(200.0);
+    FT_ASSERT(game.is_planet_unlocked(PLANET_MARS));
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_IRON_BAR);
+    game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+
+    const int fleet_id = 9101;
+    game.create_fleet(fleet_id);
+    FT_ASSERT(game.create_ship(fleet_id, SHIP_SHIELD) != 0);
+    FT_ASSERT(game.assign_convoy_escort(PLANET_TERRA, PLANET_MARS, fleet_id));
+
+    game.set_fleet_location_travel(fleet_id, PLANET_TERRA, PLANET_MARS, 10.0);
+
+    int mars_start = game.get_ore(PLANET_MARS, ITEM_IRON_BAR);
+    int dispatched = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 50);
+    FT_ASSERT_EQ(50, dispatched);
+    FT_ASSERT_EQ(fleet_id, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
+
+    double elapsed = 0.0;
+    while (game.get_ore(PLANET_MARS, ITEM_IRON_BAR) == mars_start && elapsed < 600.0)
+    {
+        game.tick(1.0);
+        elapsed += 1.0;
+    }
+    FT_ASSERT(elapsed < 600.0);
+    double cleanup = elapsed;
+    while (game.get_active_convoy_count() > 0 && cleanup < 600.0)
+    {
+        game.tick(1.0);
+        cleanup += 1.0;
+    }
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
+
+    game.set_fleet_location_planet(fleet_id, PLANET_TERRA);
+    FT_ASSERT_EQ(fleet_id, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
+    game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+
+    int mars_second_start = game.get_ore(PLANET_MARS, ITEM_IRON_BAR);
+    int dispatched_second = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 50);
+    FT_ASSERT_EQ(50, dispatched_second);
+    FT_ASSERT_EQ(0, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
+
+    double elapsed_second = 0.0;
+    while (game.get_ore(PLANET_MARS, ITEM_IRON_BAR) == mars_second_start && elapsed_second < 600.0)
+    {
+        game.tick(0.5);
+        elapsed_second += 0.5;
+    }
+    FT_ASSERT(elapsed_second < 600.0);
+    double cleanup_second = elapsed_second;
+    while (game.get_active_convoy_count() > 0 && cleanup_second < 600.0)
+    {
+        game.tick(0.5);
+        cleanup_second += 0.5;
+    }
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
+
+    return 1;
+}
