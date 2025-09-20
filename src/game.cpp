@@ -666,6 +666,7 @@ void Game::set_ore(int planet_id, int ore_id, int amount)
     ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
     if (!planet)
         return ;
+    this->ensure_planet_item_slot(planet_id, ore_id);
     planet->set_resource(ore_id, amount);
     this->send_state(planet_id, ore_id);
 }

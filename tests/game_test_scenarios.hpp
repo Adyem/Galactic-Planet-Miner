@@ -30,6 +30,7 @@ int verify_auxiliary_and_escape_protocol();
 int verify_fractional_resource_accumulation();
 int verify_hard_difficulty_fractional_output();
 int verify_mine_upgrade_station_bonus();
+int verify_set_ore_creates_missing_resource();
 int verify_supply_route_key_collisions();
 int verify_trade_relay_convoy_modifiers();
 int verify_convoy_escort_travel_speed();

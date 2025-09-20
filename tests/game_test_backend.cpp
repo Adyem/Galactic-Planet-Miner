@@ -158,6 +158,25 @@ int verify_mine_upgrade_station_bonus()
     return 1;
 }
 
+int verify_set_ore_creates_missing_resource()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    const int planet_id = PLANET_TERRA;
+    const int resource_id = ORE_TRITIUM;
+
+    FT_ASSERT_EQ(0, game.get_ore(planet_id, resource_id));
+
+    const int first_amount = 37;
+    game.set_ore(planet_id, resource_id, first_amount);
+    FT_ASSERT_EQ(first_amount, game.get_ore(planet_id, resource_id));
+
+    const int second_amount = 12;
+    game.set_ore(planet_id, resource_id, second_amount);
+    FT_ASSERT_EQ(second_amount, game.get_ore(planet_id, resource_id));
+
+    return 1;
+}
+
 int verify_supply_route_key_collisions()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
