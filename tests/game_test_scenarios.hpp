@@ -52,6 +52,7 @@ int verify_save_system_normalizes_non_finite_planet_values();
 int verify_save_system_massive_payload();
 int verify_save_system_sparse_entries();
 int verify_planet_inventory_save_round_trip();
+int verify_planet_inventory_resets_unsaved_items();
 int verify_building_save_round_trip();
 int verify_campaign_load_accepts_empty_building_payload();
 int verify_research_save_round_trip();

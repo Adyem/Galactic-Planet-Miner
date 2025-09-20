@@ -130,6 +130,8 @@ int main()
         return 0;
     if (!verify_planet_inventory_save_round_trip())
         return 0;
+    if (!verify_planet_inventory_resets_unsaved_items())
+        return 0;
     if (!verify_building_save_round_trip())
         return 0;
     if (!verify_campaign_load_accepts_empty_building_payload())
