@@ -40,6 +40,7 @@ int verify_achievement_progression();
 int verify_quest_achievement_failures();
 int verify_save_system_round_trip();
 int verify_save_system_edge_cases();
+int verify_save_system_sanitizes_ship_movement_stats();
 int verify_save_system_invalid_inputs();
 int verify_save_system_rejects_oversized_building_grids();
 int verify_save_system_prevents_building_instance_wraparound();
