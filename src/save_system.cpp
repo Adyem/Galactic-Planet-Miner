@@ -17,6 +17,29 @@ namespace
     const int  SAVE_MAX_SHIPS_PER_FLEET = 4096;
     const long BUILDING_GRID_MAX_CELLS = 1048576;
 
+    bool save_system_is_known_ship_type(int ship_type) noexcept
+    {
+        switch (ship_type)
+        {
+        case SHIP_SHIELD:
+        case SHIP_RADAR:
+        case SHIP_SALVAGE:
+        case SHIP_CAPITAL:
+        case SHIP_TRANSPORT:
+        case SHIP_CORVETTE:
+        case SHIP_INTERCEPTOR:
+        case SHIP_REPAIR_DRONE:
+        case SHIP_SUNFLARE_SLOOP:
+        case SHIP_FRIGATE_ESCORT:
+        case SHIP_FRIGATE_SUPPORT:
+        case SHIP_CAPITAL_CARRIER:
+        case SHIP_CAPITAL_DREADNOUGHT:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     union save_system_double_converter
     {
         double double_value;
@@ -659,6 +682,8 @@ bool SaveSystem::deserialize_fleets(const char *content,
             json_item *ship_type_item = json_find_item(current, key.c_str());
             if (ship_type_item)
                 ship_snapshot.type = ft_atoi(ship_type_item->value);
+            if (!save_system_is_known_ship_type(ship_snapshot.type))
+                continue;
             key = base_key;
             key.append("_armor");
             json_item *armor_item = json_find_item(current, key.c_str());
