@@ -109,6 +109,8 @@ int main()
         return 0;
     if (!verify_save_system_edge_cases())
         return 0;
+    if (!verify_save_system_sanitizes_ship_movement_stats())
+        return 0;
     if (!verify_save_system_invalid_inputs())
         return 0;
     if (!verify_save_system_rejects_oversized_building_grids())

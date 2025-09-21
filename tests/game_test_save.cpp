@@ -8,6 +8,13 @@
 #include "../libft/JSon/json.hpp"
 #include "../libft/CMA/CMA.hpp"
 #include "save_system.hpp"
+
+#define private public
+#define protected public
+#include "combat.hpp"
+#undef private
+#undef protected
+
 #include "game_test_scenarios.hpp"
 
 static bool g_fail_next_json_allocation = false;
@@ -384,6 +391,96 @@ int verify_save_system_edge_cases()
     FT_ASSERT_EQ(PLANET_TERRA, sparse_location.from);
     FT_ASSERT_EQ(PLANET_TERRA, sparse_location.to);
     FT_ASSERT(ft_absolute(sparse_fleet_entry->value->get_escort_veterancy()) < 0.000001);
+
+    return 1;
+}
+
+int verify_save_system_sanitizes_ship_movement_stats()
+{
+    SaveSystem saves;
+
+    json_document fleet_doc;
+    json_group *fleet_group = fleet_doc.create_group("fleet_sanitize_movement");
+    FT_ASSERT(fleet_group != ft_nullptr);
+    fleet_doc.append_group(fleet_group);
+
+    json_item *fleet_id_item = fleet_doc.create_item("id", 930);
+    FT_ASSERT(fleet_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, fleet_id_item);
+    json_item *ship_count_item = fleet_doc.create_item("ship_count", 1);
+    FT_ASSERT(ship_count_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_count_item);
+
+    int ship_uid = 8101;
+    json_item *ship_id_item = fleet_doc.create_item("ship_0_id", ship_uid);
+    FT_ASSERT(ship_id_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_id_item);
+    json_item *ship_type_item = fleet_doc.create_item("ship_0_type", SHIP_CAPITAL);
+    FT_ASSERT(ship_type_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, ship_type_item);
+
+    long max_speed_nan = FT_LONG_MIN;
+    ft_string max_speed_string = ft_to_string(max_speed_nan);
+    json_item *max_speed_item = fleet_doc.create_item("ship_0_max_speed", max_speed_string.c_str());
+    FT_ASSERT(max_speed_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, max_speed_item);
+
+    long acceleration_inf = FT_LONG_MAX;
+    ft_string acceleration_string = ft_to_string(acceleration_inf);
+    json_item *acceleration_item = fleet_doc.create_item("ship_0_acceleration", acceleration_string.c_str());
+    FT_ASSERT(acceleration_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, acceleration_item);
+
+    long turn_speed_negative = reference_scale_double(-125.0);
+    ft_string turn_speed_string = ft_to_string(turn_speed_negative);
+    json_item *turn_speed_item = fleet_doc.create_item("ship_0_turn_speed", turn_speed_string.c_str());
+    FT_ASSERT(turn_speed_item != ft_nullptr);
+    fleet_doc.add_item(fleet_group, turn_speed_item);
+
+    char *fleet_raw = fleet_doc.write_to_string();
+    FT_ASSERT(fleet_raw != ft_nullptr);
+    ft_string fleet_json(fleet_raw);
+    cma_free(fleet_raw);
+
+    ft_map<int, ft_sharedptr<ft_fleet> > fleets;
+    FT_ASSERT(saves.deserialize_fleets(fleet_json.c_str(), fleets));
+    FT_ASSERT_EQ(1u, fleets.size());
+
+    Pair<int, ft_sharedptr<ft_fleet> > *fleet_entry = fleets.find(930);
+    FT_ASSERT(fleet_entry != ft_nullptr);
+    ft_sharedptr<ft_fleet> restored_fleet = fleet_entry->value;
+    FT_ASSERT(restored_fleet);
+    FT_ASSERT_EQ(1, restored_fleet->get_ship_count());
+
+    const ft_ship *restored_ship = restored_fleet->get_ship(ship_uid);
+    FT_ASSERT(restored_ship != ft_nullptr);
+    FT_ASSERT(!save_system_test_is_nan(restored_ship->max_speed));
+    FT_ASSERT(!save_system_test_is_infinite(restored_ship->max_speed));
+    FT_ASSERT(!save_system_test_is_nan(restored_ship->acceleration));
+    FT_ASSERT(!save_system_test_is_infinite(restored_ship->acceleration));
+    FT_ASSERT(!save_system_test_is_nan(restored_ship->turn_speed));
+    FT_ASSERT(!save_system_test_is_infinite(restored_ship->turn_speed));
+    FT_ASSERT(restored_ship->max_speed >= 0.0);
+    FT_ASSERT(restored_ship->acceleration >= 0.0);
+    FT_ASSERT(restored_ship->turn_speed >= 0.0);
+    FT_ASSERT(ft_absolute(restored_ship->max_speed) < 0.000001);
+    FT_ASSERT(ft_absolute(restored_ship->acceleration) < 0.000001);
+    FT_ASSERT(ft_absolute(restored_ship->turn_speed) < 0.000001);
+
+    CombatManager manager;
+    CombatManager::ft_ship_tracker tracker;
+    CombatManager::ft_combat_encounter encounter;
+    manager.initialize_tracker(tracker, ship_uid, *restored_ship, true, encounter);
+
+    FT_ASSERT(!save_system_test_is_nan(tracker.max_speed));
+    FT_ASSERT(!save_system_test_is_infinite(tracker.max_speed));
+    FT_ASSERT(!save_system_test_is_nan(tracker.acceleration));
+    FT_ASSERT(!save_system_test_is_infinite(tracker.acceleration));
+    FT_ASSERT(!save_system_test_is_nan(tracker.turn_speed));
+    FT_ASSERT(!save_system_test_is_infinite(tracker.turn_speed));
+    FT_ASSERT(ft_absolute(tracker.max_speed - 4.0) < 0.000001);
+    FT_ASSERT(ft_absolute(tracker.acceleration - 0.5) < 0.000001);
+    FT_ASSERT(ft_absolute(tracker.turn_speed - 10.0) < 0.000001);
 
     return 1;
 }

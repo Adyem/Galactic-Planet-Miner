@@ -685,17 +685,35 @@ bool SaveSystem::deserialize_fleets(const char *content,
             key.append("_max_speed");
             json_item *max_speed_item = json_find_item(current, key.c_str());
             if (max_speed_item)
+            {
                 ship_snapshot.max_speed = this->unscale_long_to_double(ft_atol(max_speed_item->value));
+                if (!save_system_is_finite(ship_snapshot.max_speed))
+                    ship_snapshot.max_speed = 0.0;
+                else if (ship_snapshot.max_speed < 0.0)
+                    ship_snapshot.max_speed = 0.0;
+            }
             key = base_key;
             key.append("_acceleration");
             json_item *acceleration_item = json_find_item(current, key.c_str());
             if (acceleration_item)
+            {
                 ship_snapshot.acceleration = this->unscale_long_to_double(ft_atol(acceleration_item->value));
+                if (!save_system_is_finite(ship_snapshot.acceleration))
+                    ship_snapshot.acceleration = 0.0;
+                else if (ship_snapshot.acceleration < 0.0)
+                    ship_snapshot.acceleration = 0.0;
+            }
             key = base_key;
             key.append("_turn_speed");
             json_item *turn_speed_item = json_find_item(current, key.c_str());
             if (turn_speed_item)
+            {
                 ship_snapshot.turn_speed = this->unscale_long_to_double(ft_atol(turn_speed_item->value));
+                if (!save_system_is_finite(ship_snapshot.turn_speed))
+                    ship_snapshot.turn_speed = 0.0;
+                else if (ship_snapshot.turn_speed < 0.0)
+                    ship_snapshot.turn_speed = 0.0;
+            }
             key = base_key;
             key.append("_behavior");
             json_item *behavior_item = json_find_item(current, key.c_str());
@@ -721,6 +739,12 @@ bool SaveSystem::deserialize_fleets(const char *content,
             json_item *role_item = json_find_item(current, key.c_str());
             if (role_item)
                 ship_snapshot.role = ft_atoi(role_item->value);
+            if (!save_system_is_finite(ship_snapshot.max_speed) || ship_snapshot.max_speed < 0.0)
+                ship_snapshot.max_speed = 0.0;
+            if (!save_system_is_finite(ship_snapshot.acceleration) || ship_snapshot.acceleration < 0.0)
+                ship_snapshot.acceleration = 0.0;
+            if (!save_system_is_finite(ship_snapshot.turn_speed) || ship_snapshot.turn_speed < 0.0)
+                ship_snapshot.turn_speed = 0.0;
             fleet->add_ship_snapshot(ship_snapshot);
         }
         fleets.insert(fleet_id, fleet);
