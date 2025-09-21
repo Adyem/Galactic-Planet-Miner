@@ -166,6 +166,7 @@ private:
     ft_string                                    _last_research_checkpoint;
     ft_string                                    _last_achievement_checkpoint;
     ft_string                                    _last_building_checkpoint;
+    ft_string                                    _last_progress_checkpoint;
     ft_string                                    _last_checkpoint_tag;
     bool                                         _has_checkpoint;
     ft_vector<ft_string>                         _failed_checkpoint_tags;
@@ -374,10 +375,11 @@ public:
     const ft_string &get_campaign_research_checkpoint() const noexcept;
     const ft_string &get_campaign_achievement_checkpoint() const noexcept;
     const ft_string &get_campaign_building_checkpoint() const noexcept;
+    const ft_string &get_campaign_progress_checkpoint() const noexcept;
     bool reload_campaign_checkpoint() noexcept;
     bool load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json,
         const ft_string &research_json, const ft_string &achievement_json,
-        const ft_string &building_json) noexcept;
+        const ft_string &building_json, const ft_string &progress_json) noexcept;
 };
 
 #endif

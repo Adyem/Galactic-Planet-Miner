@@ -43,6 +43,7 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _last_research_checkpoint(),
       _last_achievement_checkpoint(),
       _last_building_checkpoint(),
+      _last_progress_checkpoint(),
       _last_checkpoint_tag(),
       _has_checkpoint(false),
       _failed_checkpoint_tags(),
@@ -830,18 +831,29 @@ bool Game::checkpoint_campaign_state_internal(const ft_string &tag)
     ft_string research_json = this->_save_system.serialize_research(this->_research);
     ft_string achievement_json = this->_save_system.serialize_achievements(this->_achievements);
     ft_string building_json = this->_save_system.serialize_buildings(this->_buildings);
+    ft_string progress_json = this->_save_system.serialize_campaign_progress(
+        this->_convoys_delivered_total, this->_convoy_raid_losses,
+        this->_current_delivery_streak, this->_longest_delivery_streak,
+        this->_next_streak_milestone_index,
+        this->_order_branch_assault_victories,
+        this->_rebellion_branch_assault_victories,
+        this->_order_branch_pending_assault,
+        this->_rebellion_branch_pending_assault);
     bool planets_valid = (planet_json.size() > 0) || (this->_planets.size() == 0);
     bool fleets_valid = (fleet_json.size() > 0) || (this->_fleets.size() == 0);
     bool research_valid = (research_json.size() > 0);
     bool achievements_valid = (achievement_json.size() > 0);
     bool buildings_valid = (building_json.size() > 0);
-    if (!planets_valid || !fleets_valid || !research_valid || !achievements_valid || !buildings_valid)
+    bool progress_valid = (progress_json.size() > 0);
+    if (!planets_valid || !fleets_valid || !research_valid || !achievements_valid
+        || !buildings_valid || !progress_valid)
         return false;
     this->_last_planet_checkpoint = planet_json;
     this->_last_fleet_checkpoint = fleet_json;
     this->_last_research_checkpoint = research_json;
     this->_last_achievement_checkpoint = achievement_json;
     this->_last_building_checkpoint = building_json;
+    this->_last_progress_checkpoint = progress_json;
     this->_last_checkpoint_tag = tag;
     this->_has_checkpoint = true;
     return true;
@@ -908,18 +920,24 @@ const ft_string &Game::get_campaign_building_checkpoint() const noexcept
     return this->_last_building_checkpoint;
 }
 
+const ft_string &Game::get_campaign_progress_checkpoint() const noexcept
+{
+    return this->_last_progress_checkpoint;
+}
+
 bool Game::reload_campaign_checkpoint() noexcept
 {
     if (!this->_has_checkpoint)
         return false;
     return this->load_campaign_from_save(this->_last_planet_checkpoint,
         this->_last_fleet_checkpoint, this->_last_research_checkpoint,
-        this->_last_achievement_checkpoint, this->_last_building_checkpoint);
+        this->_last_achievement_checkpoint, this->_last_building_checkpoint,
+        this->_last_progress_checkpoint);
 }
 
 bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string &fleet_json,
     const ft_string &research_json, const ft_string &achievement_json,
-    const ft_string &building_json) noexcept
+    const ft_string &building_json, const ft_string &progress_json) noexcept
 {
     ft_map<int, ft_sharedptr<ft_planet> > planet_snapshot;
     ft_map<int, ft_sharedptr<ft_fleet> > fleet_snapshot;
@@ -928,6 +946,7 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
     bool research_ok = true;
     bool achievements_ok = true;
     bool buildings_ok = true;
+    bool progress_ok = true;
     ft_map<int, ft_research_progress> research_state;
     double research_duration = this->_research.get_duration_scale();
     bool research_snapshot_present = false;
@@ -935,6 +954,15 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
     bool achievement_snapshot_present = false;
     BuildingManager building_snapshot;
     bool building_snapshot_present = false;
+    int convoys_delivered_total = this->_convoys_delivered_total;
+    int convoy_raid_losses = this->_convoy_raid_losses;
+    int current_delivery_streak = this->_current_delivery_streak;
+    int longest_delivery_streak = this->_longest_delivery_streak;
+    size_t next_streak_milestone_index = this->_next_streak_milestone_index;
+    int order_branch_assault_victories = this->_order_branch_assault_victories;
+    int rebellion_branch_assault_victories = this->_rebellion_branch_assault_victories;
+    int order_branch_pending_assault = this->_order_branch_pending_assault;
+    int rebellion_branch_pending_assault = this->_rebellion_branch_pending_assault;
     if (planet_json.size() > 0)
         planets_ok = this->_save_system.deserialize_planets(planet_json.c_str(), planet_snapshot);
     if (fleet_json.size() > 0)
@@ -966,8 +994,45 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
         if (buildings_ok)
             building_snapshot_present = true;
     }
-    if (!planets_ok || !fleets_ok || !research_ok || !achievements_ok || !buildings_ok)
+    if (progress_json.size() > 0)
+    {
+        progress_ok = this->_save_system.deserialize_campaign_progress(progress_json.c_str(),
+            convoys_delivered_total, convoy_raid_losses, current_delivery_streak,
+            longest_delivery_streak, next_streak_milestone_index,
+            order_branch_assault_victories, rebellion_branch_assault_victories,
+            order_branch_pending_assault, rebellion_branch_pending_assault);
+    }
+    if (!planets_ok || !fleets_ok || !research_ok || !achievements_ok || !buildings_ok || !progress_ok)
         return false;
+    if (next_streak_milestone_index > this->_streak_milestones.size())
+        next_streak_milestone_index = this->_streak_milestones.size();
+    if (current_delivery_streak < 0)
+        current_delivery_streak = 0;
+    if (longest_delivery_streak < 0)
+        longest_delivery_streak = 0;
+    if (convoys_delivered_total < 0)
+        convoys_delivered_total = 0;
+    if (convoy_raid_losses < 0)
+        convoy_raid_losses = 0;
+    if (order_branch_assault_victories < 0)
+        order_branch_assault_victories = 0;
+    if (rebellion_branch_assault_victories < 0)
+        rebellion_branch_assault_victories = 0;
+    if (order_branch_pending_assault < 0)
+        order_branch_pending_assault = 0;
+    if (rebellion_branch_pending_assault < 0)
+        rebellion_branch_pending_assault = 0;
+    this->_convoys_delivered_total = convoys_delivered_total;
+    this->_convoy_raid_losses = convoy_raid_losses;
+    this->_current_delivery_streak = current_delivery_streak;
+    if (this->_current_delivery_streak > longest_delivery_streak)
+        longest_delivery_streak = this->_current_delivery_streak;
+    this->_longest_delivery_streak = longest_delivery_streak;
+    this->_next_streak_milestone_index = next_streak_milestone_index;
+    this->_order_branch_assault_victories = order_branch_assault_victories;
+    this->_rebellion_branch_assault_victories = rebellion_branch_assault_victories;
+    this->_order_branch_pending_assault = order_branch_pending_assault;
+    this->_rebellion_branch_pending_assault = rebellion_branch_pending_assault;
     if (research_snapshot_present)
     {
         this->_research.set_duration_scale(research_duration);
