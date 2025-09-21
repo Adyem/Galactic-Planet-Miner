@@ -790,6 +790,9 @@ void Game::apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snap
         return ;
     const Pair<int, ft_sharedptr<ft_fleet> > *entries = snapshot.end();
     entries -= count;
+    int capital_ship_total = this->count_capital_ships_in_collection(this->_planet_fleets);
+    if (capital_ship_total < 0)
+        capital_ship_total = 0;
     for (size_t i = 0; i < count; ++i)
     {
         int fleet_id = entries[i].key;
@@ -816,8 +819,33 @@ void Game::apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snap
         for (size_t j = 0; j < ship_ids.size(); ++j)
         {
             const ft_ship *ship = saved_fleet->get_ship(ship_ids[j]);
-            if (ship)
-                fleet->add_ship_snapshot(*ship);
+            if (!ship)
+                continue;
+            bool type_allowed = this->is_ship_type_available(ship->type);
+            bool capital_allowed = true;
+            if (type_allowed && is_capital_ship_type(ship->type))
+            {
+                if (this->_capital_ship_limit <= 0)
+                    capital_allowed = false;
+                else if (capital_ship_total >= this->_capital_ship_limit)
+                    capital_allowed = false;
+            }
+            if (!type_allowed || !capital_allowed)
+            {
+                ft_string message("Removed ship ");
+                message.append(ft_to_string(static_cast<long>(ship->id)));
+                message.append(" from fleet ");
+                message.append(ft_to_string(static_cast<long>(fleet_id)));
+                if (!type_allowed)
+                    message.append(" (type unavailable)");
+                else
+                    message.append(" (capital limit reached)");
+                this->_lore_log.push_back(message);
+                continue;
+            }
+            fleet->add_ship_snapshot(*ship);
+            if (is_capital_ship_type(ship->type))
+                capital_ship_total += 1;
         }
     }
 }
