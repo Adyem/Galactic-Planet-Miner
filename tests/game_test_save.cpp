@@ -905,7 +905,7 @@ int verify_save_system_resolves_duplicate_ship_ids()
     FT_ASSERT(escape_before != ft_nullptr);
     FT_ASSERT(!escape_before->value);
 
-    FT_ASSERT(game.load_campaign_from_save(ft_string(), fleet_json, ft_string(), ft_string(), ft_string()));
+    FT_ASSERT(game.load_campaign_from_save(ft_string(), fleet_json, ft_string(), ft_string(), ft_string(), ft_string()));
 
     ft_sharedptr<ft_fleet> loaded_one = game.get_fleet(6100);
     FT_ASSERT(loaded_one);
@@ -1840,13 +1840,14 @@ int verify_planet_inventory_save_round_trip()
     ft_string research_json = game.get_campaign_research_checkpoint();
     ft_string achievement_json = game.get_campaign_achievement_checkpoint();
     ft_string building_json = game.get_campaign_building_checkpoint();
+    ft_string progress_json = game.get_campaign_progress_checkpoint();
 
     game.set_ore(PLANET_TERRA, ORE_IRON, 0);
     game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 0);
     game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 0);
 
     FT_ASSERT(game.load_campaign_from_save(planet_json, fleet_json, research_json,
-        achievement_json, building_json));
+        achievement_json, building_json, progress_json));
 
     FT_ASSERT_EQ(135, game.get_ore(PLANET_TERRA, ORE_IRON));
     FT_ASSERT_EQ(7, game.get_ore(PLANET_TERRA, ITEM_FUSION_REACTOR));
@@ -1867,12 +1868,13 @@ int verify_planet_inventory_resets_unsaved_items()
     ft_string research_json = game.get_campaign_research_checkpoint();
     ft_string achievement_json = game.get_campaign_achievement_checkpoint();
     ft_string building_json = game.get_campaign_building_checkpoint();
+    ft_string progress_json = game.get_campaign_progress_checkpoint();
 
     game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 5);
     FT_ASSERT_EQ(5, game.get_ore(PLANET_TERRA, ITEM_FUSION_REACTOR));
 
     FT_ASSERT(game.load_campaign_from_save(planet_json, fleet_json, research_json,
-        achievement_json, building_json));
+        achievement_json, building_json, progress_json));
 
     FT_ASSERT_EQ(88, game.get_ore(PLANET_TERRA, ORE_IRON));
     FT_ASSERT_EQ(0, game.get_ore(PLANET_TERRA, ITEM_FUSION_REACTOR));
@@ -1908,6 +1910,7 @@ int verify_building_save_round_trip()
     ft_string research_json = game.get_campaign_research_checkpoint();
     ft_string achievement_json = game.get_campaign_achievement_checkpoint();
     ft_string building_json = game.get_campaign_building_checkpoint();
+    ft_string progress_json = game.get_campaign_progress_checkpoint();
     FT_ASSERT(building_json.size() > 0);
 
     FT_ASSERT(game.remove_building(PLANET_TERRA, generator_uid));
@@ -1916,7 +1919,7 @@ int verify_building_save_round_trip()
     game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 0);
 
     FT_ASSERT(game.load_campaign_from_save(planet_json, fleet_json, research_json,
-        achievement_json, building_json));
+        achievement_json, building_json, progress_json));
 
     FT_ASSERT_EQ(logistic_usage_before, game.get_planet_logistic_usage(PLANET_TERRA));
     double restored_generation = game.get_planet_energy_generation(PLANET_TERRA);
@@ -1970,6 +1973,7 @@ int verify_campaign_load_accepts_empty_building_payload()
     ft_string research_json = game.get_campaign_research_checkpoint();
     ft_string achievement_json = game.get_campaign_achievement_checkpoint();
     ft_string building_json = game.get_campaign_building_checkpoint();
+    ft_string progress_json = game.get_campaign_progress_checkpoint();
     FT_ASSERT(building_json.size() > 0);
 
     game.set_ore(PLANET_TERRA, ORE_IRON, 0);
@@ -1977,7 +1981,7 @@ int verify_campaign_load_accepts_empty_building_payload()
 
     ft_string empty_building_payload;
     FT_ASSERT(game.load_campaign_from_save(planet_json, fleet_json, research_json,
-        achievement_json, empty_building_payload));
+        achievement_json, empty_building_payload, progress_json));
 
     FT_ASSERT_EQ(baseline_iron, game.get_ore(PLANET_TERRA, ORE_IRON));
     FT_ASSERT_EQ(baseline_logistics, game.get_planet_logistic_usage(PLANET_TERRA));
@@ -2067,8 +2071,10 @@ int verify_campaign_checkpoint_flow()
     ft_string checkpoint_research = game.get_campaign_research_checkpoint();
     ft_string checkpoint_achievements = game.get_campaign_achievement_checkpoint();
     ft_string checkpoint_buildings = game.get_campaign_building_checkpoint();
+    ft_string checkpoint_progress = game.get_campaign_progress_checkpoint();
     FT_ASSERT(checkpoint_research.size() > 0);
     FT_ASSERT(checkpoint_achievements.size() > 0);
+    FT_ASSERT(checkpoint_progress.size() > 0);
     int baseline_research_achievement_status = game.get_achievement_status(ACHIEVEMENT_RESEARCH_PIONEER);
     int baseline_research_achievement_progress = game.get_achievement_progress(ACHIEVEMENT_RESEARCH_PIONEER);
 
@@ -2088,6 +2094,7 @@ int verify_campaign_checkpoint_flow()
     ft_string progress_research = game.get_campaign_research_checkpoint();
     ft_string progress_achievements = game.get_campaign_achievement_checkpoint();
     ft_string progress_buildings = game.get_campaign_building_checkpoint();
+    ft_string progress_progress = game.get_campaign_progress_checkpoint();
     double remaining_before_tick = game.get_research_time_remaining(RESEARCH_UNLOCK_MARS);
     FT_ASSERT(remaining_before_tick > 0.0);
 
@@ -2097,7 +2104,8 @@ int verify_campaign_checkpoint_flow()
         >= baseline_research_achievement_progress);
 
     FT_ASSERT(game.load_campaign_from_save(progress_planets, progress_fleets,
-        progress_research, progress_achievements, progress_buildings));
+        progress_research, progress_achievements, progress_buildings,
+        progress_progress));
     FT_ASSERT_EQ(RESEARCH_STATUS_IN_PROGRESS, game.get_research_status(RESEARCH_UNLOCK_MARS));
     double remaining_after_restore = game.get_research_time_remaining(RESEARCH_UNLOCK_MARS);
     FT_ASSERT(remaining_after_restore > 0.0);
@@ -2108,7 +2116,8 @@ int verify_campaign_checkpoint_flow()
         game.get_achievement_progress(ACHIEVEMENT_RESEARCH_PIONEER));
 
     FT_ASSERT(game.load_campaign_from_save(checkpoint_planets, checkpoint_fleets,
-        checkpoint_research, checkpoint_achievements, checkpoint_buildings));
+        checkpoint_research, checkpoint_achievements, checkpoint_buildings,
+        checkpoint_progress));
 
     game.set_force_checkpoint_failure(true);
     ft_string forced_tag("forced_checkpoint_failure");
@@ -2152,7 +2161,7 @@ int verify_campaign_rejects_invalid_save()
 
     ft_string invalid_payload("not json");
     FT_ASSERT(!game.load_campaign_from_save(invalid_payload, invalid_payload,
-        invalid_payload, invalid_payload, invalid_payload));
+        invalid_payload, invalid_payload, invalid_payload, invalid_payload));
 
     FT_ASSERT_EQ(42, game.get_ore(PLANET_TERRA, ORE_IRON));
     FT_ASSERT_EQ(133, game.get_ship_hp(54, ship_id));
@@ -2185,6 +2194,7 @@ int verify_buildings_unchanged_on_failed_load()
     ft_string checkpoint_research = game.get_campaign_research_checkpoint();
     ft_string checkpoint_achievements = game.get_campaign_achievement_checkpoint();
     ft_string checkpoint_buildings = game.get_campaign_building_checkpoint();
+    ft_string checkpoint_progress = game.get_campaign_progress_checkpoint();
     FT_ASSERT(checkpoint_buildings.size() > 0);
 
     int logistic_with_building = game.get_planet_logistic_usage(PLANET_TERRA);
@@ -2196,7 +2206,8 @@ int verify_buildings_unchanged_on_failed_load()
 
     ft_string invalid_payload("not json");
     FT_ASSERT(!game.load_campaign_from_save(invalid_payload, invalid_payload,
-        checkpoint_research, checkpoint_achievements, checkpoint_buildings));
+        checkpoint_research, checkpoint_achievements, checkpoint_buildings,
+        checkpoint_progress));
 
     FT_ASSERT_EQ(logistic_after_removal, game.get_planet_logistic_usage(PLANET_TERRA));
     FT_ASSERT_EQ(0, game.get_building_count(PLANET_TERRA, BUILDING_SMELTER));

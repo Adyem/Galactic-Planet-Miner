@@ -37,6 +37,22 @@ public:
     ft_string serialize_buildings(const BuildingManager &buildings) const noexcept;
     bool deserialize_buildings(const char *content, BuildingManager &buildings) const noexcept;
 
+    ft_string serialize_campaign_progress(int convoys_delivered_total,
+        int convoy_raid_losses, int current_delivery_streak,
+        int longest_delivery_streak, size_t next_streak_milestone_index,
+        int order_branch_assault_victories,
+        int rebellion_branch_assault_victories,
+        int order_branch_pending_assault,
+        int rebellion_branch_pending_assault) const noexcept;
+    bool deserialize_campaign_progress(const char *content,
+        int &convoys_delivered_total, int &convoy_raid_losses,
+        int &current_delivery_streak, int &longest_delivery_streak,
+        size_t &next_streak_milestone_index,
+        int &order_branch_assault_victories,
+        int &rebellion_branch_assault_victories,
+        int &order_branch_pending_assault,
+        int &rebellion_branch_pending_assault) const noexcept;
+
     static void set_json_allocation_hook(json_allocation_hook_t hook) noexcept;
 
 private:
