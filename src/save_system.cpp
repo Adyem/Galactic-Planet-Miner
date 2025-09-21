@@ -2,6 +2,7 @@
 #include "../libft/CMA/CMA.hpp"
 #include "../libft/CPP_class/class_nullptr.hpp"
 #include "../libft/Libft/limits.hpp"
+#include "../libft/Template/set.hpp"
 
 namespace
 {
@@ -543,6 +544,8 @@ bool SaveSystem::deserialize_fleets(const char *content,
     if (!groups)
         return false;
     fleets.clear();
+    ft_set<int> seen_ship_ids;
+    long highest_ship_id = static_cast<long>(SAVE_SHIP_ID_MIN) - 1;
     json_group *current = groups;
     while (current)
     {
@@ -739,6 +742,27 @@ bool SaveSystem::deserialize_fleets(const char *content,
             json_item *role_item = json_find_item(current, key.c_str());
             if (role_item)
                 ship_snapshot.role = ft_atoi(role_item->value);
+            if (seen_ship_ids.find(ship_snapshot.id) != ft_nullptr)
+            {
+                long candidate = highest_ship_id + 1;
+                if (candidate < SAVE_SHIP_ID_MIN)
+                    candidate = SAVE_SHIP_ID_MIN;
+                while (candidate <= SAVE_SHIP_ID_MAX)
+                {
+                    if (seen_ship_ids.find(static_cast<int>(candidate)) == ft_nullptr)
+                        break;
+                    ++candidate;
+                }
+                if (candidate > SAVE_SHIP_ID_MAX)
+                {
+                    json_free_groups(groups);
+                    return false;
+                }
+                ship_snapshot.id = static_cast<int>(candidate);
+            }
+            seen_ship_ids.insert(ship_snapshot.id);
+            if (ship_snapshot.id > highest_ship_id)
+                highest_ship_id = ship_snapshot.id;
             if (!save_system_is_finite(ship_snapshot.max_speed) || ship_snapshot.max_speed < 0.0)
                 ship_snapshot.max_speed = 0.0;
             if (!save_system_is_finite(ship_snapshot.acceleration) || ship_snapshot.acceleration < 0.0)
