@@ -6,6 +6,7 @@
 #include "../libft/Template/shared_ptr.hpp"
 #include "../libft/Template/vector.hpp"
 #include "../libft/Template/pair.hpp"
+#include "../libft/Template/map.hpp"
 #include "../libft/CPP_class/class_nullptr.hpp"
 
 enum e_planet_id
@@ -50,9 +51,13 @@ class ft_planet : public ft_character
 {
 protected:
     int                                     _id;
-    ft_vector<Pair<int, ft_sharedptr<ft_item> > > _items;
-    ft_vector<Pair<int, double> >           _rates;
-    ft_vector<Pair<int, double> >           _carryover;
+    ft_map<int, ft_sharedptr<ft_item> >     _items;
+    ft_map<int, double>                     _rates;
+    ft_map<int, double>                     _carryover;
+    mutable ft_vector<Pair<int, double> >   _rates_cache;
+    mutable bool                            _rates_cache_dirty;
+    mutable ft_vector<Pair<int, double> >   _carryover_cache;
+    mutable bool                            _carryover_cache_dirty;
 
     ft_sharedptr<ft_item> find_item(int ore_id) noexcept;
     ft_sharedptr<const ft_item> find_item(int ore_id) const noexcept;

@@ -14,7 +14,7 @@ namespace
     }
 }
 
-ft_planet::ft_planet(int id) noexcept : _id(id)
+ft_planet::ft_planet(int id) noexcept : _id(id), _items(), _rates(), _carryover(), _rates_cache(), _rates_cache_dirty(true), _carryover_cache(), _carryover_cache_dirty(true)
 {
     this->_inventory.resize(32);
 }
@@ -30,81 +30,53 @@ void ft_planet::ensure_item_slot(int item_id) noexcept
     new_item->set_stack_size(0);
     this->_inventory.add_item(new_item);
 
-    Pair<int, ft_sharedptr<ft_item> > pair_item;
-    pair_item.key = item_id;
-    pair_item.value = new_item;
-    this->_items.push_back(pair_item);
+    Pair<int, ft_sharedptr<ft_item> > *entry = this->_items.find(item_id);
+    if (entry == ft_nullptr)
+        this->_items.insert(item_id, new_item);
+    else
+        entry->value = new_item;
 }
 
 void ft_planet::register_resource(int ore_id, double rate) noexcept
 {
     this->ensure_item_slot(ore_id);
-    bool found = false;
-    for (size_t i = 0; i < this->_rates.size(); ++i)
-    {
-        if (this->_rates[i].key == ore_id)
-        {
-            this->_rates[i].value = rate;
-            found = true;
-            break;
-        }
-    }
+    Pair<int, double> *rate_entry = this->_rates.find(ore_id);
+    if (rate_entry == ft_nullptr)
+        this->_rates.insert(ore_id, rate);
+    else
+        rate_entry->value = rate;
+    this->_rates_cache_dirty = true;
 
-    if (!found)
-    {
-        Pair<int, double> pair_rate;
-        pair_rate.key = ore_id;
-        pair_rate.value = rate;
-        this->_rates.push_back(pair_rate);
-    }
-
-    if (this->find_carryover(ore_id) == ft_nullptr)
-    {
-        Pair<int, double> entry;
-        entry.key = ore_id;
-        entry.value = 0.0;
-        this->_carryover.push_back(entry);
-    }
+    Pair<int, double> *carry_entry = this->_carryover.find(ore_id);
+    if (carry_entry == ft_nullptr)
+        this->_carryover.insert(ore_id, 0.0);
+    this->_carryover_cache_dirty = true;
 }
 
 ft_sharedptr<ft_item> ft_planet::find_item(int ore_id) noexcept
 {
-    for (size_t i = 0; i < this->_items.size(); ++i)
-    {
-        if (this->_items[i].key == ore_id)
-            return this->_items[i].value;
-    }
-    return ft_sharedptr<ft_item>();
+    Pair<int, ft_sharedptr<ft_item> > *entry = this->_items.find(ore_id);
+    if (entry == ft_nullptr)
+        return ft_sharedptr<ft_item>();
+    return entry->value;
 }
 
 ft_sharedptr<const ft_item> ft_planet::find_item(int ore_id) const noexcept
 {
-    for (size_t i = 0; i < this->_items.size(); ++i)
-    {
-        if (this->_items[i].key == ore_id)
-            return this->_items[i].value;
-    }
-    return ft_sharedptr<const ft_item>();
+    const Pair<int, ft_sharedptr<ft_item> > *entry = this->_items.find(ore_id);
+    if (entry == ft_nullptr)
+        return ft_sharedptr<const ft_item>();
+    return entry->value;
 }
 
 Pair<int, double> *ft_planet::find_carryover(int ore_id) noexcept
 {
-    for (size_t i = 0; i < this->_carryover.size(); ++i)
-    {
-        if (this->_carryover[i].key == ore_id)
-            return &this->_carryover[i];
-    }
-    return ft_nullptr;
+    return this->_carryover.find(ore_id);
 }
 
 const Pair<int, double> *ft_planet::find_carryover(int ore_id) const noexcept
 {
-    for (size_t i = 0; i < this->_carryover.size(); ++i)
-    {
-        if (this->_carryover[i].key == ore_id)
-            return &this->_carryover[i];
-    }
-    return ft_nullptr;
+    return this->_carryover.find(ore_id);
 }
 
 int ft_planet::get_id() const noexcept
@@ -164,29 +136,45 @@ int ft_planet::clamp_resource_amount(int ore_id, int amount) const noexcept
 
 double ft_planet::get_rate(int ore_id) const noexcept
 {
-    for (size_t i = 0; i < this->_rates.size(); ++i)
-    {
-        if (this->_rates[i].key == ore_id)
-            return this->_rates[i].value;
-    }
-    return 0;
+    const Pair<int, double> *entry = this->_rates.find(ore_id);
+    if (entry == ft_nullptr)
+        return 0;
+    return entry->value;
 }
 
 const ft_vector<Pair<int, double> > &ft_planet::get_resources() const noexcept
 {
-    return this->_rates;
+    if (this->_rates_cache_dirty)
+    {
+        this->_rates_cache.clear();
+        size_t rate_count = this->_rates.size();
+        if (rate_count > 0)
+        {
+            const Pair<int, double> *entries = this->_rates.end();
+            entries -= rate_count;
+            for (size_t i = 0; i < rate_count; ++i)
+                this->_rates_cache.push_back(entries[i]);
+        }
+        this->_rates_cache_dirty = false;
+    }
+    return this->_rates_cache;
 }
 
 ft_vector<Pair<int, int> > ft_planet::get_items_snapshot() const noexcept
 {
     ft_vector<Pair<int, int> > snapshot;
-    for (size_t i = 0; i < this->_items.size(); ++i)
+    size_t item_count = this->_items.size();
+    if (item_count == 0)
+        return snapshot;
+    const Pair<int, ft_sharedptr<ft_item> > *entries = this->_items.end();
+    entries -= item_count;
+    for (size_t i = 0; i < item_count; ++i)
     {
         Pair<int, int> entry;
-        entry.key = this->_items[i].key;
+        entry.key = entries[i].key;
         int amount = 0;
-        if (this->_items[i].value)
-            amount = this->_items[i].value->get_stack_size();
+        if (entries[i].value)
+            amount = entries[i].value->get_stack_size();
         entry.value = amount;
         snapshot.push_back(entry);
     }
@@ -195,7 +183,20 @@ ft_vector<Pair<int, int> > ft_planet::get_items_snapshot() const noexcept
 
 const ft_vector<Pair<int, double> > &ft_planet::get_carryover() const noexcept
 {
-    return this->_carryover;
+    if (this->_carryover_cache_dirty)
+    {
+        this->_carryover_cache.clear();
+        size_t carry_count = this->_carryover.size();
+        if (carry_count > 0)
+        {
+            const Pair<int, double> *entries = this->_carryover.end();
+            entries -= carry_count;
+            for (size_t i = 0; i < carry_count; ++i)
+                this->_carryover_cache.push_back(entries[i]);
+        }
+        this->_carryover_cache_dirty = false;
+    }
+    return this->_carryover_cache;
 }
 
 void ft_planet::set_carryover(int ore_id, double amount) noexcept
@@ -204,35 +205,40 @@ void ft_planet::set_carryover(int ore_id, double amount) noexcept
     if (entry)
     {
         entry->value = amount;
+        this->_carryover_cache_dirty = true;
         return ;
     }
-    Pair<int, double> carry;
-    carry.key = ore_id;
-    carry.value = amount;
-    this->_carryover.push_back(carry);
+    this->_carryover.insert(ore_id, amount);
+    this->_carryover_cache_dirty = true;
 }
 
 ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
 {
     ft_vector<Pair<int, int> > produced;
     const double epsilon = 0.0000001;
-    for (size_t i = 0; i < this->_rates.size(); ++i)
+    size_t rate_count = this->_rates.size();
+    if (rate_count == 0)
+        return produced;
+    Pair<int, double> *rate_entries = this->_rates.end();
+    rate_entries -= rate_count;
+    for (size_t i = 0; i < rate_count; ++i)
     {
-        int ore_id = this->_rates[i].key;
-        double rate = this->_rates[i].value;
+        int ore_id = rate_entries[i].key;
+        double rate = rate_entries[i].value;
         if (!planet_is_finite(rate))
             rate = 0.0;
         Pair<int, double> *carry = this->find_carryover(ore_id);
         if (carry == ft_nullptr)
         {
-            Pair<int, double> entry;
-            entry.key = ore_id;
-            entry.value = 0.0;
-            this->_carryover.push_back(entry);
+            this->_carryover.insert(ore_id, 0.0);
+            this->_carryover_cache_dirty = true;
             carry = this->find_carryover(ore_id);
         }
         if (carry && !planet_is_finite(carry->value))
+        {
             carry->value = 0.0;
+            this->_carryover_cache_dirty = true;
+        }
         double total = rate * seconds;
         if (!planet_is_finite(total))
             total = 0.0;
@@ -247,7 +253,10 @@ ft_vector<Pair<int, int> > ft_planet::produce(double seconds) noexcept
         if (remainder < 0.0)
             remainder = 0.0;
         if (carry)
+        {
             carry->value = remainder;
+            this->_carryover_cache_dirty = true;
+        }
         if (amount > 0)
         {
             this->add_resource(ore_id, amount);

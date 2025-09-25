@@ -1,512 +1,285 @@
 #include "research.hpp"
 
+namespace
+{
+struct ResearchCostEntry
+{
+    int resource_id;
+    int amount;
+};
+
+struct ResearchTemplate
+{
+    int                             id;
+    const char                      *name;
+    double                          duration;
+    const int                       *prerequisites;
+    size_t                          prerequisite_count;
+    const ResearchCostEntry         *costs;
+    size_t                          cost_count;
+    const int                       *unlock_planets;
+    size_t                          unlock_planet_count;
+};
+
+static void copy_ids(const int *data, size_t count, ft_vector<int> &out)
+{
+    out.clear();
+    for (size_t i = 0; i < count; ++i)
+        out.push_back(data[i]);
+}
+
+static void copy_costs(const ResearchCostEntry *data, size_t count, ft_vector<Pair<int, int> > &out)
+{
+    out.clear();
+    for (size_t i = 0; i < count; ++i)
+    {
+        Pair<int, int> entry;
+        entry.key = data[i].resource_id;
+        entry.value = data[i].amount;
+        out.push_back(entry);
+    }
+}
+
+static const ResearchCostEntry kMarsCosts[] = {
+    {ORE_IRON, 18},
+    {ORE_COPPER, 12},
+    {ORE_COAL, 6}
+};
+
+static const int kMarsUnlockPlanets[] = {PLANET_MARS};
+
+static const int kZalthorPrereqs[] = {RESEARCH_UNLOCK_MARS};
+static const ResearchCostEntry kZalthorCosts[] = {
+    {ORE_MITHRIL, 8},
+    {ORE_COAL, 6}
+};
+static const int kZalthorUnlockPlanets[] = {PLANET_ZALTHOR};
+
+static const int kVulcanPrereqs[] = {RESEARCH_UNLOCK_ZALTHOR};
+static const ResearchCostEntry kVulcanCosts[] = {
+    {ORE_GOLD, 6},
+    {ORE_MITHRIL, 8}
+};
+static const int kVulcanUnlockPlanets[] = {PLANET_VULCAN};
+
+static const int kNoctarisPrereqs[] = {RESEARCH_UNLOCK_VULCAN};
+static const ResearchCostEntry kNoctarisCosts[] = {
+    {ORE_TITANIUM, 5},
+    {ORE_SILVER, 6},
+    {ORE_TIN, 6}
+};
+static const int kNoctarisUnlockPlanets[] = {PLANET_NOCTARIS_PRIME};
+
+static const ResearchCostEntry kPlanningTerraCosts[] = {
+    {ITEM_IRON_BAR, 15},
+    {ITEM_ENGINE_PART, 5}
+};
+
+static const int kPlanningMarsPrereqs[] = {RESEARCH_UNLOCK_MARS};
+static const ResearchCostEntry kPlanningMarsCosts[] = {
+    {ITEM_IRON_BAR, 30},
+    {ITEM_ENGINE_PART, 10}
+};
+
+static const int kPlanningZalthorPrereqs[] = {RESEARCH_UNLOCK_ZALTHOR};
+static const ResearchCostEntry kPlanningZalthorCosts[] = {
+    {ITEM_IRON_BAR, 45},
+    {ITEM_ENGINE_PART, 15}
+};
+
+static const int kSolarPrereqs[] = {RESEARCH_UNLOCK_MARS};
+static const ResearchCostEntry kSolarCosts[] = {
+    {ORE_IRON, 20},
+    {ORE_COPPER, 30},
+    {ITEM_ACCUMULATOR, 2}
+};
+
+static const int kMasteryPrereqs[] = {RESEARCH_SOLAR_PANELS};
+static const ResearchCostEntry kMasteryCosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 5},
+    {ITEM_TITANIUM_BAR, 10},
+    {ITEM_FUSION_REACTOR, 1}
+};
+
+static const int kTradePrereqs[] = {RESEARCH_CRAFTING_MASTERY};
+static const ResearchCostEntry kTradeCosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 6},
+    {ITEM_ACCUMULATOR, 3},
+    {ITEM_TITANIUM_BAR, 6}
+};
+
+static const int kStructuralIPrereqs[] = {RESEARCH_UNLOCK_MARS};
+static const ResearchCostEntry kStructuralICosts[] = {
+    {ITEM_IRON_BAR, 10},
+    {ORE_COAL, 10}
+};
+
+static const int kStructuralIIPrereqs[] = {RESEARCH_STRUCTURAL_REINFORCEMENT_I};
+static const ResearchCostEntry kStructuralIICosts[] = {
+    {ITEM_IRON_BAR, 20},
+    {ORE_COAL, 20}
+};
+
+static const int kStructuralIIIPrereqs[] = {RESEARCH_STRUCTURAL_REINFORCEMENT_II};
+static const ResearchCostEntry kStructuralIIICosts[] = {
+    {ITEM_IRON_BAR, 30},
+    {ORE_COAL, 30}
+};
+
+static const int kDefensiveIPrereqs[] = {RESEARCH_UNLOCK_ZALTHOR};
+static const ResearchCostEntry kDefensiveICosts[] = {
+    {ITEM_COPPER_BAR, 10},
+    {ITEM_MITHRIL_BAR, 5}
+};
+
+static const int kDefensiveIIPrereqs[] = {RESEARCH_DEFENSIVE_FORTIFICATION_I};
+static const ResearchCostEntry kDefensiveIICosts[] = {
+    {ITEM_COPPER_BAR, 20},
+    {ITEM_MITHRIL_BAR, 10}
+};
+
+static const int kDefensiveIIIPrereqs[] = {RESEARCH_DEFENSIVE_FORTIFICATION_II};
+static const ResearchCostEntry kDefensiveIIICosts[] = {
+    {ITEM_COPPER_BAR, 30},
+    {ITEM_MITHRIL_BAR, 15}
+};
+
+static const int kArmamentIPrereqs[] = {RESEARCH_UNLOCK_VULCAN};
+static const ResearchCostEntry kArmamentICosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 5},
+    {ITEM_TITANIUM_BAR, 5}
+};
+
+static const int kArmamentIIPrereqs[] = {RESEARCH_ARMAMENT_ENHANCEMENT_I};
+static const ResearchCostEntry kArmamentIICosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 10},
+    {ITEM_TITANIUM_BAR, 10},
+    {ORE_TRITIUM, 5}
+};
+
+static const int kArmamentIIIPrereqs[] = {RESEARCH_ARMAMENT_ENHANCEMENT_II};
+static const ResearchCostEntry kArmamentIIICosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 15},
+    {ITEM_TITANIUM_BAR, 15},
+    {ORE_TRITIUM, 10},
+    {ITEM_FUSION_REACTOR, 1}
+};
+
+static const int kLunaPrereqs[] = {RESEARCH_UNLOCK_MARS};
+static const ResearchCostEntry kLunaCosts[] = {
+    {ORE_IRON, 25},
+    {ORE_COPPER, 20},
+    {ITEM_ENGINE_PART, 6}
+};
+static const int kLunaUnlockPlanets[] = {PLANET_LUNA};
+
+static const int kFasterCraftingPrereqs[] = {RESEARCH_CRAFTING_MASTERY};
+static const ResearchCostEntry kFasterCraftingCosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 8},
+    {ITEM_TITANIUM_BAR, 12},
+    {ITEM_ACCUMULATOR, 4}
+};
+
+static const int kShieldPrereqs[] = {RESEARCH_DEFENSIVE_FORTIFICATION_I};
+static const ResearchCostEntry kShieldCosts[] = {
+    {ITEM_COPPER_BAR, 15},
+    {ITEM_MITHRIL_BAR, 12},
+    {ITEM_ACCUMULATOR, 2}
+};
+
+static const int kEmergencyPrereqs[] = {RESEARCH_SOLAR_PANELS};
+static const ResearchCostEntry kEmergencyCosts[] = {
+    {ORE_COAL, 20},
+    {ITEM_ACCUMULATOR, 3}
+};
+
+static const int kRepairPrereqs[] = {
+    RESEARCH_SHIELD_TECHNOLOGY,
+    RESEARCH_DEFENSIVE_FORTIFICATION_II
+};
+static const ResearchCostEntry kRepairCosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 6},
+    {ITEM_ACCUMULATOR, 4},
+    {ITEM_FUSION_REACTOR, 1}
+};
+
+static const int kTritiumPrereqs[] = {RESEARCH_UNLOCK_NOCTARIS};
+static const ResearchCostEntry kTritiumCosts[] = {
+    {ORE_OBSIDIAN, 12},
+    {ORE_CRYSTAL, 6},
+    {ITEM_ACCUMULATOR, 3}
+};
+
+static const int kCapitalPrereqs[] = {RESEARCH_ARMAMENT_ENHANCEMENT_II};
+static const ResearchCostEntry kCapitalCosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 12},
+    {ITEM_TITANIUM_BAR, 12},
+    {ITEM_FUSION_REACTOR, 2}
+};
+
+static const int kAuxiliaryPrereqs[] = {RESEARCH_CAPITAL_SHIP_INITIATIVE};
+static const ResearchCostEntry kAuxiliaryCosts[] = {
+    {ITEM_ADVANCED_ENGINE_PART, 15},
+    {ITEM_TITANIUM_BAR, 15},
+    {ORE_TRITIUM, 6},
+    {ITEM_FUSION_REACTOR, 2}
+};
+
+static const int kEscapePrereqs[] = {RESEARCH_REPAIR_DRONE_TECHNOLOGY};
+static const ResearchCostEntry kEscapeCosts[] = {
+    {ITEM_ACCUMULATOR, 5},
+    {ORE_TRITIUM, 4},
+    {ITEM_FUSION_REACTOR, 1}
+};
+
+static const ResearchTemplate kResearchTemplates[] = {
+    {RESEARCH_UNLOCK_MARS, "Unlock Mars", 30.0, ft_nullptr, 0, kMarsCosts, sizeof(kMarsCosts) / sizeof(kMarsCosts[0]), kMarsUnlockPlanets, sizeof(kMarsUnlockPlanets) / sizeof(kMarsUnlockPlanets[0])},
+    {RESEARCH_UNLOCK_ZALTHOR, "Unlock Zalthor", 40.0, kZalthorPrereqs, sizeof(kZalthorPrereqs) / sizeof(kZalthorPrereqs[0]), kZalthorCosts, sizeof(kZalthorCosts) / sizeof(kZalthorCosts[0]), kZalthorUnlockPlanets, sizeof(kZalthorUnlockPlanets) / sizeof(kZalthorUnlockPlanets[0])},
+    {RESEARCH_UNLOCK_VULCAN, "Unlock Vulcan", 55.0, kVulcanPrereqs, sizeof(kVulcanPrereqs) / sizeof(kVulcanPrereqs[0]), kVulcanCosts, sizeof(kVulcanCosts) / sizeof(kVulcanCosts[0]), kVulcanUnlockPlanets, sizeof(kVulcanUnlockPlanets) / sizeof(kVulcanUnlockPlanets[0])},
+    {RESEARCH_UNLOCK_NOCTARIS, "Unlock Noctaris Prime", 60.0, kNoctarisPrereqs, sizeof(kNoctarisPrereqs) / sizeof(kNoctarisPrereqs[0]), kNoctarisCosts, sizeof(kNoctarisCosts) / sizeof(kNoctarisCosts[0]), kNoctarisUnlockPlanets, sizeof(kNoctarisUnlockPlanets) / sizeof(kNoctarisUnlockPlanets[0])},
+    {RESEARCH_URBAN_PLANNING_TERRA, "Urban Planning I", 20.0, ft_nullptr, 0, kPlanningTerraCosts, sizeof(kPlanningTerraCosts) / sizeof(kPlanningTerraCosts[0]), ft_nullptr, 0},
+    {RESEARCH_URBAN_PLANNING_MARS, "Urban Planning II", 25.0, kPlanningMarsPrereqs, sizeof(kPlanningMarsPrereqs) / sizeof(kPlanningMarsPrereqs[0]), kPlanningMarsCosts, sizeof(kPlanningMarsCosts) / sizeof(kPlanningMarsCosts[0]), ft_nullptr, 0},
+    {RESEARCH_URBAN_PLANNING_ZALTHOR, "Urban Planning III", 30.0, kPlanningZalthorPrereqs, sizeof(kPlanningZalthorPrereqs) / sizeof(kPlanningZalthorPrereqs[0]), kPlanningZalthorCosts, sizeof(kPlanningZalthorCosts) / sizeof(kPlanningZalthorCosts[0]), ft_nullptr, 0},
+    {RESEARCH_SOLAR_PANELS, "Solar Panel Engineering", 25.0, kSolarPrereqs, sizeof(kSolarPrereqs) / sizeof(kSolarPrereqs[0]), kSolarCosts, sizeof(kSolarCosts) / sizeof(kSolarCosts[0]), ft_nullptr, 0},
+    {RESEARCH_CRAFTING_MASTERY, "Crafting Mastery", 35.0, kMasteryPrereqs, sizeof(kMasteryPrereqs) / sizeof(kMasteryPrereqs[0]), kMasteryCosts, sizeof(kMasteryCosts) / sizeof(kMasteryCosts[0]), ft_nullptr, 0},
+    {RESEARCH_INTERSTELLAR_TRADE, "Interstellar Trade Networks", 32.0, kTradePrereqs, sizeof(kTradePrereqs) / sizeof(kTradePrereqs[0]), kTradeCosts, sizeof(kTradeCosts) / sizeof(kTradeCosts[0]), ft_nullptr, 0},
+    {RESEARCH_STRUCTURAL_REINFORCEMENT_I, "Structural Reinforcement I", 25.0, kStructuralIPrereqs, sizeof(kStructuralIPrereqs) / sizeof(kStructuralIPrereqs[0]), kStructuralICosts, sizeof(kStructuralICosts) / sizeof(kStructuralICosts[0]), ft_nullptr, 0},
+    {RESEARCH_STRUCTURAL_REINFORCEMENT_II, "Structural Reinforcement II", 35.0, kStructuralIIPrereqs, sizeof(kStructuralIIPrereqs) / sizeof(kStructuralIIPrereqs[0]), kStructuralIICosts, sizeof(kStructuralIICosts) / sizeof(kStructuralIICosts[0]), ft_nullptr, 0},
+    {RESEARCH_STRUCTURAL_REINFORCEMENT_III, "Structural Reinforcement III", 45.0, kStructuralIIIPrereqs, sizeof(kStructuralIIIPrereqs) / sizeof(kStructuralIIIPrereqs[0]), kStructuralIIICosts, sizeof(kStructuralIIICosts) / sizeof(kStructuralIIICosts[0]), ft_nullptr, 0},
+    {RESEARCH_DEFENSIVE_FORTIFICATION_I, "Defensive Fortification I", 30.0, kDefensiveIPrereqs, sizeof(kDefensiveIPrereqs) / sizeof(kDefensiveIPrereqs[0]), kDefensiveICosts, sizeof(kDefensiveICosts) / sizeof(kDefensiveICosts[0]), ft_nullptr, 0},
+    {RESEARCH_DEFENSIVE_FORTIFICATION_II, "Defensive Fortification II", 40.0, kDefensiveIIPrereqs, sizeof(kDefensiveIIPrereqs) / sizeof(kDefensiveIIPrereqs[0]), kDefensiveIICosts, sizeof(kDefensiveIICosts) / sizeof(kDefensiveIICosts[0]), ft_nullptr, 0},
+    {RESEARCH_DEFENSIVE_FORTIFICATION_III, "Defensive Fortification III", 50.0, kDefensiveIIIPrereqs, sizeof(kDefensiveIIIPrereqs) / sizeof(kDefensiveIIIPrereqs[0]), kDefensiveIIICosts, sizeof(kDefensiveIIICosts) / sizeof(kDefensiveIIICosts[0]), ft_nullptr, 0},
+    {RESEARCH_ARMAMENT_ENHANCEMENT_I, "Armament Enhancement I", 35.0, kArmamentIPrereqs, sizeof(kArmamentIPrereqs) / sizeof(kArmamentIPrereqs[0]), kArmamentICosts, sizeof(kArmamentICosts) / sizeof(kArmamentICosts[0]), ft_nullptr, 0},
+    {RESEARCH_ARMAMENT_ENHANCEMENT_II, "Armament Enhancement II", 45.0, kArmamentIIPrereqs, sizeof(kArmamentIIPrereqs) / sizeof(kArmamentIIPrereqs[0]), kArmamentIICosts, sizeof(kArmamentIICosts) / sizeof(kArmamentIICosts[0]), ft_nullptr, 0},
+    {RESEARCH_ARMAMENT_ENHANCEMENT_III, "Armament Enhancement III", 55.0, kArmamentIIIPrereqs, sizeof(kArmamentIIIPrereqs) / sizeof(kArmamentIIIPrereqs[0]), kArmamentIIICosts, sizeof(kArmamentIIICosts) / sizeof(kArmamentIIICosts[0]), ft_nullptr, 0},
+    {RESEARCH_UNLOCK_LUNA, "Unlock Luna", 35.0, kLunaPrereqs, sizeof(kLunaPrereqs) / sizeof(kLunaPrereqs[0]), kLunaCosts, sizeof(kLunaCosts) / sizeof(kLunaCosts[0]), kLunaUnlockPlanets, sizeof(kLunaUnlockPlanets) / sizeof(kLunaUnlockPlanets[0])},
+    {RESEARCH_FASTER_CRAFTING, "Faster Crafting", 40.0, kFasterCraftingPrereqs, sizeof(kFasterCraftingPrereqs) / sizeof(kFasterCraftingPrereqs[0]), kFasterCraftingCosts, sizeof(kFasterCraftingCosts) / sizeof(kFasterCraftingCosts[0]), ft_nullptr, 0},
+    {RESEARCH_SHIELD_TECHNOLOGY, "Shield Technology", 35.0, kShieldPrereqs, sizeof(kShieldPrereqs) / sizeof(kShieldPrereqs[0]), kShieldCosts, sizeof(kShieldCosts) / sizeof(kShieldCosts[0]), ft_nullptr, 0},
+    {RESEARCH_EMERGENCY_ENERGY_CONSERVATION, "Emergency Energy Conservation", 30.0, kEmergencyPrereqs, sizeof(kEmergencyPrereqs) / sizeof(kEmergencyPrereqs[0]), kEmergencyCosts, sizeof(kEmergencyCosts) / sizeof(kEmergencyCosts[0]), ft_nullptr, 0},
+    {RESEARCH_REPAIR_DRONE_TECHNOLOGY, "Repair Drone Technology", 45.0, kRepairPrereqs, sizeof(kRepairPrereqs) / sizeof(kRepairPrereqs[0]), kRepairCosts, sizeof(kRepairCosts) / sizeof(kRepairCosts[0]), ft_nullptr, 0},
+    {RESEARCH_TRITIUM_EXTRACTION, "Tritium Extraction", 50.0, kTritiumPrereqs, sizeof(kTritiumPrereqs) / sizeof(kTritiumPrereqs[0]), kTritiumCosts, sizeof(kTritiumCosts) / sizeof(kTritiumCosts[0]), ft_nullptr, 0},
+    {RESEARCH_CAPITAL_SHIP_INITIATIVE, "Capital Ship Initiative", 55.0, kCapitalPrereqs, sizeof(kCapitalPrereqs) / sizeof(kCapitalPrereqs[0]), kCapitalCosts, sizeof(kCapitalCosts) / sizeof(kCapitalCosts[0]), ft_nullptr, 0},
+    {RESEARCH_AUXILIARY_FRIGATE_DEVELOPMENT, "Auxiliary Frigate Development", 60.0, kAuxiliaryPrereqs, sizeof(kAuxiliaryPrereqs) / sizeof(kAuxiliaryPrereqs[0]), kAuxiliaryCosts, sizeof(kAuxiliaryCosts) / sizeof(kAuxiliaryCosts[0]), ft_nullptr, 0},
+    {RESEARCH_ESCAPE_POD_LIFELINE, "Escape Pod Lifeline", 45.0, kEscapePrereqs, sizeof(kEscapePrereqs) / sizeof(kEscapePrereqs[0]), kEscapeCosts, sizeof(kEscapeCosts) / sizeof(kEscapeCosts[0]), ft_nullptr, 0}
+};
+}
+
 ResearchManager::ResearchManager()
     : _duration_scale(1.0)
 {
-    ft_sharedptr<ft_research_definition> mars(new ft_research_definition());
-    mars->id = RESEARCH_UNLOCK_MARS;
-    mars->name = ft_string("Unlock Mars");
-    mars->duration = 30.0;
-    mars->prerequisites.clear();
-    mars->costs.clear();
-    mars->unlock_planets.clear();
-    Pair<int, int> cost;
-    cost.key = ORE_IRON;
-    cost.value = 18;
-    mars->costs.push_back(cost);
-    cost.key = ORE_COPPER;
-    cost.value = 12;
-    mars->costs.push_back(cost);
-    cost.key = ORE_COAL;
-    cost.value = 6;
-    mars->costs.push_back(cost);
-    mars->unlock_planets.push_back(PLANET_MARS);
-    this->register_research(mars);
-
-    ft_sharedptr<ft_research_definition> zalthor(new ft_research_definition());
-    zalthor->id = RESEARCH_UNLOCK_ZALTHOR;
-    zalthor->name = ft_string("Unlock Zalthor");
-    zalthor->duration = 40.0;
-    zalthor->prerequisites.clear();
-    zalthor->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
-    zalthor->costs.clear();
-    cost.key = ORE_MITHRIL;
-    cost.value = 8;
-    zalthor->costs.push_back(cost);
-    cost.key = ORE_COAL;
-    cost.value = 6;
-    zalthor->costs.push_back(cost);
-    zalthor->unlock_planets.clear();
-    zalthor->unlock_planets.push_back(PLANET_ZALTHOR);
-    this->register_research(zalthor);
-
-    ft_sharedptr<ft_research_definition> vulcan(new ft_research_definition());
-    vulcan->id = RESEARCH_UNLOCK_VULCAN;
-    vulcan->name = ft_string("Unlock Vulcan");
-    vulcan->duration = 55.0;
-    vulcan->prerequisites.clear();
-    vulcan->prerequisites.push_back(RESEARCH_UNLOCK_ZALTHOR);
-    vulcan->costs.clear();
-    cost.key = ORE_GOLD;
-    cost.value = 6;
-    vulcan->costs.push_back(cost);
-    cost.key = ORE_MITHRIL;
-    cost.value = 8;
-    vulcan->costs.push_back(cost);
-    vulcan->unlock_planets.clear();
-    vulcan->unlock_planets.push_back(PLANET_VULCAN);
-    this->register_research(vulcan);
-
-    ft_sharedptr<ft_research_definition> noctaris(new ft_research_definition());
-    noctaris->id = RESEARCH_UNLOCK_NOCTARIS;
-    noctaris->name = ft_string("Unlock Noctaris Prime");
-    noctaris->duration = 60.0;
-    noctaris->prerequisites.clear();
-    noctaris->prerequisites.push_back(RESEARCH_UNLOCK_VULCAN);
-    noctaris->costs.clear();
-    cost.key = ORE_TITANIUM;
-    cost.value = 5;
-    noctaris->costs.push_back(cost);
-    cost.key = ORE_SILVER;
-    cost.value = 6;
-    noctaris->costs.push_back(cost);
-    cost.key = ORE_TIN;
-    cost.value = 6;
-    noctaris->costs.push_back(cost);
-    noctaris->unlock_planets.clear();
-    noctaris->unlock_planets.push_back(PLANET_NOCTARIS_PRIME);
-    this->register_research(noctaris);
-
-    ft_sharedptr<ft_research_definition> planning_terra(new ft_research_definition());
-    planning_terra->id = RESEARCH_URBAN_PLANNING_TERRA;
-    planning_terra->name = ft_string("Urban Planning I");
-    planning_terra->duration = 20.0;
-    planning_terra->prerequisites.clear();
-    planning_terra->costs.clear();
-    cost.key = ITEM_IRON_BAR;
-    cost.value = 15;
-    planning_terra->costs.push_back(cost);
-    cost.key = ITEM_ENGINE_PART;
-    cost.value = 5;
-    planning_terra->costs.push_back(cost);
-    planning_terra->unlock_planets.clear();
-    this->register_research(planning_terra);
-
-    ft_sharedptr<ft_research_definition> planning_mars(new ft_research_definition());
-    planning_mars->id = RESEARCH_URBAN_PLANNING_MARS;
-    planning_mars->name = ft_string("Urban Planning II");
-    planning_mars->duration = 25.0;
-    planning_mars->prerequisites.clear();
-    planning_mars->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
-    planning_mars->costs.clear();
-    cost.key = ITEM_IRON_BAR;
-    cost.value = 30;
-    planning_mars->costs.push_back(cost);
-    cost.key = ITEM_ENGINE_PART;
-    cost.value = 10;
-    planning_mars->costs.push_back(cost);
-    planning_mars->unlock_planets.clear();
-    this->register_research(planning_mars);
-
-    ft_sharedptr<ft_research_definition> planning_zalthor(new ft_research_definition());
-    planning_zalthor->id = RESEARCH_URBAN_PLANNING_ZALTHOR;
-    planning_zalthor->name = ft_string("Urban Planning III");
-    planning_zalthor->duration = 30.0;
-    planning_zalthor->prerequisites.clear();
-    planning_zalthor->prerequisites.push_back(RESEARCH_UNLOCK_ZALTHOR);
-    planning_zalthor->costs.clear();
-    cost.key = ITEM_IRON_BAR;
-    cost.value = 45;
-    planning_zalthor->costs.push_back(cost);
-    cost.key = ITEM_ENGINE_PART;
-    cost.value = 15;
-    planning_zalthor->costs.push_back(cost);
-    planning_zalthor->unlock_planets.clear();
-    this->register_research(planning_zalthor);
-
-    ft_sharedptr<ft_research_definition> solar(new ft_research_definition());
-    solar->id = RESEARCH_SOLAR_PANELS;
-    solar->name = ft_string("Solar Panel Engineering");
-    solar->duration = 25.0;
-    solar->prerequisites.clear();
-    solar->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
-    solar->costs.clear();
-    cost.key = ORE_IRON;
-    cost.value = 20;
-    solar->costs.push_back(cost);
-    cost.key = ORE_COPPER;
-    cost.value = 30;
-    solar->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 2;
-    solar->costs.push_back(cost);
-    solar->unlock_planets.clear();
-    this->register_research(solar);
-
-    ft_sharedptr<ft_research_definition> mastery(new ft_research_definition());
-    mastery->id = RESEARCH_CRAFTING_MASTERY;
-    mastery->name = ft_string("Crafting Mastery");
-    mastery->duration = 35.0;
-    mastery->prerequisites.clear();
-    mastery->prerequisites.push_back(RESEARCH_SOLAR_PANELS);
-    mastery->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 5;
-    mastery->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 10;
-    mastery->costs.push_back(cost);
-    cost.key = ITEM_FUSION_REACTOR;
-    cost.value = 1;
-    mastery->costs.push_back(cost);
-    mastery->unlock_planets.clear();
-    this->register_research(mastery);
-
-    ft_sharedptr<ft_research_definition> trade(new ft_research_definition());
-    trade->id = RESEARCH_INTERSTELLAR_TRADE;
-    trade->name = ft_string("Interstellar Trade Networks");
-    trade->duration = 32.0;
-    trade->prerequisites.clear();
-    trade->prerequisites.push_back(RESEARCH_CRAFTING_MASTERY);
-    trade->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 6;
-    trade->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 3;
-    trade->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 6;
-    trade->costs.push_back(cost);
-    trade->unlock_planets.clear();
-    this->register_research(trade);
-
-    ft_sharedptr<ft_research_definition> structural_i(new ft_research_definition());
-    structural_i->id = RESEARCH_STRUCTURAL_REINFORCEMENT_I;
-    structural_i->name = ft_string("Structural Reinforcement I");
-    structural_i->duration = 25.0;
-    structural_i->prerequisites.clear();
-    structural_i->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
-    structural_i->costs.clear();
-    cost.key = ITEM_IRON_BAR;
-    cost.value = 10;
-    structural_i->costs.push_back(cost);
-    cost.key = ORE_COAL;
-    cost.value = 10;
-    structural_i->costs.push_back(cost);
-    structural_i->unlock_planets.clear();
-    this->register_research(structural_i);
-
-    ft_sharedptr<ft_research_definition> structural_ii(new ft_research_definition());
-    structural_ii->id = RESEARCH_STRUCTURAL_REINFORCEMENT_II;
-    structural_ii->name = ft_string("Structural Reinforcement II");
-    structural_ii->duration = 35.0;
-    structural_ii->prerequisites.clear();
-    structural_ii->prerequisites.push_back(RESEARCH_STRUCTURAL_REINFORCEMENT_I);
-    structural_ii->costs.clear();
-    cost.key = ITEM_IRON_BAR;
-    cost.value = 20;
-    structural_ii->costs.push_back(cost);
-    cost.key = ORE_COAL;
-    cost.value = 20;
-    structural_ii->costs.push_back(cost);
-    structural_ii->unlock_planets.clear();
-    this->register_research(structural_ii);
-
-    ft_sharedptr<ft_research_definition> structural_iii(new ft_research_definition());
-    structural_iii->id = RESEARCH_STRUCTURAL_REINFORCEMENT_III;
-    structural_iii->name = ft_string("Structural Reinforcement III");
-    structural_iii->duration = 45.0;
-    structural_iii->prerequisites.clear();
-    structural_iii->prerequisites.push_back(RESEARCH_STRUCTURAL_REINFORCEMENT_II);
-    structural_iii->costs.clear();
-    cost.key = ITEM_IRON_BAR;
-    cost.value = 30;
-    structural_iii->costs.push_back(cost);
-    cost.key = ORE_COAL;
-    cost.value = 30;
-    structural_iii->costs.push_back(cost);
-    structural_iii->unlock_planets.clear();
-    this->register_research(structural_iii);
-
-    ft_sharedptr<ft_research_definition> defensive_i(new ft_research_definition());
-    defensive_i->id = RESEARCH_DEFENSIVE_FORTIFICATION_I;
-    defensive_i->name = ft_string("Defensive Fortification I");
-    defensive_i->duration = 30.0;
-    defensive_i->prerequisites.clear();
-    defensive_i->prerequisites.push_back(RESEARCH_UNLOCK_ZALTHOR);
-    defensive_i->costs.clear();
-    cost.key = ITEM_COPPER_BAR;
-    cost.value = 10;
-    defensive_i->costs.push_back(cost);
-    cost.key = ITEM_MITHRIL_BAR;
-    cost.value = 5;
-    defensive_i->costs.push_back(cost);
-    defensive_i->unlock_planets.clear();
-    this->register_research(defensive_i);
-
-    ft_sharedptr<ft_research_definition> defensive_ii(new ft_research_definition());
-    defensive_ii->id = RESEARCH_DEFENSIVE_FORTIFICATION_II;
-    defensive_ii->name = ft_string("Defensive Fortification II");
-    defensive_ii->duration = 40.0;
-    defensive_ii->prerequisites.clear();
-    defensive_ii->prerequisites.push_back(RESEARCH_DEFENSIVE_FORTIFICATION_I);
-    defensive_ii->costs.clear();
-    cost.key = ITEM_COPPER_BAR;
-    cost.value = 20;
-    defensive_ii->costs.push_back(cost);
-    cost.key = ITEM_MITHRIL_BAR;
-    cost.value = 10;
-    defensive_ii->costs.push_back(cost);
-    defensive_ii->unlock_planets.clear();
-    this->register_research(defensive_ii);
-
-    ft_sharedptr<ft_research_definition> defensive_iii(new ft_research_definition());
-    defensive_iii->id = RESEARCH_DEFENSIVE_FORTIFICATION_III;
-    defensive_iii->name = ft_string("Defensive Fortification III");
-    defensive_iii->duration = 50.0;
-    defensive_iii->prerequisites.clear();
-    defensive_iii->prerequisites.push_back(RESEARCH_DEFENSIVE_FORTIFICATION_II);
-    defensive_iii->costs.clear();
-    cost.key = ITEM_COPPER_BAR;
-    cost.value = 30;
-    defensive_iii->costs.push_back(cost);
-    cost.key = ITEM_MITHRIL_BAR;
-    cost.value = 15;
-    defensive_iii->costs.push_back(cost);
-    defensive_iii->unlock_planets.clear();
-    this->register_research(defensive_iii);
-
-    ft_sharedptr<ft_research_definition> armament_i(new ft_research_definition());
-    armament_i->id = RESEARCH_ARMAMENT_ENHANCEMENT_I;
-    armament_i->name = ft_string("Armament Enhancement I");
-    armament_i->duration = 35.0;
-    armament_i->prerequisites.clear();
-    armament_i->prerequisites.push_back(RESEARCH_UNLOCK_VULCAN);
-    armament_i->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 5;
-    armament_i->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 5;
-    armament_i->costs.push_back(cost);
-    armament_i->unlock_planets.clear();
-    this->register_research(armament_i);
-
-    ft_sharedptr<ft_research_definition> armament_ii(new ft_research_definition());
-    armament_ii->id = RESEARCH_ARMAMENT_ENHANCEMENT_II;
-    armament_ii->name = ft_string("Armament Enhancement II");
-    armament_ii->duration = 45.0;
-    armament_ii->prerequisites.clear();
-    armament_ii->prerequisites.push_back(RESEARCH_ARMAMENT_ENHANCEMENT_I);
-    armament_ii->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 10;
-    armament_ii->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 10;
-    armament_ii->costs.push_back(cost);
-    cost.key = ORE_TRITIUM;
-    cost.value = 5;
-    armament_ii->costs.push_back(cost);
-    armament_ii->unlock_planets.clear();
-    this->register_research(armament_ii);
-
-    ft_sharedptr<ft_research_definition> armament_iii(new ft_research_definition());
-    armament_iii->id = RESEARCH_ARMAMENT_ENHANCEMENT_III;
-    armament_iii->name = ft_string("Armament Enhancement III");
-    armament_iii->duration = 55.0;
-    armament_iii->prerequisites.clear();
-    armament_iii->prerequisites.push_back(RESEARCH_ARMAMENT_ENHANCEMENT_II);
-    armament_iii->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 15;
-    armament_iii->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 15;
-    armament_iii->costs.push_back(cost);
-    cost.key = ORE_TRITIUM;
-    cost.value = 10;
-    armament_iii->costs.push_back(cost);
-    cost.key = ITEM_FUSION_REACTOR;
-    cost.value = 1;
-    armament_iii->costs.push_back(cost);
-    armament_iii->unlock_planets.clear();
-    this->register_research(armament_iii);
-
-    ft_sharedptr<ft_research_definition> luna(new ft_research_definition());
-    luna->id = RESEARCH_UNLOCK_LUNA;
-    luna->name = ft_string("Unlock Luna");
-    luna->duration = 35.0;
-    luna->prerequisites.clear();
-    luna->prerequisites.push_back(RESEARCH_UNLOCK_MARS);
-    luna->costs.clear();
-    cost.key = ORE_IRON;
-    cost.value = 25;
-    luna->costs.push_back(cost);
-    cost.key = ORE_COPPER;
-    cost.value = 20;
-    luna->costs.push_back(cost);
-    cost.key = ITEM_ENGINE_PART;
-    cost.value = 6;
-    luna->costs.push_back(cost);
-    luna->unlock_planets.clear();
-    luna->unlock_planets.push_back(PLANET_LUNA);
-    this->register_research(luna);
-
-    ft_sharedptr<ft_research_definition> faster_crafting(new ft_research_definition());
-    faster_crafting->id = RESEARCH_FASTER_CRAFTING;
-    faster_crafting->name = ft_string("Faster Crafting");
-    faster_crafting->duration = 40.0;
-    faster_crafting->prerequisites.clear();
-    faster_crafting->prerequisites.push_back(RESEARCH_CRAFTING_MASTERY);
-    faster_crafting->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 8;
-    faster_crafting->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 12;
-    faster_crafting->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 4;
-    faster_crafting->costs.push_back(cost);
-    faster_crafting->unlock_planets.clear();
-    this->register_research(faster_crafting);
-
-    ft_sharedptr<ft_research_definition> shield(new ft_research_definition());
-    shield->id = RESEARCH_SHIELD_TECHNOLOGY;
-    shield->name = ft_string("Shield Technology");
-    shield->duration = 35.0;
-    shield->prerequisites.clear();
-    shield->prerequisites.push_back(RESEARCH_DEFENSIVE_FORTIFICATION_I);
-    shield->costs.clear();
-    cost.key = ITEM_COPPER_BAR;
-    cost.value = 15;
-    shield->costs.push_back(cost);
-    cost.key = ITEM_MITHRIL_BAR;
-    cost.value = 12;
-    shield->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 2;
-    shield->costs.push_back(cost);
-    shield->unlock_planets.clear();
-    this->register_research(shield);
-
-    ft_sharedptr<ft_research_definition> emergency(new ft_research_definition());
-    emergency->id = RESEARCH_EMERGENCY_ENERGY_CONSERVATION;
-    emergency->name = ft_string("Emergency Energy Conservation");
-    emergency->duration = 30.0;
-    emergency->prerequisites.clear();
-    emergency->prerequisites.push_back(RESEARCH_SOLAR_PANELS);
-    emergency->costs.clear();
-    cost.key = ORE_COAL;
-    cost.value = 20;
-    emergency->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 3;
-    emergency->costs.push_back(cost);
-    emergency->unlock_planets.clear();
-    this->register_research(emergency);
-
-    ft_sharedptr<ft_research_definition> repair(new ft_research_definition());
-    repair->id = RESEARCH_REPAIR_DRONE_TECHNOLOGY;
-    repair->name = ft_string("Repair Drone Technology");
-    repair->duration = 45.0;
-    repair->prerequisites.clear();
-    repair->prerequisites.push_back(RESEARCH_SHIELD_TECHNOLOGY);
-    repair->prerequisites.push_back(RESEARCH_DEFENSIVE_FORTIFICATION_II);
-    repair->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 6;
-    repair->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 4;
-    repair->costs.push_back(cost);
-    cost.key = ITEM_FUSION_REACTOR;
-    cost.value = 1;
-    repair->costs.push_back(cost);
-    repair->unlock_planets.clear();
-    this->register_research(repair);
-
-    ft_sharedptr<ft_research_definition> tritium(new ft_research_definition());
-    tritium->id = RESEARCH_TRITIUM_EXTRACTION;
-    tritium->name = ft_string("Tritium Extraction");
-    tritium->duration = 50.0;
-    tritium->prerequisites.clear();
-    tritium->prerequisites.push_back(RESEARCH_UNLOCK_NOCTARIS);
-    tritium->costs.clear();
-    cost.key = ORE_OBSIDIAN;
-    cost.value = 12;
-    tritium->costs.push_back(cost);
-    cost.key = ORE_CRYSTAL;
-    cost.value = 6;
-    tritium->costs.push_back(cost);
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 3;
-    tritium->costs.push_back(cost);
-    tritium->unlock_planets.clear();
-    this->register_research(tritium);
-
-    ft_sharedptr<ft_research_definition> capital(new ft_research_definition());
-    capital->id = RESEARCH_CAPITAL_SHIP_INITIATIVE;
-    capital->name = ft_string("Capital Ship Initiative");
-    capital->duration = 55.0;
-    capital->prerequisites.clear();
-    capital->prerequisites.push_back(RESEARCH_ARMAMENT_ENHANCEMENT_II);
-    capital->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 12;
-    capital->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 12;
-    capital->costs.push_back(cost);
-    cost.key = ITEM_FUSION_REACTOR;
-    cost.value = 2;
-    capital->costs.push_back(cost);
-    capital->unlock_planets.clear();
-    this->register_research(capital);
-
-    ft_sharedptr<ft_research_definition> auxiliary(new ft_research_definition());
-    auxiliary->id = RESEARCH_AUXILIARY_FRIGATE_DEVELOPMENT;
-    auxiliary->name = ft_string("Auxiliary Frigate Development");
-    auxiliary->duration = 60.0;
-    auxiliary->prerequisites.clear();
-    auxiliary->prerequisites.push_back(RESEARCH_CAPITAL_SHIP_INITIATIVE);
-    auxiliary->costs.clear();
-    cost.key = ITEM_ADVANCED_ENGINE_PART;
-    cost.value = 15;
-    auxiliary->costs.push_back(cost);
-    cost.key = ITEM_TITANIUM_BAR;
-    cost.value = 15;
-    auxiliary->costs.push_back(cost);
-    cost.key = ORE_TRITIUM;
-    cost.value = 6;
-    auxiliary->costs.push_back(cost);
-    cost.key = ITEM_FUSION_REACTOR;
-    cost.value = 2;
-    auxiliary->costs.push_back(cost);
-    auxiliary->unlock_planets.clear();
-    this->register_research(auxiliary);
-
-    ft_sharedptr<ft_research_definition> escape(new ft_research_definition());
-    escape->id = RESEARCH_ESCAPE_POD_LIFELINE;
-    escape->name = ft_string("Escape Pod Lifeline");
-    escape->duration = 45.0;
-    escape->prerequisites.clear();
-    escape->prerequisites.push_back(RESEARCH_REPAIR_DRONE_TECHNOLOGY);
-    escape->costs.clear();
-    cost.key = ITEM_ACCUMULATOR;
-    cost.value = 5;
-    escape->costs.push_back(cost);
-    cost.key = ORE_TRITIUM;
-    cost.value = 4;
-    escape->costs.push_back(cost);
-    cost.key = ITEM_FUSION_REACTOR;
-    cost.value = 1;
-    escape->costs.push_back(cost);
-    escape->unlock_planets.clear();
-    this->register_research(escape);
-
+    size_t template_count = sizeof(kResearchTemplates) / sizeof(kResearchTemplates[0]);
+    for (size_t i = 0; i < template_count; ++i)
+    {
+        const ResearchTemplate &entry = kResearchTemplates[i];
+        ft_sharedptr<ft_research_definition> definition(new ft_research_definition());
+        definition->id = entry.id;
+        definition->name = ft_string(entry.name);
+        definition->duration = entry.duration;
+        copy_ids(entry.prerequisites, entry.prerequisite_count, definition->prerequisites);
+        copy_costs(entry.costs, entry.cost_count, definition->costs);
+        copy_ids(entry.unlock_planets, entry.unlock_planet_count, definition->unlock_planets);
+        this->register_research(definition);
+    }
     this->update_availability();
 }
 
