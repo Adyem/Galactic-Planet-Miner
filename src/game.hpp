@@ -179,6 +179,8 @@ private:
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
+    ft_sharedptr<ft_planet> get_planet_storage_target(int id);
+    ft_sharedptr<const ft_planet> get_planet_storage_target(int id) const;
     ft_sharedptr<ft_fleet> get_fleet(int id);
     ft_sharedptr<const ft_fleet> get_fleet(int id) const;
     ft_sharedptr<ft_fleet> get_planet_fleet(int id);

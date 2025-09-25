@@ -15,6 +15,9 @@ public:
     ~BackendClient();
 
     int send_state(const ft_string &state, ft_string &response);
+
+    const ft_string &get_host_for_testing() const;
+    const ft_string &get_port_for_testing() const;
 };
 
 #endif

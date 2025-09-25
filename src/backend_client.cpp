@@ -36,43 +36,100 @@ namespace
         status_buffer[token_length] = '\0';
         return ft_atoi(status_buffer);
     }
+
+    void assign_substring(ft_string &target, const char *begin, const char *end)
+    {
+        target.clear();
+        const char *cursor = begin;
+        while (cursor < end)
+        {
+            target.append(*cursor);
+            cursor += 1;
+        }
+    }
+
+    bool is_numeric_range(const char *begin, const char *end)
+    {
+        if (begin == end)
+            return false;
+        const char *cursor = begin;
+        while (cursor < end)
+        {
+            if (!ft_isdigit(*cursor))
+                return false;
+            cursor += 1;
+        }
+        return true;
+    }
 }
 
 BackendClient::BackendClient(const ft_string &host, const ft_string &path)
     : _host(host), _path(path), _port()
 {
-    const char *host_cstr = host.c_str();
-    const char *separator = ft_strrchr(host_cstr, ':');
-    if (separator != ft_nullptr && separator != host_cstr)
+    const char *input = host.c_str();
+    const char *scheme_separator = ft_strstr(input, "://");
+    const char *authority_start;
+    if (scheme_separator != ft_nullptr)
+        authority_start = scheme_separator + 3;
+    else
+        authority_start = input;
+
+    const char *authority_end = authority_start;
+    while (*authority_end != '\0' && *authority_end != '/' && *authority_end != '?' && *authority_end != '#')
+        authority_end += 1;
+
+    const char *credentials_separator = ft_strrchr(authority_start, '@');
+    if (credentials_separator != ft_nullptr && credentials_separator < authority_end)
+        authority_start = credentials_separator + 1;
+
+    if (authority_start >= authority_end)
     {
-        const char *port_start = separator + 1;
-        if (*port_start != '\0')
+        assign_substring(this->_host, authority_start, authority_end);
+        return ;
+    }
+
+    if (*authority_start == '[')
+    {
+        const char *closing_bracket = ft_strchr(authority_start, ']');
+        if (closing_bracket != ft_nullptr && closing_bracket < authority_end)
         {
-            bool numeric = true;
-            const char *cursor = port_start;
-            while (*cursor != '\0')
+            assign_substring(this->_host, authority_start, closing_bracket + 1);
+            const char *after_bracket = closing_bracket + 1;
+            if (after_bracket < authority_end && *after_bracket == ':')
             {
-                if (!ft_isdigit(*cursor))
-                {
-                    numeric = false;
-                    break;
-                }
-                cursor += 1;
+                const char *port_candidate = after_bracket + 1;
+                if (is_numeric_range(port_candidate, authority_end))
+                    assign_substring(this->_port, port_candidate, authority_end);
             }
-            if (numeric)
+            return ;
+        }
+    }
+
+    int colon_count = 0;
+    const char *cursor = authority_start;
+    while (cursor < authority_end)
+    {
+        if (*cursor == ':')
+            colon_count += 1;
+        cursor += 1;
+    }
+
+    if (colon_count == 1)
+    {
+        const char *last_colon = ft_strrchr(authority_start, ':');
+        if (last_colon != ft_nullptr && last_colon < authority_end)
+        {
+            const char *port_candidate = last_colon + 1;
+            if (is_numeric_range(port_candidate, authority_end))
             {
-                this->_port.clear();
-                this->_port.append(port_start);
-                this->_host.clear();
-                const char *copy_cursor = host_cstr;
-                while (copy_cursor < separator)
-                {
-                    this->_host.append(*copy_cursor);
-                    copy_cursor += 1;
-                }
+                assign_substring(this->_host, authority_start, last_colon);
+                assign_substring(this->_port, port_candidate, authority_end);
+                return ;
             }
         }
     }
+
+    assign_substring(this->_host, authority_start, authority_end);
     return ;
 }
 
@@ -106,4 +163,14 @@ int BackendClient::send_state(const ft_string &state, ft_string &response)
     if (http_status >= 100)
         return (http_status);
     return (fallback_status);
+}
+
+const ft_string &BackendClient::get_host_for_testing() const
+{
+    return (this->_host);
+}
+
+const ft_string &BackendClient::get_port_for_testing() const
+{
+    return (this->_port);
 }
