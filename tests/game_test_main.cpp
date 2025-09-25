@@ -78,6 +78,8 @@ int main()
         return 0;
     if (!verify_supply_contract_automation())
         return 0;
+    if (!verify_supply_contract_pending_stock_buffer())
+        return 0;
     if (!verify_multiple_convoy_raids())
         return 0;
     if (!verify_supply_route_escalation())

@@ -6,14 +6,34 @@
 
 void Game::append_lore_entry(const ft_string &entry)
 {
-    this->_lore_log.push_back(entry);
-    if (this->_lore_log.size() > LORE_LOG_MAX_ENTRIES)
-        this->_lore_log.erase(this->_lore_log.begin());
+    if (this->_lore_log_count < LORE_LOG_MAX_ENTRIES)
+    {
+        this->_lore_log.push_back(entry);
+        this->_lore_log_count += 1;
+    }
+    else if (this->_lore_log.size() > 0)
+    {
+        size_t overwrite_index = this->_lore_log_start;
+        this->_lore_log[overwrite_index] = entry;
+        this->_lore_log_start = (this->_lore_log_start + 1) % this->_lore_log.size();
+    }
+    else
+    {
+        this->_lore_log.push_back(entry);
+        this->_lore_log_count = 1;
+        this->_lore_log_start = 0;
+    }
+    this->_lore_log_cache_dirty = true;
 }
 
 Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     : _backend(host, path),
       _save_system(),
+      _lore_log(),
+      _lore_log_start(0),
+      _lore_log_count(0),
+      _lore_log_cache(),
+      _lore_log_cache_dirty(false),
       _difficulty(GAME_DIFFICULTY_STANDARD),
       _resource_multiplier(1.0),
       _quest_time_scale(1.0),
@@ -56,7 +76,9 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _has_checkpoint(false),
       _failed_checkpoint_tags(),
       _force_checkpoint_failure(false),
-      _backend_online(true)
+      _backend_online(true),
+      _backend_retry_delay_ms(0),
+      _backend_next_retry_ms(0)
 {
     ft_sharedptr<ft_planet> terra(new ft_planet_terra());
     ft_sharedptr<ft_planet> mars(new ft_planet_mars());
@@ -462,6 +484,12 @@ void Game::send_state(int planet_id, int ore_id)
         return ;
 
     int amount = planet->get_resource(ore_id);
+    if (!this->_backend_online)
+    {
+        long current_time_ms = ft_time_ms();
+        if (this->_backend_next_retry_ms != 0 && current_time_ms < this->_backend_next_retry_ms)
+            return ;
+    }
     Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_last_sent_resources.find(planet_id);
     if (this->_backend_online && planet_entry != ft_nullptr)
     {
@@ -494,9 +522,21 @@ void Game::send_state(int planet_id, int ore_id)
     }
     if (offline)
     {
-        if (this->_backend_online)
+        long retry_now_ms = ft_time_ms();
+        if (this->_backend_retry_delay_ms <= 0)
+            this->_backend_retry_delay_ms = BACKEND_RETRY_INITIAL_DELAY_MS;
+        else
         {
-            this->_backend_online = false;
+            long doubled_delay = this->_backend_retry_delay_ms * 2;
+            if (doubled_delay > BACKEND_RETRY_MAX_DELAY_MS)
+                doubled_delay = BACKEND_RETRY_MAX_DELAY_MS;
+            this->_backend_retry_delay_ms = doubled_delay;
+        }
+        this->_backend_next_retry_ms = retry_now_ms + this->_backend_retry_delay_ms;
+        bool was_online = this->_backend_online;
+        this->_backend_online = false;
+        if (was_online)
+        {
             ft_string entry("Operations report: backend connection lost");
             entry.append(" (status ");
             entry.append(ft_to_string(status));
@@ -504,11 +544,17 @@ void Game::send_state(int planet_id, int ore_id)
             this->append_lore_entry(entry);
         }
     }
-    else if (!this->_backend_online)
+    else
     {
+        this->_backend_retry_delay_ms = 0;
+        this->_backend_next_retry_ms = 0;
+        bool was_offline = !this->_backend_online;
         this->_backend_online = true;
-        ft_string entry("Operations report: backend connection restored.");
-        this->append_lore_entry(entry);
+        if (was_offline)
+        {
+            ft_string entry("Operations report: backend connection restored.");
+            this->append_lore_entry(entry);
+        }
     }
 
     if (!offline)

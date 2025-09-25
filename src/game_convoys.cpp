@@ -294,6 +294,32 @@ bool Game::has_active_convoy_for_contract(int contract_id) const
     return active >= limit;
 }
 
+void Game::increase_contract_pending_delivery(int contract_id, int amount)
+{
+    if (contract_id <= 0 || amount <= 0)
+        return ;
+    Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract_id);
+    if (entry == ft_nullptr)
+        return ;
+    ft_supply_contract &contract = entry->value;
+    if (contract.pending_delivery < 0)
+        contract.pending_delivery = 0;
+    contract.pending_delivery += amount;
+}
+
+void Game::decrease_contract_pending_delivery(int contract_id, int amount)
+{
+    if (contract_id <= 0 || amount <= 0)
+        return ;
+    Pair<int, ft_supply_contract> *entry = this->_supply_contracts.find(contract_id);
+    if (entry == ft_nullptr)
+        return ;
+    ft_supply_contract &contract = entry->value;
+    contract.pending_delivery -= amount;
+    if (contract.pending_delivery < 0)
+        contract.pending_delivery = 0;
+}
+
 void Game::accelerate_contract(int contract_id, double fraction)
 {
     if (contract_id <= 0 || fraction <= 0.0)
@@ -801,6 +827,8 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
         lost = 1;
     if (lost > convoy.amount)
         lost = convoy.amount;
+    if (lost > 0)
+        this->decrease_contract_pending_delivery(convoy.contract_id, lost);
     convoy.amount -= lost;
     convoy.raided = true;
     convoy.raid_meter = 0.0;
@@ -847,6 +875,8 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
 
 void Game::finalize_convoy(ft_supply_convoy &convoy)
 {
+    if (convoy.amount > 0)
+        this->decrease_contract_pending_delivery(convoy.contract_id, convoy.amount);
     if (!convoy.destroyed && convoy.amount > 0)
     {
         this->record_convoy_delivery(convoy);
@@ -950,7 +980,14 @@ void Game::process_supply_contracts(double seconds)
             if (contract.has_minimum_stock)
             {
                 int destination_stock = destination->get_resource(contract.resource_id);
-                if (destination_stock >= contract.minimum_stock)
+                int projected_stock = destination_stock;
+                if (contract.pending_delivery > 0)
+                {
+                    projected_stock += contract.pending_delivery;
+                    if (projected_stock < destination_stock)
+                        projected_stock = contract.minimum_stock;
+                }
+                if (projected_stock >= contract.minimum_stock)
                 {
                     contract.elapsed_seconds = contract.interval_seconds;
                     break;
@@ -991,6 +1028,7 @@ void Game::process_supply_contracts(double seconds)
                 break;
             }
             dispatched = true;
+            this->increase_contract_pending_delivery(contract.id, dispatched_amount);
             contract.elapsed_seconds -= contract.interval_seconds;
             if (contract.elapsed_seconds < 0.0)
                 contract.elapsed_seconds = 0.0;
@@ -1243,6 +1281,7 @@ int Game::create_supply_contract(int origin_planet_id, int destination_planet_id
     if (max_active_convoys < 1)
         max_active_convoys = 1;
     contract.max_active_convoys = max_active_convoys;
+    contract.pending_delivery = 0;
     if (minimum_destination_stock >= 0)
     {
         contract.has_minimum_stock = true;
