@@ -91,12 +91,24 @@ void Game::produce(double seconds)
         if (!planet)
             continue;
         ft_vector<Pair<int, int> > produced = planet->produce(seconds);
+        ft_vector<int> updated_ores;
         double mine_multiplier = this->_buildings.get_mine_multiplier(planet_id);
         for (size_t j = 0; j < produced.size(); ++j)
         {
             int ore_id = produced[j].key;
             int base_amount = produced[j].value;
             int final_amount = base_amount;
+            bool ore_tracked = false;
+            for (size_t k = 0; k < updated_ores.size(); ++k)
+            {
+                if (updated_ores[k] == ore_id)
+                {
+                    ore_tracked = true;
+                    break;
+                }
+            }
+            if (!ore_tracked)
+                updated_ores.push_back(ore_id);
             if (base_amount > 0)
             {
                 double multiplier_delta = this->_resource_multiplier - 1.0;
@@ -146,7 +158,6 @@ void Game::produce(double seconds)
                         planet->sub_resource(ore_id, -diff);
                 }
             }
-            this->send_state(planet_id, ore_id);
             if (mine_multiplier > 1.0 && final_amount > 0)
             {
                 Pair<int, ft_resource_accumulator> *ore_accumulator = this->get_resource_accumulator(planet_id, ore_id, false);
@@ -165,12 +176,13 @@ void Game::produce(double seconds)
                 if (bonus > 0)
                 {
                     planet->add_resource(ore_id, bonus);
-                    this->send_state(planet_id, ore_id);
                 }
                 if (ore_accumulator != ft_nullptr)
                     ore_accumulator->value.mine_bonus_remainder = remainder;
             }
         }
+        for (size_t j = 0; j < updated_ores.size(); ++j)
+            this->send_state(planet_id, updated_ores[j]);
     }
 }
 
