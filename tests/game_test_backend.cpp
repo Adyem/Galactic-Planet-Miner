@@ -57,8 +57,9 @@ static void run_malformed_response_server(MalformedResponseServerConfig *config)
 
 static ft_string build_loopback_host(uint16_t port)
 {
-    (void)port;
-    return ft_string("127.0.0.1");
+    ft_string host("127.0.0.1:");
+    host.append(ft_to_string(port));
+    return host;
 }
 
 static ft_thread start_malformed_response_server(MalformedResponseServerConfig &config)
@@ -97,8 +98,10 @@ int verify_backend_roundtrip()
     const ft_string &offline_entry = offline_log[offline_lore_before];
     const ft_string offline_prefix("Operations report: backend connection lost");
     FT_ASSERT_EQ(0, ft_strncmp(offline_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
+    const ft_string offline_status_fragment("(status 503)");
+    FT_ASSERT(ft_strstr(offline_entry.c_str(), offline_status_fragment.c_str()) != ft_nullptr);
 
-    const uint16_t malformed_port = 80;
+    const uint16_t malformed_port = 18080;
     MalformedResponseServerConfig malformed_backend_config(malformed_port, ft_string("garbled-response"));
     ft_thread malformed_backend_thread = start_malformed_response_server(malformed_backend_config);
     wait_for_server_start();
@@ -112,7 +115,7 @@ int verify_backend_roundtrip()
     FT_ASSERT_EQ(0, ft_strncmp(malformed_response.c_str(), fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
     FT_ASSERT_EQ(0, ft_strcmp(malformed_response.c_str() + malformed_response.size() - payload_size, payload.c_str()));
 
-    const uint16_t malformed_game_port = 80;
+    const uint16_t malformed_game_port = 18081;
     MalformedResponseServerConfig malformed_game_config(malformed_game_port, ft_string("garbled-response"));
     ft_thread malformed_game_thread = start_malformed_response_server(malformed_game_config);
     wait_for_server_start();
@@ -126,8 +129,9 @@ int verify_backend_roundtrip()
     FT_ASSERT_EQ(malformed_lore_before + 1, malformed_log.size());
     const ft_string &malformed_entry = malformed_log[malformed_lore_before];
     FT_ASSERT_EQ(0, ft_strncmp(malformed_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
+    FT_ASSERT(ft_strstr(malformed_entry.c_str(), offline_status_fragment.c_str()) != ft_nullptr);
 
-    const uint16_t redirect_port = 80;
+    const uint16_t redirect_port = 18082;
     const ft_string redirect_payload("HTTP/1.1 302 Found\r\nLocation: /redirect\r\nContent-Length: 0\r\n\r\n");
     MalformedResponseServerConfig redirect_backend_config(redirect_port, redirect_payload);
     ft_thread redirect_backend_thread = start_malformed_response_server(redirect_backend_config);

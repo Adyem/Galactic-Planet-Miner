@@ -39,8 +39,40 @@ namespace
 }
 
 BackendClient::BackendClient(const ft_string &host, const ft_string &path)
-    : _host(host), _path(path)
+    : _host(host), _path(path), _port()
 {
+    const char *host_cstr = host.c_str();
+    const char *separator = ft_strrchr(host_cstr, ':');
+    if (separator != ft_nullptr && separator != host_cstr)
+    {
+        const char *port_start = separator + 1;
+        if (*port_start != '\0')
+        {
+            bool numeric = true;
+            const char *cursor = port_start;
+            while (*cursor != '\0')
+            {
+                if (!ft_isdigit(*cursor))
+                {
+                    numeric = false;
+                    break;
+                }
+                cursor += 1;
+            }
+            if (numeric)
+            {
+                this->_port.clear();
+                this->_port.append(port_start);
+                this->_host.clear();
+                const char *copy_cursor = host_cstr;
+                while (copy_cursor < separator)
+                {
+                    this->_host.append(*copy_cursor);
+                    copy_cursor += 1;
+                }
+            }
+        }
+    }
     return ;
 }
 
@@ -51,7 +83,10 @@ BackendClient::~BackendClient()
 
 int BackendClient::send_state(const ft_string &state, ft_string &response)
 {
-    int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, false);
+    const char *port_cstr = ft_nullptr;
+    if (!this->_port.empty())
+        port_cstr = this->_port.c_str();
+    int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, false, port_cstr);
     if (status != 0)
     {
         set_offline_echo_response(response, state);

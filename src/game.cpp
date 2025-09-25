@@ -394,11 +394,11 @@ void Game::send_state(int planet_id, int ore_id)
     body.append(ft_to_string(planet->get_resource(ore_id)));
     body.append("}");
     ft_string response;
-    this->_backend.send_state(body, response);
-    bool offline = false;
+    int status = this->_backend.send_state(body, response);
+    bool offline = (status < 200 || status >= 400);
     const ft_string fallback_prefix("[offline] echo=");
     size_t prefix_size = fallback_prefix.size();
-    if (response.size() >= prefix_size)
+    if (!offline && response.size() >= prefix_size)
     {
         const char *resp_cstr = response.c_str();
         if (ft_strncmp(resp_cstr, fallback_prefix.c_str(), static_cast<size_t>(prefix_size)) == 0)
@@ -409,7 +409,10 @@ void Game::send_state(int planet_id, int ore_id)
         if (this->_backend_online)
         {
             this->_backend_online = false;
-            ft_string entry("Operations report: backend connection lost. Switching to offline mode.");
+            ft_string entry("Operations report: backend connection lost");
+            entry.append(" (status ");
+            entry.append(ft_to_string(status));
+            entry.append("). Switching to offline mode.");
             this->append_lore_entry(entry);
         }
     }
