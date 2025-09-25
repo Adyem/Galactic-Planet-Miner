@@ -34,12 +34,14 @@ public:
         bool    has_minimum_stock;
         int     minimum_stock;
         int     max_active_convoys;
+        int     pending_delivery;
 
         ft_supply_contract()
             : id(0), origin_planet_id(0), destination_planet_id(0),
               resource_id(0), shipment_size(0), interval_seconds(0.0),
               elapsed_seconds(0.0), has_minimum_stock(false),
-              minimum_stock(0), max_active_convoys(1)
+              minimum_stock(0), max_active_convoys(1),
+              pending_delivery(0)
         {}
     };
 
@@ -75,6 +77,10 @@ private:
     AchievementManager                           _achievements;
     static const size_t                          LORE_LOG_MAX_ENTRIES = 512;
     ft_vector<ft_string>                         _lore_log;
+    size_t                                       _lore_log_start;
+    size_t                                       _lore_log_count;
+    mutable ft_vector<ft_string>                 _lore_log_cache;
+    mutable bool                                 _lore_log_cache_dirty;
     void                                        append_lore_entry(const ft_string &entry);
     int                                          _difficulty;
     double                                       _resource_multiplier;
@@ -176,6 +182,10 @@ private:
     ft_vector<ft_string>                         _failed_checkpoint_tags;
     bool                                         _force_checkpoint_failure;
     bool                                         _backend_online;
+    static const long                            BACKEND_RETRY_INITIAL_DELAY_MS = 1000;
+    static const long                            BACKEND_RETRY_MAX_DELAY_MS = 60000;
+    long                                         _backend_retry_delay_ms;
+    long                                         _backend_next_retry_ms;
 
     ft_sharedptr<ft_planet> get_planet(int id);
     ft_sharedptr<const ft_planet> get_planet(int id) const;
@@ -228,6 +238,8 @@ private:
     void accelerate_contract(int contract_id, double fraction);
     int count_active_convoys_for_contract(int contract_id) const;
     bool has_active_convoy_for_contract(int contract_id) const;
+    void increase_contract_pending_delivery(int contract_id, int amount);
+    void decrease_contract_pending_delivery(int contract_id, int amount);
     int dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
                         int destination_planet_id, int resource_id, int amount,
                         int contract_id, int escort_fleet_id = 0);
@@ -303,6 +315,8 @@ public:
     bool get_assault_defender_positions(int planet_id, ft_vector<ft_ship_spatial_state> &out) const;
     const ft_vector<ft_string> &get_lore_log() const;
     bool is_backend_online() const;
+    long get_backend_retry_delay_ms_for_testing() const;
+    long get_backend_next_retry_ms_for_testing() const;
 
     int add_ore(int planet_id, int ore_id, int amount);
     int sub_ore(int planet_id, int ore_id, int amount);

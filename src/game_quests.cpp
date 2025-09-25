@@ -306,11 +306,45 @@ int Game::get_quest_choice(int quest_id) const
 
 const ft_vector<ft_string> &Game::get_lore_log() const
 {
-    return this->_lore_log;
+    if (!this->_lore_log_cache_dirty)
+        return this->_lore_log_cache;
+
+    this->_lore_log_cache.clear();
+    if (this->_lore_log_count == 0)
+    {
+        this->_lore_log_cache_dirty = false;
+        return this->_lore_log_cache;
+    }
+
+    size_t buffer_size = this->_lore_log.size();
+    if (buffer_size == 0)
+    {
+        this->_lore_log_cache_dirty = false;
+        return this->_lore_log_cache;
+    }
+
+    this->_lore_log_cache.reserve(this->_lore_log_count);
+    for (size_t i = 0; i < this->_lore_log_count; ++i)
+    {
+        size_t index = (this->_lore_log_start + i) % buffer_size;
+        this->_lore_log_cache.push_back(this->_lore_log[index]);
+    }
+    this->_lore_log_cache_dirty = false;
+    return this->_lore_log_cache;
 }
 
 bool Game::is_backend_online() const
 {
     return this->_backend_online;
+}
+
+long Game::get_backend_retry_delay_ms_for_testing() const
+{
+    return this->_backend_retry_delay_ms;
+}
+
+long Game::get_backend_next_retry_ms_for_testing() const
+{
+    return this->_backend_next_retry_ms;
 }
 

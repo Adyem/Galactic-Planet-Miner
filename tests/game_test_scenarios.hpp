@@ -12,6 +12,7 @@ int validate_order_branch_storyline();
 int evaluate_building_and_convoy_systems(Game &game);
 int evaluate_ship_upgrade_research(Game &game);
 int verify_supply_contract_automation();
+int verify_supply_contract_pending_stock_buffer();
 int verify_convoy_quest_objectives();
 int verify_multiple_convoy_raids();
 int verify_supply_route_escalation();

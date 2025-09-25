@@ -954,6 +954,46 @@ int verify_supply_contract_automation()
     return 1;
 }
 
+int verify_supply_contract_pending_stock_buffer()
+{
+    Game contract_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    contract_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 180);
+    contract_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+
+    int contract_id = contract_game.create_supply_contract(PLANET_TERRA, PLANET_MARS,
+                                                           ITEM_IRON_BAR, 30, 5.0, 30, 5);
+    FT_ASSERT(contract_id > 0);
+
+    contract_game.tick(5.0);
+    FT_ASSERT_EQ(1, contract_game.get_active_convoy_count());
+
+    Game::ft_supply_contract details;
+    FT_ASSERT(contract_game.get_supply_contract(contract_id, details));
+    FT_ASSERT_EQ(30, details.pending_delivery);
+
+    contract_game.tick(5.0);
+    FT_ASSERT_EQ(1, contract_game.get_active_convoy_count());
+    FT_ASSERT(contract_game.get_supply_contract(contract_id, details));
+    FT_ASSERT_EQ(30, details.pending_delivery);
+
+    contract_game.tick(5.0);
+    FT_ASSERT_EQ(1, contract_game.get_active_convoy_count());
+
+    contract_game.tick(60.0);
+    FT_ASSERT_EQ(0, contract_game.get_active_convoy_count());
+    FT_ASSERT(contract_game.get_supply_contract(contract_id, details));
+    FT_ASSERT_EQ(0, details.pending_delivery);
+    FT_ASSERT(contract_game.get_ore(PLANET_MARS, ITEM_IRON_BAR) >= 30);
+
+    contract_game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 5);
+    contract_game.tick(5.0);
+    FT_ASSERT(contract_game.get_active_convoy_count() >= 1);
+    FT_ASSERT(contract_game.get_supply_contract(contract_id, details));
+    FT_ASSERT(details.pending_delivery >= 30);
+
+    return 1;
+}
+
 int verify_convoy_quest_objectives()
 {
     Game success_game(ft_string("127.0.0.1:8080"), ft_string("/"));

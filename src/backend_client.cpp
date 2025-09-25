@@ -64,13 +64,21 @@ namespace
 }
 
 BackendClient::BackendClient(const ft_string &host, const ft_string &path)
-    : _host(host), _path(path), _port()
+    : _host(host), _path(path), _port(), _use_ssl(false)
 {
     const char *input = host.c_str();
     const char *scheme_separator = ft_strstr(input, "://");
     const char *authority_start;
     if (scheme_separator != ft_nullptr)
+    {
+        ft_string scheme_value;
+        assign_substring(scheme_value, input, scheme_separator);
+        if (scheme_value.size() == 5 && ft_strncmp(scheme_value.c_str(), "https", 5) == 0)
+            this->_use_ssl = true;
+        else if (scheme_value.size() == 4 && ft_strncmp(scheme_value.c_str(), "http", 4) == 0)
+            this->_use_ssl = false;
         authority_start = scheme_separator + 3;
+    }
     else
         authority_start = input;
 
@@ -143,7 +151,7 @@ int BackendClient::send_state(const ft_string &state, ft_string &response)
     const char *port_cstr = ft_nullptr;
     if (!this->_port.empty())
         port_cstr = this->_port.c_str();
-    int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, false, port_cstr);
+    int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, this->_use_ssl, port_cstr);
     if (status != 0)
     {
         set_offline_echo_response(response, state);
@@ -173,4 +181,9 @@ const ft_string &BackendClient::get_host_for_testing() const
 const ft_string &BackendClient::get_port_for_testing() const
 {
     return (this->_port);
+}
+
+bool BackendClient::get_use_ssl_for_testing() const
+{
+    return (this->_use_ssl);
 }

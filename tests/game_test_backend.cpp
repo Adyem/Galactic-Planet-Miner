@@ -100,6 +100,22 @@ int verify_backend_roundtrip()
     FT_ASSERT_EQ(0, ft_strncmp(offline_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
     const ft_string offline_status_fragment("(status 503)");
     FT_ASSERT(ft_strstr(offline_entry.c_str(), offline_status_fragment.c_str()) != ft_nullptr);
+    long offline_retry_delay = offline_game.get_backend_retry_delay_ms_for_testing();
+    FT_ASSERT(offline_retry_delay >= 1000);
+    long offline_next_retry = offline_game.get_backend_next_retry_ms_for_testing();
+    long offline_failure_time = ft_time_ms();
+    FT_ASSERT(offline_next_retry > offline_failure_time);
+    offline_game.add_ore(PLANET_TERRA, ORE_COPPER, 1);
+    FT_ASSERT_EQ(offline_retry_delay, offline_game.get_backend_retry_delay_ms_for_testing());
+    FT_ASSERT_EQ(offline_next_retry, offline_game.get_backend_next_retry_ms_for_testing());
+    int wait_milliseconds = static_cast<int>(offline_retry_delay + 50);
+    ft_this_thread_sleep_for(std::chrono::milliseconds(wait_milliseconds));
+    offline_game.add_ore(PLANET_TERRA, ORE_GOLD, 1);
+    long second_retry_delay = offline_game.get_backend_retry_delay_ms_for_testing();
+    FT_ASSERT(second_retry_delay >= offline_retry_delay);
+    long second_next_retry = offline_game.get_backend_next_retry_ms_for_testing();
+    long second_failure_time = ft_time_ms();
+    FT_ASSERT(second_next_retry > second_failure_time);
 
     const uint16_t malformed_port = 18080;
     MalformedResponseServerConfig malformed_backend_config(malformed_port, ft_string("garbled-response"));
@@ -189,33 +205,39 @@ int verify_backend_host_parsing()
     FT_ASSERT_EQ(expected_numeric_host, numeric.get_host_for_testing());
     ft_string expected_numeric_port("18090");
     FT_ASSERT_EQ(expected_numeric_port, numeric.get_port_for_testing());
+    FT_ASSERT(!numeric.get_use_ssl_for_testing());
 
     BackendClient bracketed_ipv6(ft_string("[::1]:65535"), ft_string("/"));
     ft_string expected_bracketed_host("[::1]");
     FT_ASSERT_EQ(expected_bracketed_host, bracketed_ipv6.get_host_for_testing());
     ft_string expected_bracketed_port("65535");
     FT_ASSERT_EQ(expected_bracketed_port, bracketed_ipv6.get_port_for_testing());
+    FT_ASSERT(!bracketed_ipv6.get_use_ssl_for_testing());
 
     BackendClient scheme_without_port(ft_string("https://example.com"), ft_string("/"));
     ft_string expected_scheme_host("example.com");
     FT_ASSERT_EQ(expected_scheme_host, scheme_without_port.get_host_for_testing());
     FT_ASSERT(scheme_without_port.get_port_for_testing().empty());
+    FT_ASSERT(scheme_without_port.get_use_ssl_for_testing());
 
     BackendClient service_named_port(ft_string("localhost:http"), ft_string("/"));
     ft_string expected_service_host("localhost:http");
     FT_ASSERT_EQ(expected_service_host, service_named_port.get_host_for_testing());
     FT_ASSERT(service_named_port.get_port_for_testing().empty());
+    FT_ASSERT(!service_named_port.get_use_ssl_for_testing());
 
     BackendClient unbracketed_ipv6(ft_string("fc00::1"), ft_string("/"));
     ft_string expected_unbracketed_host("fc00::1");
     FT_ASSERT_EQ(expected_unbracketed_host, unbracketed_ipv6.get_host_for_testing());
     FT_ASSERT(unbracketed_ipv6.get_port_for_testing().empty());
+    FT_ASSERT(!unbracketed_ipv6.get_use_ssl_for_testing());
 
     BackendClient scheme_with_path(ft_string("https://example.org:4443/api"), ft_string("/"));
     ft_string expected_path_host("example.org");
     FT_ASSERT_EQ(expected_path_host, scheme_with_path.get_host_for_testing());
     ft_string expected_path_port("4443");
     FT_ASSERT_EQ(expected_path_port, scheme_with_path.get_port_for_testing());
+    FT_ASSERT(scheme_with_path.get_use_ssl_for_testing());
 
     return 1;
 }
