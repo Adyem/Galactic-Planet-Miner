@@ -60,6 +60,13 @@ private:
     ft_sharedptr<ft_fleet> create_fleet_instance(int fleet_id) const noexcept;
     long scale_double_to_long(double value) const noexcept;
     double unscale_long_to_double(long value) const noexcept;
+    ft_string encode_building_grid(const ft_vector<int> &grid) const noexcept;
+    bool decode_building_grid(const char *encoded, size_t expected_cells,
+        ft_vector<int> &grid) const noexcept;
+    ft_string encode_building_instances(const ft_map<int, ft_building_instance> &instances)
+        const noexcept;
+    bool decode_building_instances(const char *encoded,
+        ft_map<int, ft_building_instance> &instances) const noexcept;
 };
 
 #endif

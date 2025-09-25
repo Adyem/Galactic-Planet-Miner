@@ -154,7 +154,9 @@ static long reference_scale_double(double value)
 
 static ft_string save_system_building_payload(int width, int height,
     int used_plots = 0, int logistic_capacity = 0, int logistic_usage = 0,
-    int next_instance_id = 1, int planet_id = 99)
+    int next_instance_id = 1, int planet_id = 99,
+    const ft_vector<Pair<int, int> > *grid_entries = ft_nullptr,
+    const ft_vector<ft_building_instance> *instances = ft_nullptr)
 {
     json_document document;
     json_group *manager_group = document.create_group("buildings_manager");
@@ -210,6 +212,75 @@ static ft_string save_system_building_payload(int width, int height,
     if (next_instance == ft_nullptr)
         return ft_string();
     document.add_item(planet_group, next_instance);
+
+    if (grid_entries)
+    {
+        for (size_t i = 0; i < grid_entries->size(); ++i)
+        {
+            const Pair<int, int> &entry = (*grid_entries)[i];
+            ft_string cell_key("cell_");
+            cell_key.append(ft_to_string(static_cast<long>(entry.key)));
+            json_item *cell_item = document.create_item(cell_key.c_str(), entry.value);
+            if (cell_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, cell_item);
+        }
+    }
+
+    if (instances)
+    {
+        for (size_t i = 0; i < instances->size(); ++i)
+        {
+            const ft_building_instance &instance = (*instances)[i];
+            ft_string base_key("instance_");
+            base_key.append(ft_to_string(static_cast<long>(instance.uid)));
+
+            ft_string key = base_key;
+            key.append("_uid");
+            json_item *uid_item = document.create_item(key.c_str(), instance.uid);
+            if (uid_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, uid_item);
+
+            key = base_key;
+            key.append("_definition");
+            json_item *definition_item = document.create_item(key.c_str(), instance.definition_id);
+            if (definition_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, definition_item);
+
+            key = base_key;
+            key.append("_x");
+            json_item *x_item = document.create_item(key.c_str(), instance.x);
+            if (x_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, x_item);
+
+            key = base_key;
+            key.append("_y");
+            json_item *y_item = document.create_item(key.c_str(), instance.y);
+            if (y_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, y_item);
+
+            key = base_key;
+            key.append("_progress");
+            long progress_scaled = reference_scale_double(instance.progress);
+            ft_string progress_value = ft_to_string(progress_scaled);
+            json_item *progress_item = document.create_item(key.c_str(), progress_value.c_str());
+            if (progress_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, progress_item);
+
+            key = base_key;
+            key.append("_active");
+            int active_flag = instance.active ? 1 : 0;
+            json_item *active_item = document.create_item(key.c_str(), active_flag);
+            if (active_item == ft_nullptr)
+                return ft_string();
+            document.add_item(planet_group, active_item);
+        }
+    }
 
     char *raw = document.write_to_string();
     if (raw == ft_nullptr)
@@ -604,6 +675,124 @@ int verify_save_system_prevents_building_instance_wraparound()
     FT_ASSERT_EQ(coal_before, game.get_ore(PLANET_TERRA, ORE_COAL));
     FT_ASSERT_EQ(copper_before, game.get_ore(PLANET_TERRA, ORE_COPPER));
     FT_ASSERT_EQ(0, buildings.get_building_count(PLANET_TERRA, BUILDING_POWER_GENERATOR));
+
+    return 1;
+}
+
+int verify_save_system_compact_building_serialization()
+{
+    SaveSystem saves;
+    BuildingManager buildings;
+
+    ft_vector<Pair<int, int> > legacy_grid;
+    Pair<int, int> cell;
+    cell.key = 0;
+    cell.value = 7;
+    legacy_grid.push_back(cell);
+    cell.key = 1;
+    cell.value = 7;
+    legacy_grid.push_back(cell);
+    cell.key = 2;
+    cell.value = 2;
+    legacy_grid.push_back(cell);
+    cell.key = 3;
+    cell.value = 2;
+    legacy_grid.push_back(cell);
+    cell.key = 4;
+    cell.value = 2;
+    legacy_grid.push_back(cell);
+    cell.key = 5;
+    cell.value = 9;
+    legacy_grid.push_back(cell);
+
+    ft_vector<ft_building_instance> legacy_instances;
+    ft_building_instance instance;
+    instance.uid = 42;
+    instance.definition_id = BUILDING_SMELTER;
+    instance.x = 1;
+    instance.y = 0;
+    instance.progress = 0.5;
+    instance.active = true;
+    legacy_instances.push_back(instance);
+
+    ft_string legacy_payload = save_system_building_payload(3, 2, 6, 12, 4, 99, 77,
+        &legacy_grid, &legacy_instances);
+    FT_ASSERT(legacy_payload.size() > 0);
+    FT_ASSERT(saves.deserialize_buildings(legacy_payload.c_str(), buildings));
+
+    ft_string serialized = saves.serialize_buildings(buildings);
+    FT_ASSERT(serialized.size() > 0);
+
+    json_group *groups = json_read_from_string(serialized.c_str());
+    FT_ASSERT(groups != ft_nullptr);
+
+    bool saw_grid = false;
+    bool saw_instances = false;
+    bool saw_cell_key = false;
+    bool saw_instance_key = false;
+    const char *grid_value = ft_nullptr;
+    const char *instance_value = ft_nullptr;
+
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *type_item = json_find_item(current, "type");
+        const char *type_value = ft_nullptr;
+        if (type_item)
+            type_value = type_item->value;
+        if (type_value && ft_strcmp(type_value, "planet") == 0)
+        {
+            json_item *item = current->items;
+            while (item)
+            {
+                if (item->key)
+                {
+                    if (ft_strcmp(item->key, "grid") == 0)
+                    {
+                        saw_grid = true;
+                        grid_value = item->value;
+                    }
+                    else if (ft_strcmp(item->key, "instances") == 0)
+                    {
+                        saw_instances = true;
+                        instance_value = item->value;
+                    }
+                    else if (ft_strncmp(item->key, "cell_", 5) == 0)
+                        saw_cell_key = true;
+                    else if (ft_strncmp(item->key, "instance_", 9) == 0)
+                        saw_instance_key = true;
+                }
+                item = item->next;
+            }
+        }
+        current = current->next;
+    }
+
+    FT_ASSERT(saw_grid);
+    FT_ASSERT(saw_instances);
+    FT_ASSERT(!saw_cell_key);
+    FT_ASSERT(!saw_instance_key);
+    FT_ASSERT(grid_value != ft_nullptr);
+    FT_ASSERT(ft_strcmp(grid_value, "7x2 2x3 9") == 0);
+
+    FT_ASSERT(instance_value != ft_nullptr);
+    ft_string expected_instances("42,");
+    expected_instances.append(ft_to_string(static_cast<long>(instance.definition_id)));
+    expected_instances.append(",1,0,");
+    long expected_progress = reference_scale_double(instance.progress);
+    expected_instances.append(ft_to_string(expected_progress));
+    expected_instances.append(",1");
+    FT_ASSERT(ft_strcmp(instance_value, expected_instances.c_str()) == 0);
+
+    json_free_groups(groups);
+
+    BuildingManager roundtrip;
+    FT_ASSERT(saves.deserialize_buildings(serialized.c_str(), roundtrip));
+    FT_ASSERT_EQ(6, roundtrip.get_planet_plot_capacity(77));
+    FT_ASSERT_EQ(6, roundtrip.get_planet_plot_usage(77));
+    FT_ASSERT_EQ(12, roundtrip.get_planet_logistic_capacity(77));
+    FT_ASSERT_EQ(4, roundtrip.get_planet_logistic_usage(77));
+    FT_ASSERT_EQ(1, roundtrip.get_building_count(77, instance.definition_id));
 
     return 1;
 }

@@ -210,6 +210,97 @@ namespace
         document.add_item(group, item);
         return true;
     }
+
+    void save_system_append_grid_run(ft_string &target, int value, size_t count) noexcept
+    {
+        if (!target.empty())
+            target.append(" ");
+        target.append(ft_to_string(value));
+        if (count > 1)
+        {
+            target.append("x");
+            target.append(ft_to_string(static_cast<long>(count)));
+        }
+    }
+
+    bool save_system_parse_grid_run(const char *token_begin, const char *token_end,
+        long &value_out, size_t &count_out) noexcept
+    {
+        if (!token_begin || !token_end || token_begin == token_end)
+            return false;
+        const char *cursor = token_begin;
+        ft_string value_buffer;
+        bool has_digit = false;
+
+        if (*cursor == '-')
+        {
+            value_buffer.append('-');
+            ++cursor;
+        }
+        while (cursor < token_end && ft_isdigit(*cursor))
+        {
+            value_buffer.append(*cursor);
+            ++cursor;
+            has_digit = true;
+        }
+        if (!has_digit)
+            return false;
+        value_out = ft_atol(value_buffer.c_str());
+        count_out = 1;
+        if (cursor == token_end)
+            return true;
+        if (*cursor != 'x')
+            return false;
+        ++cursor;
+        ft_string count_buffer;
+        bool has_count_digit = false;
+        while (cursor < token_end && ft_isdigit(*cursor))
+        {
+            count_buffer.append(*cursor);
+            ++cursor;
+            has_count_digit = true;
+        }
+        if (!has_count_digit)
+            return false;
+        if (cursor != token_end)
+            return false;
+        long parsed_count = ft_atol(count_buffer.c_str());
+        if (parsed_count <= 0)
+            return false;
+        count_out = static_cast<size_t>(parsed_count);
+        return true;
+    }
+
+    bool save_system_parse_csv_long(const char *&cursor, const char *limit, long &out) noexcept
+    {
+        if (!cursor || !limit)
+            return false;
+        if (cursor >= limit)
+            return false;
+        ft_string buffer;
+        bool has_digit = false;
+        if (*cursor == '-')
+        {
+            buffer.append('-');
+            ++cursor;
+        }
+        while (cursor < limit && ft_isdigit(*cursor))
+        {
+            buffer.append(*cursor);
+            ++cursor;
+            has_digit = true;
+        }
+        if (!has_digit)
+            return false;
+        out = ft_atol(buffer.c_str());
+        if (cursor < limit)
+        {
+            if (*cursor != ',')
+                return false;
+            ++cursor;
+        }
+        return true;
+    }
 }
 
 SaveSystem::SaveSystem() noexcept
@@ -1045,6 +1136,165 @@ bool SaveSystem::deserialize_achievements(const char *content, AchievementManage
     return true;
 }
 
+ft_string SaveSystem::encode_building_grid(const ft_vector<int> &grid) const noexcept
+{
+    ft_string encoded;
+    size_t size = grid.size();
+    if (size == 0)
+        return encoded;
+    int current = grid[0];
+    size_t run = 1;
+    for (size_t i = 1; i < size; ++i)
+    {
+        int value = grid[i];
+        if (value == current)
+        {
+            ++run;
+            continue;
+        }
+        save_system_append_grid_run(encoded, current, run);
+        current = value;
+        run = 1;
+    }
+    save_system_append_grid_run(encoded, current, run);
+    return encoded;
+}
+
+bool SaveSystem::decode_building_grid(const char *encoded, size_t expected_cells,
+    ft_vector<int> &grid) const noexcept
+{
+    grid.clear();
+    if (expected_cells == 0)
+        return true;
+    if (!encoded || *encoded == '\0')
+    {
+        grid.resize(expected_cells, 0);
+        return true;
+    }
+    grid.reserve(expected_cells);
+    const char *cursor = encoded;
+    size_t produced = 0;
+    while (*cursor != '\0')
+    {
+        while (*cursor == ' ')
+            ++cursor;
+        if (*cursor == '\0')
+            break;
+        const char *token_begin = cursor;
+        while (*cursor != '\0' && *cursor != ' ')
+            ++cursor;
+        const char *token_end = cursor;
+        long value_long = 0;
+        size_t run = 0;
+        if (!save_system_parse_grid_run(token_begin, token_end, value_long, run))
+            return false;
+        if (run > static_cast<size_t>(BUILDING_GRID_MAX_CELLS))
+            return false;
+        if (produced > expected_cells)
+            return false;
+        size_t remaining = expected_cells - produced;
+        if (run > remaining)
+            return false;
+        for (size_t i = 0; i < run; ++i)
+        {
+            grid.push_back(static_cast<int>(value_long));
+        }
+        produced += run;
+    }
+    if (produced > expected_cells)
+        return false;
+    if (produced < expected_cells)
+    {
+        size_t deficit = expected_cells - produced;
+        for (size_t i = 0; i < deficit; ++i)
+            grid.push_back(0);
+    }
+    return grid.size() == expected_cells;
+}
+
+ft_string SaveSystem::encode_building_instances(const ft_map<int, ft_building_instance> &instances)
+    const noexcept
+{
+    ft_string encoded;
+    size_t count = instances.size();
+    if (count == 0)
+        return encoded;
+    const Pair<int, ft_building_instance> *entries = instances.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const ft_building_instance &instance = entries[i].value;
+        if (!encoded.empty())
+            encoded.append(";");
+        encoded.append(ft_to_string(entries[i].key));
+        encoded.append(",");
+        encoded.append(ft_to_string(instance.definition_id));
+        encoded.append(",");
+        encoded.append(ft_to_string(instance.x));
+        encoded.append(",");
+        encoded.append(ft_to_string(instance.y));
+        encoded.append(",");
+        long progress_scaled = this->scale_double_to_long(instance.progress);
+        encoded.append(ft_to_string(progress_scaled));
+        encoded.append(",");
+        encoded.append(instance.active ? "1" : "0");
+    }
+    return encoded;
+}
+
+bool SaveSystem::decode_building_instances(const char *encoded,
+    ft_map<int, ft_building_instance> &instances) const noexcept
+{
+    instances.clear();
+    if (!encoded || *encoded == '\0')
+        return true;
+    const char *cursor = encoded;
+    while (*cursor != '\0')
+    {
+        while (*cursor == ';')
+            ++cursor;
+        if (*cursor == '\0')
+            break;
+        const char *segment_end = cursor;
+        while (*segment_end != '\0' && *segment_end != ';')
+            ++segment_end;
+        const char *field_cursor = cursor;
+        long key_value = 0;
+        long definition_value = 0;
+        long x_value = 0;
+        long y_value = 0;
+        long progress_value = 0;
+        long active_value = 0;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, key_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, definition_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, x_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, y_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, progress_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, active_value))
+            return false;
+        if (field_cursor != segment_end)
+            return false;
+        ft_building_instance instance;
+        instance.uid = static_cast<int>(key_value);
+        instance.definition_id = static_cast<int>(definition_value);
+        instance.x = static_cast<int>(x_value);
+        instance.y = static_cast<int>(y_value);
+        instance.progress = this->unscale_long_to_double(progress_value);
+        instance.active = active_value != 0;
+        int insert_key = instance.uid;
+        instances.insert(insert_key, instance);
+        cursor = segment_end;
+        if (*cursor == ';')
+            ++cursor;
+    }
+    return true;
+}
+
 ft_string SaveSystem::serialize_buildings(const BuildingManager &buildings) const noexcept
 {
     json_document document;
@@ -1181,53 +1431,18 @@ ft_string SaveSystem::serialize_buildings(const BuildingManager &buildings) cons
             if (!save_system_add_item(document, group, "next_instance_id", state.next_instance_id))
                 return save_system_abort_serialization(document);
 
-            size_t grid_size = state.grid.size();
-            for (size_t j = 0; j < grid_size; ++j)
+            ft_string grid_payload = this->encode_building_grid(state.grid);
+            if (grid_payload.size() > 0)
             {
-                ft_string cell_key("cell_");
-                cell_key.append(ft_to_string(static_cast<long>(j)));
-                if (!save_system_add_item(document, group, cell_key.c_str(), state.grid[j]))
+                if (!save_system_add_item(document, group, "grid", grid_payload.c_str()))
                     return save_system_abort_serialization(document);
             }
 
-            size_t instance_count = state.instances.size();
-            if (instance_count > 0)
+            ft_string instance_payload = this->encode_building_instances(state.instances);
+            if (instance_payload.size() > 0)
             {
-                const Pair<int, ft_building_instance> *inst_entries = state.instances.end();
-                inst_entries -= instance_count;
-                for (size_t j = 0; j < instance_count; ++j)
-                {
-                    const ft_building_instance &instance = inst_entries[j].value;
-                    ft_string base_key("instance_");
-                    base_key.append(ft_to_string(instance.uid));
-                    ft_string key = base_key;
-                    key.append("_uid");
-                    if (!save_system_add_item(document, group, key.c_str(), instance.uid))
-                        return save_system_abort_serialization(document);
-                    key = base_key;
-                    key.append("_definition");
-                    if (!save_system_add_item(document, group, key.c_str(), instance.definition_id))
-                        return save_system_abort_serialization(document);
-                    key = base_key;
-                    key.append("_x");
-                    if (!save_system_add_item(document, group, key.c_str(), instance.x))
-                        return save_system_abort_serialization(document);
-                    key = base_key;
-                    key.append("_y");
-                    if (!save_system_add_item(document, group, key.c_str(), instance.y))
-                        return save_system_abort_serialization(document);
-                    key = base_key;
-                    key.append("_progress");
-                    long progress_scaled = this->scale_double_to_long(instance.progress);
-                    ft_string progress_value = ft_to_string(progress_scaled);
-                    if (!save_system_add_item(document, group, key.c_str(), progress_value.c_str()))
-                        return save_system_abort_serialization(document);
-                    key = base_key;
-                    key.append("_active");
-                    int active_flag = instance.active ? 1 : 0;
-                    if (!save_system_add_item(document, group, key.c_str(), active_flag))
-                        return save_system_abort_serialization(document);
-                }
+                if (!save_system_add_item(document, group, "instances", instance_payload.c_str()))
+                    return save_system_abort_serialization(document);
             }
         }
     }
@@ -1315,6 +1530,8 @@ bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &bui
             state.planet_id = planet_id;
             ft_vector<Pair<int, int> > grid_entries;
             ft_map<int, ft_building_instance> instance_lookup;
+            const char *grid_payload_ptr = ft_nullptr;
+            const char *instance_payload_ptr = ft_nullptr;
             json_item *item = current->items;
             while (item)
             {
@@ -1364,6 +1581,10 @@ bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &bui
                     if (state.next_instance_id >= FT_BUILDING_INSTANCE_ID_MAX)
                         state.next_instance_id = FT_BUILDING_INSTANCE_ID_MAX;
                 }
+                else if (ft_strcmp(item->key, "grid") == 0)
+                    grid_payload_ptr = item->value;
+                else if (ft_strcmp(item->key, "instances") == 0)
+                    instance_payload_ptr = item->value;
                 else if (ft_strncmp(item->key, "cell_", 5) == 0)
                 {
                     Pair<int, int> entry;
@@ -1459,16 +1680,29 @@ bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &bui
             state.grid.clear();
             if (total_cells > 0)
             {
-                state.grid.resize(total_cells, 0);
-                for (size_t j = 0; j < grid_entries.size(); ++j)
+                bool decoded_grid = false;
+                if (grid_payload_ptr && grid_payload_ptr[0] != '\0')
                 {
-                    int index = grid_entries[j].key;
-                    if (index < 0)
-                        continue;
-                    size_t cell_index = static_cast<size_t>(index);
-                    if (cell_index >= total_cells)
-                        continue;
-                    state.grid[cell_index] = grid_entries[j].value;
+                    if (!this->decode_building_grid(grid_payload_ptr, total_cells, state.grid))
+                    {
+                        json_free_groups(groups);
+                        return false;
+                    }
+                    decoded_grid = true;
+                }
+                if (!decoded_grid)
+                {
+                    state.grid.resize(total_cells, 0);
+                    for (size_t j = 0; j < grid_entries.size(); ++j)
+                    {
+                        int index = grid_entries[j].key;
+                        if (index < 0)
+                            continue;
+                        size_t cell_index = static_cast<size_t>(index);
+                        if (cell_index >= total_cells)
+                            continue;
+                        state.grid[cell_index] = grid_entries[j].value;
+                    }
                 }
             }
 
@@ -1481,17 +1715,30 @@ bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &bui
                 state.used_plots = max_plots;
 
             state.instances.clear();
-            size_t instance_count = instance_lookup.size();
-            if (instance_count > 0)
+            bool decoded_instances = false;
+            if (instance_payload_ptr)
             {
-                const Pair<int, ft_building_instance> *inst_entries = instance_lookup.end();
-                inst_entries -= instance_count;
-                for (size_t j = 0; j < instance_count; ++j)
+                if (!this->decode_building_instances(instance_payload_ptr, state.instances))
                 {
-                    ft_building_instance instance = inst_entries[j].value;
-                    if (instance.uid == 0)
-                        instance.uid = inst_entries[j].key;
-                    state.instances.insert(inst_entries[j].key, instance);
+                    json_free_groups(groups);
+                    return false;
+                }
+                decoded_instances = true;
+            }
+            if (!decoded_instances)
+            {
+                size_t instance_count = instance_lookup.size();
+                if (instance_count > 0)
+                {
+                    const Pair<int, ft_building_instance> *inst_entries = instance_lookup.end();
+                    inst_entries -= instance_count;
+                    for (size_t j = 0; j < instance_count; ++j)
+                    {
+                        ft_building_instance instance = inst_entries[j].value;
+                        if (instance.uid == 0)
+                            instance.uid = inst_entries[j].key;
+                        state.instances.insert(inst_entries[j].key, instance);
+                    }
                 }
             }
 
