@@ -69,6 +69,7 @@ public:
     int sub_resource(int ore_id, int amount) noexcept;
     int get_resource(int ore_id) const noexcept;
     void set_resource(int ore_id, int amount) noexcept;
+    int clamp_resource_amount(int ore_id, int amount) const noexcept;
     double get_rate(int ore_id) const noexcept;
     const ft_vector<Pair<int, double> > &get_resources() const noexcept;
     ft_vector<Pair<int, int> > get_items_snapshot() const noexcept;

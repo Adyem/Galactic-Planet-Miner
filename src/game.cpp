@@ -745,10 +745,20 @@ void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &sn
             continue;
         const ft_vector<Pair<int, double> > &saved_rates = saved_planet->get_resources();
         for (size_t j = 0; j < saved_rates.size(); ++j)
-            planet->register_resource(saved_rates[j].key, saved_rates[j].value);
+        {
+            int ore_id = saved_rates[j].key;
+            if (ore_id <= 0)
+                continue;
+            planet->register_resource(ore_id, saved_rates[j].value);
+        }
         const ft_vector<Pair<int, double> > &saved_carryover = saved_planet->get_carryover();
         for (size_t j = 0; j < saved_carryover.size(); ++j)
-            planet->set_carryover(saved_carryover[j].key, saved_carryover[j].value);
+        {
+            int ore_id = saved_carryover[j].key;
+            if (ore_id <= 0)
+                continue;
+            planet->set_carryover(ore_id, saved_carryover[j].value);
+        }
         ft_vector<Pair<int, int> > inventory_snapshot = saved_planet->get_items_snapshot();
         ft_set<int> saved_item_ids(inventory_snapshot.size());
         for (size_t j = 0; j < inventory_snapshot.size(); ++j)
@@ -765,8 +775,11 @@ void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &sn
         for (size_t j = 0; j < inventory_snapshot.size(); ++j)
         {
             int item_id = inventory_snapshot[j].key;
+            if (item_id <= 0)
+                continue;
             this->ensure_planet_item_slot(planet_id, item_id);
-            planet->set_resource(item_id, inventory_snapshot[j].value);
+            int sanitized = planet->clamp_resource_amount(item_id, inventory_snapshot[j].value);
+            planet->set_resource(item_id, sanitized);
             this->send_state(planet_id, item_id);
         }
         this->_resource_deficits.remove(planet_id);

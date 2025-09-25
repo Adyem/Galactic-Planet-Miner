@@ -145,6 +145,23 @@ void ft_planet::set_resource(int ore_id, int amount) noexcept
         item->set_stack_size(amount);
 }
 
+int ft_planet::clamp_resource_amount(int ore_id, int amount) const noexcept
+{
+    if (amount < 0)
+        amount = 0;
+    int max_stack = 1000000;
+    ft_sharedptr<const ft_item> item = this->find_item(ore_id);
+    if (item)
+    {
+        int item_max = item->get_max_stack();
+        if (item_max > 0)
+            max_stack = item_max;
+    }
+    if (amount > max_stack)
+        amount = max_stack;
+    return amount;
+}
+
 double ft_planet::get_rate(int ore_id) const noexcept
 {
     for (size_t i = 0; i < this->_rates.size(); ++i)
