@@ -2,6 +2,8 @@
 #include "../libft/CMA/CMA.hpp"
 #include "../libft/CPP_class/class_nullptr.hpp"
 #include "../libft/Libft/limits.hpp"
+#include "../libft/Libft/libft.hpp"
+#include "../libft/Math/math.hpp"
 #include "../libft/Template/set.hpp"
 
 namespace
@@ -16,6 +18,47 @@ namespace
     const int  SAVE_SHIP_ID_MAX = FT_INT_MAX - 1;
     const int  SAVE_MAX_SHIPS_PER_FLEET = 4096;
     const long BUILDING_GRID_MAX_CELLS = 1048576;
+    const int  SAVE_PLANET_STACK_LIMIT = 1000000;
+
+    bool save_system_parse_int_exact(const char *value, int &out) noexcept
+    {
+        if (!value)
+            return false;
+        char *end = ft_nullptr;
+        long parsed = ft_strtol(value, &end, 10);
+        if (end == value)
+            return false;
+        while (end && *end != '\0')
+        {
+            if (!ft_isspace(*end))
+                return false;
+            ++end;
+        }
+        if (parsed < FT_INT_MIN)
+            parsed = FT_INT_MIN;
+        if (parsed > FT_INT_MAX)
+            parsed = FT_INT_MAX;
+        out = static_cast<int>(parsed);
+        return true;
+    }
+
+    bool save_system_parse_non_negative_int(const char *value, int &out) noexcept
+    {
+        if (!save_system_parse_int_exact(value, out))
+            return false;
+        if (out < 0)
+            out = 0;
+        return true;
+    }
+
+    bool save_system_parse_stack_amount(const char *value, int &out) noexcept
+    {
+        if (!save_system_parse_non_negative_int(value, out))
+            return false;
+        if (out > SAVE_PLANET_STACK_LIMIT)
+            out = SAVE_PLANET_STACK_LIMIT;
+        return true;
+    }
 
     bool save_system_is_known_ship_type(int ship_type) noexcept
     {
@@ -365,8 +408,12 @@ bool SaveSystem::deserialize_planets(const char *content,
                 int ore_id = ft_atoi(item->key + 9);
                 Pair<int, int> entry;
                 entry.key = ore_id;
-                entry.value = ft_atoi(item->value);
-                resource_amounts.push_back(entry);
+                int amount = 0;
+                if (ore_id > 0 && save_system_parse_stack_amount(item->value, amount))
+                {
+                    entry.value = amount;
+                    resource_amounts.push_back(entry);
+                }
             }
             else if (item->key && ft_strncmp(item->key, "rate_", 5) == 0)
             {
@@ -389,8 +436,12 @@ bool SaveSystem::deserialize_planets(const char *content,
                 int item_id = ft_atoi(item->key + 5);
                 Pair<int, int> entry;
                 entry.key = item_id;
-                entry.value = ft_atoi(item->value);
-                inventory_items.push_back(entry);
+                int amount = 0;
+                if (item_id > 0 && save_system_parse_stack_amount(item->value, amount))
+                {
+                    entry.value = amount;
+                    inventory_items.push_back(entry);
+                }
             }
             item = item->next;
         }
@@ -400,13 +451,17 @@ bool SaveSystem::deserialize_planets(const char *content,
             double rate = this->unscale_long_to_double(resource_rates[i].value);
             if (!save_system_is_finite(rate))
                 rate = 0.0;
-            planet->register_resource(ore_id, rate);
+            if (ore_id > 0)
+                planet->register_resource(ore_id, rate);
         }
         for (size_t i = 0; i < resource_amounts.size(); ++i)
         {
             int ore_id = resource_amounts[i].key;
+            if (ore_id <= 0)
+                continue;
             planet->register_resource(ore_id, planet->get_rate(ore_id));
-            planet->set_resource(ore_id, resource_amounts[i].value);
+            int sanitized = planet->clamp_resource_amount(ore_id, resource_amounts[i].value);
+            planet->set_resource(ore_id, sanitized);
         }
         for (size_t i = 0; i < resource_carryover.size(); ++i)
         {
@@ -414,13 +469,17 @@ bool SaveSystem::deserialize_planets(const char *content,
             double carry_value = this->unscale_long_to_double(resource_carryover[i].value);
             if (!save_system_is_finite(carry_value))
                 carry_value = 0.0;
-            planet->set_carryover(ore_id, carry_value);
+            if (ore_id > 0)
+                planet->set_carryover(ore_id, carry_value);
         }
         for (size_t i = 0; i < inventory_items.size(); ++i)
         {
             int item_id = inventory_items[i].key;
+            if (item_id <= 0)
+                continue;
             planet->ensure_item_slot(item_id);
-            planet->set_resource(item_id, inventory_items[i].value);
+            int sanitized = planet->clamp_resource_amount(item_id, inventory_items[i].value);
+            planet->set_resource(item_id, sanitized);
         }
         planets.insert(planet_id, planet);
         current = current->next;
@@ -688,27 +747,58 @@ bool SaveSystem::deserialize_fleets(const char *content,
             key.append("_armor");
             json_item *armor_item = json_find_item(current, key.c_str());
             if (armor_item)
-                ship_snapshot.armor = ft_atoi(armor_item->value);
+            {
+                if (!save_system_parse_non_negative_int(armor_item->value, ship_snapshot.armor))
+                    ship_snapshot.armor = 0;
+            }
+            else
+                ship_snapshot.armor = 0;
             key = base_key;
             key.append("_hp");
             json_item *hp_item = json_find_item(current, key.c_str());
-            if (hp_item)
-                ship_snapshot.hp = ft_atoi(hp_item->value);
             key = base_key;
             key.append("_shield");
             json_item *shield_item = json_find_item(current, key.c_str());
-            if (shield_item)
-                ship_snapshot.shield = ft_atoi(shield_item->value);
             key = base_key;
             key.append("_max_hp");
             json_item *max_hp_item = json_find_item(current, key.c_str());
-            if (max_hp_item)
-                ship_snapshot.max_hp = ft_atoi(max_hp_item->value);
+            if (!max_hp_item)
+                continue;
+            int max_hp_value = 0;
+            if (!save_system_parse_non_negative_int(max_hp_item->value, max_hp_value))
+                continue;
+            ship_snapshot.max_hp = max_hp_value;
+            int hp_value = ship_snapshot.max_hp;
+            if (hp_item)
+            {
+                if (!save_system_parse_non_negative_int(hp_item->value, hp_value))
+                    continue;
+            }
+            if (ship_snapshot.max_hp <= 0)
+                hp_value = 0;
+            else if (hp_value > ship_snapshot.max_hp)
+                hp_value = ship_snapshot.max_hp;
+            ship_snapshot.hp = hp_value;
             key = base_key;
             key.append("_max_shield");
             json_item *max_shield_item = json_find_item(current, key.c_str());
-            if (max_shield_item)
-                ship_snapshot.max_shield = ft_atoi(max_shield_item->value);
+            if (!max_shield_item)
+                continue;
+            int max_shield_value = 0;
+            if (!save_system_parse_non_negative_int(max_shield_item->value, max_shield_value))
+                continue;
+            ship_snapshot.max_shield = max_shield_value;
+            int shield_value = ship_snapshot.max_shield;
+            if (shield_item)
+            {
+                if (!save_system_parse_non_negative_int(shield_item->value, shield_value))
+                    continue;
+            }
+            if (ship_snapshot.max_shield <= 0)
+                shield_value = 0;
+            else if (shield_value > ship_snapshot.max_shield)
+                shield_value = ship_snapshot.max_shield;
+            ship_snapshot.shield = shield_value;
             key = base_key;
             key.append("_max_speed");
             json_item *max_speed_item = json_find_item(current, key.c_str());
