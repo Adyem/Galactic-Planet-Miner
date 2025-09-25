@@ -3,6 +3,13 @@
 #include "../libft/Template/pair.hpp"
 #include "../libft/Template/set.hpp"
 
+void Game::append_lore_entry(const ft_string &entry)
+{
+    this->_lore_log.push_back(entry);
+    if (this->_lore_log.size() > LORE_LOG_MAX_ENTRIES)
+        this->_lore_log.erase(this->_lore_log.begin());
+}
+
 Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     : _backend(host, path),
       _save_system(),
@@ -91,24 +98,12 @@ void Game::produce(double seconds)
         if (!planet)
             continue;
         ft_vector<Pair<int, int> > produced = planet->produce(seconds);
-        ft_vector<int> updated_ores;
         double mine_multiplier = this->_buildings.get_mine_multiplier(planet_id);
         for (size_t j = 0; j < produced.size(); ++j)
         {
             int ore_id = produced[j].key;
             int base_amount = produced[j].value;
             int final_amount = base_amount;
-            bool ore_tracked = false;
-            for (size_t k = 0; k < updated_ores.size(); ++k)
-            {
-                if (updated_ores[k] == ore_id)
-                {
-                    ore_tracked = true;
-                    break;
-                }
-            }
-            if (!ore_tracked)
-                updated_ores.push_back(ore_id);
             if (base_amount > 0)
             {
                 double multiplier_delta = this->_resource_multiplier - 1.0;
@@ -180,9 +175,8 @@ void Game::produce(double seconds)
                 if (ore_accumulator != ft_nullptr)
                     ore_accumulator->value.mine_bonus_remainder = remainder;
             }
+            this->send_state(planet_id, ore_id);
         }
-        for (size_t j = 0; j < updated_ores.size(); ++j)
-            this->send_state(planet_id, updated_ores[j]);
     }
 }
 
@@ -238,7 +232,7 @@ void Game::tick(double seconds)
         ft_string entry("Old Miner Joe records a victory at planet ");
         entry.append(ft_to_string(planet_id));
         entry.append(ft_string(": the raider fleet was repelled."));
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
         if (planet_id == this->_order_branch_pending_assault)
         {
             this->_order_branch_assault_victories += 1;
@@ -246,7 +240,7 @@ void Game::tick(double seconds)
             ft_string branch_entry("Marshal Rhea honors the Dominion strike force triumphant at planet ");
             branch_entry.append(ft_to_string(planet_id));
             branch_entry.append(ft_string("."));
-            this->_lore_log.push_back(branch_entry);
+            this->append_lore_entry(branch_entry);
         }
         if (planet_id == this->_rebellion_branch_pending_assault)
         {
@@ -255,7 +249,7 @@ void Game::tick(double seconds)
             ft_string branch_entry("Captain Blackthorne salutes the liberated crews holding planet ");
             branch_entry.append(ft_to_string(planet_id));
             branch_entry.append(ft_string("."));
-            this->_lore_log.push_back(branch_entry);
+            this->append_lore_entry(branch_entry);
         }
     }
     for (size_t i = 0; i < assault_failed.size(); ++i)
@@ -275,7 +269,7 @@ void Game::tick(double seconds)
         ft_string entry("Professor Lumen warns of losses on planet ");
         entry.append(ft_to_string(planet_id));
         entry.append(ft_string(": raiders breached the defenses."));
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
         if (planet_id == this->_order_branch_pending_assault)
         {
             if (this->get_quest_status(QUEST_ORDER_DOMINION) == QUEST_STATUS_ACTIVE)
@@ -400,18 +394,15 @@ void Game::send_state(int planet_id, int ore_id)
     body.append(ft_to_string(planet->get_resource(ore_id)));
     body.append("}");
     ft_string response;
-    int status = this->_backend.send_state(body, response);
-    bool offline = (status < 200 || status >= 400);
-    if (!offline)
+    this->_backend.send_state(body, response);
+    bool offline = false;
+    const ft_string fallback_prefix("[offline] echo=");
+    size_t prefix_size = fallback_prefix.size();
+    if (response.size() >= prefix_size)
     {
-        const ft_string fallback_prefix("[offline] echo=");
-        size_t prefix_size = fallback_prefix.size();
-        if (response.size() >= prefix_size)
-        {
-            const char *resp_cstr = response.c_str();
-            if (ft_strncmp(resp_cstr, fallback_prefix.c_str(), static_cast<size_t>(prefix_size)) == 0)
-                offline = true;
-        }
+        const char *resp_cstr = response.c_str();
+        if (ft_strncmp(resp_cstr, fallback_prefix.c_str(), static_cast<size_t>(prefix_size)) == 0)
+            offline = true;
     }
     if (offline)
     {
@@ -419,14 +410,14 @@ void Game::send_state(int planet_id, int ore_id)
         {
             this->_backend_online = false;
             ft_string entry("Operations report: backend connection lost. Switching to offline mode.");
-            this->_lore_log.push_back(entry);
+            this->append_lore_entry(entry);
         }
     }
     else if (!this->_backend_online)
     {
         this->_backend_online = true;
         ft_string entry("Operations report: backend connection restored.");
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
     }
 }
 
@@ -539,7 +530,7 @@ void Game::announce_achievements(const ft_vector<int> &achievement_ids)
         entry.append(info.name);
         entry.append(ft_string(": "));
         entry.append(info.description);
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
     }
 }
 
@@ -852,7 +843,7 @@ void Game::apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snap
                     message.append(" (type unavailable)");
                 else
                     message.append(" (capital limit reached)");
-                this->_lore_log.push_back(message);
+                this->append_lore_entry(message);
                 continue;
             }
             fleet->add_ship_snapshot(*ship);
@@ -904,7 +895,7 @@ void Game::record_checkpoint_failure(const ft_string &tag) noexcept
     this->_failed_checkpoint_tags.push_back(tag);
     ft_string failure_message("Checkpoint save failed: ");
     failure_message.append(tag);
-    this->_lore_log.push_back(failure_message);
+    this->append_lore_entry(failure_message);
 }
 
 bool Game::save_campaign_checkpoint(const ft_string &tag) noexcept

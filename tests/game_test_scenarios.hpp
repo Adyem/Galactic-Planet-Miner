@@ -4,6 +4,7 @@
 #include "game.hpp"
 
 int verify_backend_roundtrip();
+int verify_lore_log_retention();
 int validate_initial_campaign_flow(Game &game);
 int validate_order_branch_storyline();
 int evaluate_building_and_convoy_systems(Game &game);
