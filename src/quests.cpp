@@ -1,257 +1,187 @@
 #include "quests.hpp"
 #include "buildings.hpp"
 
+namespace
+{
+struct QuestObjectiveEntry
+{
+    int type;
+    int target_id;
+    int amount;
+};
+
+struct QuestChoiceEntry
+{
+    int         choice_id;
+    const char  *description;
+};
+
+struct QuestTemplate
+{
+    int                         id;
+    const char                  *name;
+    const char                  *description;
+    double                      time_limit;
+    bool                        requires_choice;
+    int                         required_choice_quest;
+    int                         required_choice_value;
+    const int                   *prerequisites;
+    size_t                      prerequisite_count;
+    const QuestObjectiveEntry   *objectives;
+    size_t                      objective_count;
+    const QuestChoiceEntry      *choices;
+    size_t                      choice_count;
+};
+
+static void copy_ids(const int *data, size_t count, ft_vector<int> &out)
+{
+    out.clear();
+    for (size_t i = 0; i < count; ++i)
+        out.push_back(data[i]);
+}
+
+static void copy_objectives(const QuestObjectiveEntry *data, size_t count, ft_vector<ft_quest_objective> &out)
+{
+    out.clear();
+    for (size_t i = 0; i < count; ++i)
+    {
+        ft_quest_objective objective;
+        objective.type = data[i].type;
+        objective.target_id = data[i].target_id;
+        objective.amount = data[i].amount;
+        out.push_back(objective);
+    }
+}
+
+static void copy_choices(const QuestChoiceEntry *data, size_t count, ft_vector<ft_quest_choice_definition> &out)
+{
+    out.clear();
+    for (size_t i = 0; i < count; ++i)
+    {
+        ft_quest_choice_definition choice;
+        choice.choice_id = data[i].choice_id;
+        choice.description = ft_string(data[i].description);
+        out.push_back(choice);
+    }
+}
+
+static const QuestObjectiveEntry kSkirmishObjectives[] = {
+    {QUEST_OBJECTIVE_RESOURCE_TOTAL, ORE_IRON, 10},
+    {QUEST_OBJECTIVE_RESOURCE_TOTAL, ORE_COPPER, 10}
+};
+
+static const int kDefensePrereqs[] = {QUEST_INITIAL_SKIRMISHES};
+static const QuestObjectiveEntry kDefenseObjectives[] = {
+    {QUEST_OBJECTIVE_FLEET_COUNT, 0, 2},
+    {QUEST_OBJECTIVE_TOTAL_SHIP_HP, 0, 120}
+};
+
+static const int kInvestigatePrereqs[] = {QUEST_DEFENSE_OF_TERRA};
+static const QuestObjectiveEntry kInvestigateObjectives[] = {
+    {QUEST_OBJECTIVE_RESEARCH_COMPLETED, RESEARCH_UNLOCK_MARS, 1},
+    {QUEST_OBJECTIVE_RESEARCH_COMPLETED, RESEARCH_UNLOCK_ZALTHOR, 1}
+};
+
+static const int kSecurePrereqs[] = {QUEST_INVESTIGATE_RAIDERS};
+static const QuestObjectiveEntry kSecureObjectives[] = {
+    {QUEST_OBJECTIVE_CONVOYS_DELIVERED, 0, 3},
+    {QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST, 0, 1}
+};
+
+static const int kStreakPrereqs[] = {QUEST_SECURE_SUPPLY_LINES};
+static const QuestObjectiveEntry kStreakObjectives[] = {
+    {QUEST_OBJECTIVE_CONVOY_STREAK, 0, 3}
+};
+
+static const int kEscortPrereqs[] = {QUEST_STEADY_SUPPLY_STREAK};
+static const QuestObjectiveEntry kEscortObjectives[] = {
+    {QUEST_OBJECTIVE_CONVOYS_DELIVERED, 0, 8},
+    {QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST, 0, 1}
+};
+
+static const int kBattlePrereqs[] = {QUEST_INVESTIGATE_RAIDERS, QUEST_HIGH_VALUE_ESCORT};
+static const QuestObjectiveEntry kBattleObjectives[] = {
+    {QUEST_OBJECTIVE_RESEARCH_COMPLETED, RESEARCH_UNLOCK_VULCAN, 1},
+    {QUEST_OBJECTIVE_TOTAL_SHIP_HP, 0, 180}
+};
+
+static const int kDecisionPrereqs[] = {QUEST_CLIMACTIC_BATTLE};
+static const QuestChoiceEntry kDecisionChoices[] = {
+    {QUEST_CHOICE_EXECUTE_BLACKTHORNE, "Execute Blackthorne to preserve order."},
+    {QUEST_CHOICE_SPARE_BLACKTHORNE, "Spare Blackthorne and investigate corruption."}
+};
+
+static const int kOrderPrereqs[] = {QUEST_CRITICAL_DECISION};
+static const QuestObjectiveEntry kOrderObjectives[] = {
+    {QUEST_OBJECTIVE_RESOURCE_TOTAL, ORE_COAL, 20}
+};
+
+static const int kRebellionPrereqs[] = {QUEST_CRITICAL_DECISION};
+static const QuestObjectiveEntry kRebellionObjectives[] = {
+    {QUEST_OBJECTIVE_RESEARCH_COMPLETED, RESEARCH_UNLOCK_NOCTARIS, 1},
+    {QUEST_OBJECTIVE_RESOURCE_TOTAL, ORE_OBSIDIAN, 4}
+};
+
+static const int kOrderSuppressPrereqs[] = {QUEST_ORDER_UPRISING};
+static const QuestObjectiveEntry kOrderSuppressObjectives[] = {
+    {QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST, 0, 250},
+    {QUEST_OBJECTIVE_BUILDING_COUNT, BUILDING_PROXIMITY_RADAR, 1}
+};
+
+static const int kOrderDominionPrereqs[] = {QUEST_ORDER_SUPPRESS_RAIDS};
+static const QuestObjectiveEntry kOrderDominionObjectives[] = {
+    {QUEST_OBJECTIVE_ASSAULT_VICTORIES, PLANET_MARS, 1}
+};
+
+static const int kRebellionNetworkPrereqs[] = {QUEST_REBELLION_FLEET};
+static const QuestObjectiveEntry kRebellionNetworkObjectives[] = {
+    {QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST, 0, 300},
+    {QUEST_OBJECTIVE_BUILDING_COUNT, BUILDING_TRADE_RELAY, 1}
+};
+
+static const int kRebellionLiberationPrereqs[] = {QUEST_REBELLION_NETWORK};
+static const QuestObjectiveEntry kRebellionLiberationObjectives[] = {
+    {QUEST_OBJECTIVE_ASSAULT_VICTORIES, PLANET_ZALTHOR, 1}
+};
+
+static const QuestTemplate kQuestTemplates[] = {
+    {QUEST_INITIAL_SKIRMISHES, "Initial Raider Skirmishes", "Protect supply convoys and fortify Terra's perimeter.", 0.0, false, 0, 0, ft_nullptr, 0, kSkirmishObjectives, sizeof(kSkirmishObjectives) / sizeof(kSkirmishObjectives[0]), ft_nullptr, 0},
+    {QUEST_DEFENSE_OF_TERRA, "Defense of Terra", "Assemble a defensive wing to repel raider assaults.", 180.0, false, 0, 0, kDefensePrereqs, sizeof(kDefensePrereqs) / sizeof(kDefensePrereqs[0]), kDefenseObjectives, sizeof(kDefenseObjectives) / sizeof(kDefenseObjectives[0]), ft_nullptr, 0},
+    {QUEST_INVESTIGATE_RAIDERS, "Investigate Raider Motives", "Complete research to uncover the raiders' plans.", 240.0, false, 0, 0, kInvestigatePrereqs, sizeof(kInvestigatePrereqs) / sizeof(kInvestigatePrereqs[0]), kInvestigateObjectives, sizeof(kInvestigateObjectives) / sizeof(kInvestigateObjectives[0]), ft_nullptr, 0},
+    {QUEST_SECURE_SUPPLY_LINES, "Secure Supply Lines", "Deliver convoys while keeping raid losses contained.", 0.0, false, 0, 0, kSecurePrereqs, sizeof(kSecurePrereqs) / sizeof(kSecurePrereqs[0]), kSecureObjectives, sizeof(kSecureObjectives) / sizeof(kSecureObjectives[0]), ft_nullptr, 0},
+    {QUEST_STEADY_SUPPLY_STREAK, "Steady Supply Streak", "Maintain an uninterrupted chain of convoy deliveries.", 0.0, false, 0, 0, kStreakPrereqs, sizeof(kStreakPrereqs) / sizeof(kStreakPrereqs[0]), kStreakObjectives, sizeof(kStreakObjectives) / sizeof(kStreakObjectives[0]), ft_nullptr, 0},
+    {QUEST_HIGH_VALUE_ESCORT, "High-Value Escort", "Escort critical shipments through heightened raids.", 0.0, false, 0, 0, kEscortPrereqs, sizeof(kEscortPrereqs) / sizeof(kEscortPrereqs[0]), kEscortObjectives, sizeof(kEscortObjectives) / sizeof(kEscortObjectives[0]), ft_nullptr, 0},
+    {QUEST_CLIMACTIC_BATTLE, "Climactic Battle", "Prepare the fleets and technology for the climactic assault.", 300.0, false, 0, 0, kBattlePrereqs, sizeof(kBattlePrereqs) / sizeof(kBattlePrereqs[0]), kBattleObjectives, sizeof(kBattleObjectives) / sizeof(kBattleObjectives[0]), ft_nullptr, 0},
+    {QUEST_CRITICAL_DECISION, "The Critical Decision", "Decide Blackthorne's fate and set the course for the system.", 0.0, true, 0, 0, kDecisionPrereqs, sizeof(kDecisionPrereqs) / sizeof(kDecisionPrereqs[0]), ft_nullptr, 0, kDecisionChoices, sizeof(kDecisionChoices) / sizeof(kDecisionChoices[0])},
+    {QUEST_ORDER_UPRISING, "Order's Last Stand", "Crush the uprising that rises after Blackthorne's execution.", 360.0, false, QUEST_CRITICAL_DECISION, QUEST_CHOICE_EXECUTE_BLACKTHORNE, kOrderPrereqs, sizeof(kOrderPrereqs) / sizeof(kOrderPrereqs[0]), kOrderObjectives, sizeof(kOrderObjectives) / sizeof(kOrderObjectives[0]), ft_nullptr, 0},
+    {QUEST_REBELLION_FLEET, "Rebellion Rising", "Rally new allies after sparing Blackthorne.", 360.0, false, QUEST_CRITICAL_DECISION, QUEST_CHOICE_SPARE_BLACKTHORNE, kRebellionPrereqs, sizeof(kRebellionPrereqs) / sizeof(kRebellionPrereqs[0]), kRebellionObjectives, sizeof(kRebellionObjectives) / sizeof(kRebellionObjectives[0]), ft_nullptr, 0},
+    {QUEST_ORDER_SUPPRESS_RAIDS, "Suppress the Raider Cells", "Deploy Order loyalists to quiet convoy lanes and establish sensor grids.", 0.0, false, QUEST_CRITICAL_DECISION, QUEST_CHOICE_EXECUTE_BLACKTHORNE, kOrderSuppressPrereqs, sizeof(kOrderSuppressPrereqs) / sizeof(kOrderSuppressPrereqs[0]), kOrderSuppressObjectives, sizeof(kOrderSuppressObjectives) / sizeof(kOrderSuppressObjectives[0]), ft_nullptr, 0},
+    {QUEST_ORDER_DOMINION, "Order Dominion", "Rally the Order fleets to crush a decisive assault and cement control.", 0.0, false, QUEST_CRITICAL_DECISION, QUEST_CHOICE_EXECUTE_BLACKTHORNE, kOrderDominionPrereqs, sizeof(kOrderDominionPrereqs) / sizeof(kOrderDominionPrereqs[0]), kOrderDominionObjectives, sizeof(kOrderDominionObjectives) / sizeof(kOrderDominionObjectives[0]), ft_nullptr, 0},
+    {QUEST_REBELLION_NETWORK, "Shadow Network", "Spin up rebel listening posts and keep the raids suppressed long enough to regro up.", 0.0, false, QUEST_CRITICAL_DECISION, QUEST_CHOICE_SPARE_BLACKTHORNE, kRebellionNetworkPrereqs, sizeof(kRebellionNetworkPrereqs) / sizeof(kRebellionNetworkPrereqs[0]), kRebellionNetworkObjectives, sizeof(kRebellionNetworkObjectives) / sizeof(kRebellionNetworkObjectives[0]), ft_nullptr, 0},
+    {QUEST_REBELLION_LIBERATION, "Liberation of the Frontier", "Lead allied cells through a flagship assault to secure the frontier worlds.", 0.0, false, QUEST_CRITICAL_DECISION, QUEST_CHOICE_SPARE_BLACKTHORNE, kRebellionLiberationPrereqs, sizeof(kRebellionLiberationPrereqs) / sizeof(kRebellionLiberationPrereqs[0]), kRebellionLiberationObjectives, sizeof(kRebellionLiberationObjectives) / sizeof(kRebellionLiberationObjectives[0]), ft_nullptr, 0}
+};
+}
+
 QuestManager::QuestManager()
     : _time_scale(1.0)
 {
-    ft_sharedptr<ft_quest_definition> skirmish(new ft_quest_definition());
-    skirmish->id = QUEST_INITIAL_SKIRMISHES;
-    skirmish->name = ft_string("Initial Raider Skirmishes");
-    skirmish->description = ft_string("Protect supply convoys and fortify Terra's perimeter.");
-    skirmish->time_limit = 0.0;
-    skirmish->requires_choice = false;
-    skirmish->required_choice_quest = 0;
-    skirmish->required_choice_value = 0;
-    ft_quest_objective objective;
-    objective.type = QUEST_OBJECTIVE_RESOURCE_TOTAL;
-    objective.target_id = ORE_IRON;
-    objective.amount = 10;
-    skirmish->objectives.push_back(objective);
-    objective.target_id = ORE_COPPER;
-    objective.amount = 10;
-    skirmish->objectives.push_back(objective);
-    this->register_quest(skirmish);
-
-    ft_sharedptr<ft_quest_definition> defense(new ft_quest_definition());
-    defense->id = QUEST_DEFENSE_OF_TERRA;
-    defense->name = ft_string("Defense of Terra");
-    defense->description = ft_string("Assemble a defensive wing to repel raider assaults.");
-    defense->time_limit = 180.0;
-    defense->requires_choice = false;
-    defense->required_choice_quest = 0;
-    defense->required_choice_value = 0;
-    defense->prerequisites.push_back(QUEST_INITIAL_SKIRMISHES);
-    objective.type = QUEST_OBJECTIVE_FLEET_COUNT;
-    objective.target_id = 0;
-    objective.amount = 2;
-    defense->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_TOTAL_SHIP_HP;
-    objective.target_id = 0;
-    objective.amount = 120;
-    defense->objectives.push_back(objective);
-    this->register_quest(defense);
-
-    ft_sharedptr<ft_quest_definition> investigate(new ft_quest_definition());
-    investigate->id = QUEST_INVESTIGATE_RAIDERS;
-    investigate->name = ft_string("Investigate Raider Motives");
-    investigate->description = ft_string("Complete research to uncover the raiders' plans.");
-    investigate->time_limit = 240.0;
-    investigate->requires_choice = false;
-    investigate->required_choice_quest = 0;
-    investigate->required_choice_value = 0;
-    investigate->prerequisites.push_back(QUEST_DEFENSE_OF_TERRA);
-    objective.type = QUEST_OBJECTIVE_RESEARCH_COMPLETED;
-    objective.target_id = RESEARCH_UNLOCK_MARS;
-    objective.amount = 1;
-    investigate->objectives.push_back(objective);
-    objective.target_id = RESEARCH_UNLOCK_ZALTHOR;
-    objective.amount = 1;
-    investigate->objectives.push_back(objective);
-    this->register_quest(investigate);
-
-    ft_sharedptr<ft_quest_definition> secure(new ft_quest_definition());
-    secure->id = QUEST_SECURE_SUPPLY_LINES;
-    secure->name = ft_string("Secure Supply Lines");
-    secure->description = ft_string("Deliver convoys while keeping raid losses contained.");
-    secure->time_limit = 0.0;
-    secure->requires_choice = false;
-    secure->required_choice_quest = 0;
-    secure->required_choice_value = 0;
-    secure->prerequisites.push_back(QUEST_INVESTIGATE_RAIDERS);
-    objective.type = QUEST_OBJECTIVE_CONVOYS_DELIVERED;
-    objective.target_id = 0;
-    objective.amount = 3;
-    secure->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST;
-    objective.target_id = 0;
-    objective.amount = 1;
-    secure->objectives.push_back(objective);
-    this->register_quest(secure);
-
-    ft_sharedptr<ft_quest_definition> streak(new ft_quest_definition());
-    streak->id = QUEST_STEADY_SUPPLY_STREAK;
-    streak->name = ft_string("Steady Supply Streak");
-    streak->description = ft_string("Maintain an uninterrupted chain of convoy deliveries.");
-    streak->time_limit = 0.0;
-    streak->requires_choice = false;
-    streak->required_choice_quest = 0;
-    streak->required_choice_value = 0;
-    streak->prerequisites.push_back(QUEST_SECURE_SUPPLY_LINES);
-    objective.type = QUEST_OBJECTIVE_CONVOY_STREAK;
-    objective.target_id = 0;
-    objective.amount = 3;
-    streak->objectives.push_back(objective);
-    this->register_quest(streak);
-
-    ft_sharedptr<ft_quest_definition> escort(new ft_quest_definition());
-    escort->id = QUEST_HIGH_VALUE_ESCORT;
-    escort->name = ft_string("High-Value Escort");
-    escort->description = ft_string("Escort critical shipments through heightened raids.");
-    escort->time_limit = 0.0;
-    escort->requires_choice = false;
-    escort->required_choice_quest = 0;
-    escort->required_choice_value = 0;
-    escort->prerequisites.push_back(QUEST_STEADY_SUPPLY_STREAK);
-    objective.type = QUEST_OBJECTIVE_CONVOYS_DELIVERED;
-    objective.target_id = 0;
-    objective.amount = 8;
-    escort->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST;
-    objective.target_id = 0;
-    objective.amount = 1;
-    escort->objectives.push_back(objective);
-    this->register_quest(escort);
-
-    ft_sharedptr<ft_quest_definition> battle(new ft_quest_definition());
-    battle->id = QUEST_CLIMACTIC_BATTLE;
-    battle->name = ft_string("Climactic Battle");
-    battle->description = ft_string("Prepare the fleets and technology for the climactic assault.");
-    battle->time_limit = 300.0;
-    battle->requires_choice = false;
-    battle->required_choice_quest = 0;
-    battle->required_choice_value = 0;
-    battle->prerequisites.push_back(QUEST_INVESTIGATE_RAIDERS);
-    battle->prerequisites.push_back(QUEST_HIGH_VALUE_ESCORT);
-    objective.type = QUEST_OBJECTIVE_RESEARCH_COMPLETED;
-    objective.target_id = RESEARCH_UNLOCK_VULCAN;
-    objective.amount = 1;
-    battle->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_TOTAL_SHIP_HP;
-    objective.target_id = 0;
-    objective.amount = 180;
-    battle->objectives.push_back(objective);
-    this->register_quest(battle);
-
-    ft_sharedptr<ft_quest_definition> decision(new ft_quest_definition());
-    decision->id = QUEST_CRITICAL_DECISION;
-    decision->name = ft_string("The Critical Decision");
-    decision->description = ft_string("Decide Blackthorne's fate and set the course for the system.");
-    decision->time_limit = 0.0;
-    decision->requires_choice = true;
-    decision->required_choice_quest = 0;
-    decision->required_choice_value = 0;
-    decision->prerequisites.push_back(QUEST_CLIMACTIC_BATTLE);
-    ft_quest_choice_definition choice;
-    choice.choice_id = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
-    choice.description = ft_string("Execute Blackthorne to preserve order.");
-    decision->choices.push_back(choice);
-    choice.choice_id = QUEST_CHOICE_SPARE_BLACKTHORNE;
-    choice.description = ft_string("Spare Blackthorne and investigate corruption.");
-    decision->choices.push_back(choice);
-    this->register_quest(decision);
-
-    ft_sharedptr<ft_quest_definition> order(new ft_quest_definition());
-    order->id = QUEST_ORDER_UPRISING;
-    order->name = ft_string("Order's Last Stand");
-    order->description = ft_string("Crush the uprising that rises after Blackthorne's execution.");
-    order->time_limit = 360.0;
-    order->requires_choice = false;
-    order->required_choice_quest = QUEST_CRITICAL_DECISION;
-    order->required_choice_value = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
-    order->prerequisites.push_back(QUEST_CRITICAL_DECISION);
-    objective.type = QUEST_OBJECTIVE_RESOURCE_TOTAL;
-    objective.target_id = ORE_COAL;
-    objective.amount = 20;
-    order->objectives.push_back(objective);
-    this->register_quest(order);
-
-    ft_sharedptr<ft_quest_definition> rebellion(new ft_quest_definition());
-    rebellion->id = QUEST_REBELLION_FLEET;
-    rebellion->name = ft_string("Rebellion Rising");
-    rebellion->description = ft_string("Rally new allies after sparing Blackthorne.");
-    rebellion->time_limit = 360.0;
-    rebellion->requires_choice = false;
-    rebellion->required_choice_quest = QUEST_CRITICAL_DECISION;
-    rebellion->required_choice_value = QUEST_CHOICE_SPARE_BLACKTHORNE;
-    rebellion->prerequisites.push_back(QUEST_CRITICAL_DECISION);
-    objective.type = QUEST_OBJECTIVE_RESEARCH_COMPLETED;
-    objective.target_id = RESEARCH_UNLOCK_NOCTARIS;
-    objective.amount = 1;
-    rebellion->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_RESOURCE_TOTAL;
-    objective.target_id = ORE_OBSIDIAN;
-    objective.amount = 4;
-    rebellion->objectives.push_back(objective);
-    this->register_quest(rebellion);
-
-    ft_sharedptr<ft_quest_definition> order_suppress(new ft_quest_definition());
-    order_suppress->id = QUEST_ORDER_SUPPRESS_RAIDS;
-    order_suppress->name = ft_string("Suppress the Raider Cells");
-    order_suppress->description = ft_string("Deploy Order loyalists to quiet convoy lanes and establish sensor grids.");
-    order_suppress->time_limit = 0.0;
-    order_suppress->requires_choice = false;
-    order_suppress->required_choice_quest = QUEST_CRITICAL_DECISION;
-    order_suppress->required_choice_value = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
-    order_suppress->prerequisites.push_back(QUEST_ORDER_UPRISING);
-    objective.type = QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST;
-    objective.target_id = 0;
-    objective.amount = 250;
-    order_suppress->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_BUILDING_COUNT;
-    objective.target_id = BUILDING_PROXIMITY_RADAR;
-    objective.amount = 1;
-    order_suppress->objectives.push_back(objective);
-    this->register_quest(order_suppress);
-
-    ft_sharedptr<ft_quest_definition> order_dominion(new ft_quest_definition());
-    order_dominion->id = QUEST_ORDER_DOMINION;
-    order_dominion->name = ft_string("Order Dominion");
-    order_dominion->description = ft_string("Rally the Order fleets to crush a decisive assault and cement control.");
-    order_dominion->time_limit = 0.0;
-    order_dominion->requires_choice = false;
-    order_dominion->required_choice_quest = QUEST_CRITICAL_DECISION;
-    order_dominion->required_choice_value = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
-    order_dominion->prerequisites.push_back(QUEST_ORDER_SUPPRESS_RAIDS);
-    objective.type = QUEST_OBJECTIVE_ASSAULT_VICTORIES;
-    objective.target_id = PLANET_MARS;
-    objective.amount = 1;
-    order_dominion->objectives.push_back(objective);
-    this->register_quest(order_dominion);
-
-    ft_sharedptr<ft_quest_definition> rebellion_network(new ft_quest_definition());
-    rebellion_network->id = QUEST_REBELLION_NETWORK;
-    rebellion_network->name = ft_string("Shadow Network");
-    rebellion_network->description = ft_string("Spin up rebel listening posts and keep the raids suppressed long enough to regroup.");
-    rebellion_network->time_limit = 0.0;
-    rebellion_network->requires_choice = false;
-    rebellion_network->required_choice_quest = QUEST_CRITICAL_DECISION;
-    rebellion_network->required_choice_value = QUEST_CHOICE_SPARE_BLACKTHORNE;
-    rebellion_network->prerequisites.push_back(QUEST_REBELLION_FLEET);
-    objective.type = QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST;
-    objective.target_id = 0;
-    objective.amount = 300;
-    rebellion_network->objectives.push_back(objective);
-    objective.type = QUEST_OBJECTIVE_BUILDING_COUNT;
-    objective.target_id = BUILDING_TRADE_RELAY;
-    objective.amount = 1;
-    rebellion_network->objectives.push_back(objective);
-    this->register_quest(rebellion_network);
-
-    ft_sharedptr<ft_quest_definition> rebellion_liberation(new ft_quest_definition());
-    rebellion_liberation->id = QUEST_REBELLION_LIBERATION;
-    rebellion_liberation->name = ft_string("Liberation of the Frontier");
-    rebellion_liberation->description = ft_string("Lead allied cells through a flagship assault to secure the frontier worlds.");
-    rebellion_liberation->time_limit = 0.0;
-    rebellion_liberation->requires_choice = false;
-    rebellion_liberation->required_choice_quest = QUEST_CRITICAL_DECISION;
-    rebellion_liberation->required_choice_value = QUEST_CHOICE_SPARE_BLACKTHORNE;
-    rebellion_liberation->prerequisites.push_back(QUEST_REBELLION_NETWORK);
-    objective.type = QUEST_OBJECTIVE_ASSAULT_VICTORIES;
-    objective.target_id = PLANET_ZALTHOR;
-    objective.amount = 1;
-    rebellion_liberation->objectives.push_back(objective);
-    this->register_quest(rebellion_liberation);
-
+    size_t template_count = sizeof(kQuestTemplates) / sizeof(kQuestTemplates[0]);
+    for (size_t i = 0; i < template_count; ++i)
+    {
+        const QuestTemplate &entry = kQuestTemplates[i];
+        ft_sharedptr<ft_quest_definition> definition(new ft_quest_definition());
+        definition->id = entry.id;
+        definition->name = ft_string(entry.name);
+        definition->description = ft_string(entry.description);
+        definition->time_limit = entry.time_limit;
+        definition->requires_choice = entry.requires_choice;
+        definition->required_choice_quest = entry.required_choice_quest;
+        definition->required_choice_value = entry.required_choice_value;
+        copy_ids(entry.prerequisites, entry.prerequisite_count, definition->prerequisites);
+        copy_objectives(entry.objectives, entry.objective_count, definition->objectives);
+        copy_choices(entry.choices, entry.choice_count, definition->choices);
+        this->register_quest(definition);
+    }
     this->update_availability();
     this->activate_next();
 }
