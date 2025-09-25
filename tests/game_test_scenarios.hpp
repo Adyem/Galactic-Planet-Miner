@@ -4,6 +4,8 @@
 #include "game.hpp"
 
 int verify_backend_roundtrip();
+int verify_backend_host_parsing();
+int verify_locked_planet_reward_delivery();
 int verify_lore_log_retention();
 int validate_initial_campaign_flow(Game &game);
 int validate_order_branch_storyline();

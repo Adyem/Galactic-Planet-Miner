@@ -394,6 +394,28 @@ ft_sharedptr<const ft_planet> Game::get_planet(int id) const
     return entry->value;
 }
 
+ft_sharedptr<ft_planet> Game::get_planet_storage_target(int id)
+{
+    Pair<int, ft_sharedptr<ft_planet> > *entry = this->_planets.find(id);
+    if (entry != ft_nullptr)
+        return entry->value;
+    Pair<int, ft_sharedptr<ft_planet> > *locked = this->_locked_planets.find(id);
+    if (locked != ft_nullptr)
+        return locked->value;
+    return ft_sharedptr<ft_planet>();
+}
+
+ft_sharedptr<const ft_planet> Game::get_planet_storage_target(int id) const
+{
+    const Pair<int, ft_sharedptr<ft_planet> > *entry = this->_planets.find(id);
+    if (entry != ft_nullptr)
+        return entry->value;
+    const Pair<int, ft_sharedptr<ft_planet> > *locked = this->_locked_planets.find(id);
+    if (locked != ft_nullptr)
+        return locked->value;
+    return ft_sharedptr<const ft_planet>();
+}
+
 ft_sharedptr<ft_fleet> Game::get_fleet(int id)
 {
     Pair<int, ft_sharedptr<ft_fleet> > *entry = this->_fleets.find(id);
@@ -727,7 +749,7 @@ double Game::get_planet_energy_pressure(int planet_id) const
 
 void Game::ensure_planet_item_slot(int planet_id, int resource_id)
 {
-    ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return ;
     planet->ensure_item_slot(resource_id);
@@ -735,7 +757,7 @@ void Game::ensure_planet_item_slot(int planet_id, int resource_id)
 
 int Game::add_ore(int planet_id, int ore_id, int amount)
 {
-    ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return 0;
     int total = planet->add_resource(ore_id, amount);
@@ -745,7 +767,7 @@ int Game::add_ore(int planet_id, int ore_id, int amount)
 
 int Game::sub_ore(int planet_id, int ore_id, int amount)
 {
-    ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return 0;
     int total = planet->sub_resource(ore_id, amount);
@@ -755,7 +777,7 @@ int Game::sub_ore(int planet_id, int ore_id, int amount)
 
 int Game::get_ore(int planet_id, int ore_id) const
 {
-    ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<const ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return 0;
     return planet->get_resource(ore_id);
@@ -763,7 +785,7 @@ int Game::get_ore(int planet_id, int ore_id) const
 
 void Game::set_ore(int planet_id, int ore_id, int amount)
 {
-    ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return ;
     this->ensure_planet_item_slot(planet_id, ore_id);
@@ -773,7 +795,7 @@ void Game::set_ore(int planet_id, int ore_id, int amount)
 
 double Game::get_rate(int planet_id, int ore_id) const
 {
-    ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<const ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return 0;
     return planet->get_rate(ore_id);
@@ -782,7 +804,7 @@ double Game::get_rate(int planet_id, int ore_id) const
 const ft_vector<Pair<int, double> > &Game::get_planet_resources(int planet_id) const
 {
     static ft_vector<Pair<int, double> > empty;
-    ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);
+    ft_sharedptr<const ft_planet> planet = this->get_planet_storage_target(planet_id);
     if (!planet)
         return empty;
     return planet->get_resources();

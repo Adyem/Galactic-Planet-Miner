@@ -23,6 +23,12 @@ int main()
     if (!verify_backend_roundtrip())
         return 0;
 
+    if (!verify_backend_host_parsing())
+        return 0;
+
+    if (!verify_locked_planet_reward_delivery())
+        return 0;
+
     if (!verify_lore_log_retention())
         return 0;
 

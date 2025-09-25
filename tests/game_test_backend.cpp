@@ -182,6 +182,92 @@ int verify_backend_roundtrip()
     return 1;
 }
 
+int verify_backend_host_parsing()
+{
+    BackendClient numeric(ft_string("http://127.0.0.1:18090"), ft_string("/"));
+    ft_string expected_numeric_host("127.0.0.1");
+    FT_ASSERT_EQ(expected_numeric_host, numeric.get_host_for_testing());
+    ft_string expected_numeric_port("18090");
+    FT_ASSERT_EQ(expected_numeric_port, numeric.get_port_for_testing());
+
+    BackendClient bracketed_ipv6(ft_string("[::1]:65535"), ft_string("/"));
+    ft_string expected_bracketed_host("[::1]");
+    FT_ASSERT_EQ(expected_bracketed_host, bracketed_ipv6.get_host_for_testing());
+    ft_string expected_bracketed_port("65535");
+    FT_ASSERT_EQ(expected_bracketed_port, bracketed_ipv6.get_port_for_testing());
+
+    BackendClient scheme_without_port(ft_string("https://example.com"), ft_string("/"));
+    ft_string expected_scheme_host("example.com");
+    FT_ASSERT_EQ(expected_scheme_host, scheme_without_port.get_host_for_testing());
+    FT_ASSERT(scheme_without_port.get_port_for_testing().empty());
+
+    BackendClient service_named_port(ft_string("localhost:http"), ft_string("/"));
+    ft_string expected_service_host("localhost:http");
+    FT_ASSERT_EQ(expected_service_host, service_named_port.get_host_for_testing());
+    FT_ASSERT(service_named_port.get_port_for_testing().empty());
+
+    BackendClient unbracketed_ipv6(ft_string("fc00::1"), ft_string("/"));
+    ft_string expected_unbracketed_host("fc00::1");
+    FT_ASSERT_EQ(expected_unbracketed_host, unbracketed_ipv6.get_host_for_testing());
+    FT_ASSERT(unbracketed_ipv6.get_port_for_testing().empty());
+
+    BackendClient scheme_with_path(ft_string("https://example.org:4443/api"), ft_string("/"));
+    ft_string expected_path_host("example.org");
+    FT_ASSERT_EQ(expected_path_host, scheme_with_path.get_host_for_testing());
+    ft_string expected_path_port("4443");
+    FT_ASSERT_EQ(expected_path_port, scheme_with_path.get_port_for_testing());
+
+    return 1;
+}
+
+int verify_locked_planet_reward_delivery()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    const int iron_reward = 75;
+    const int copper_reward = 30;
+
+    game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    int iron_total = game.add_ore(PLANET_MARS, ITEM_IRON_BAR, iron_reward);
+    FT_ASSERT_EQ(iron_reward, iron_total);
+
+    int after_sub = game.sub_ore(PLANET_MARS, ITEM_IRON_BAR, 15);
+    FT_ASSERT_EQ(iron_reward - 15, after_sub);
+
+    game.set_ore(PLANET_MARS, ITEM_COPPER_BAR, copper_reward);
+
+    FT_ASSERT_EQ(iron_reward - 15, game.get_ore(PLANET_MARS, ITEM_IRON_BAR));
+    FT_ASSERT_EQ(copper_reward, game.get_ore(PLANET_MARS, ITEM_COPPER_BAR));
+
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    double elapsed = 0.0;
+    while (!game.is_planet_unlocked(PLANET_MARS) && elapsed < 1200.0)
+    {
+        game.tick(1.0);
+        elapsed += 1.0;
+    }
+    FT_ASSERT(game.is_planet_unlocked(PLANET_MARS));
+
+    FT_ASSERT_EQ(iron_reward - 15, game.get_ore(PLANET_MARS, ITEM_IRON_BAR));
+    FT_ASSERT_EQ(copper_reward, game.get_ore(PLANET_MARS, ITEM_COPPER_BAR));
+
+    const ft_vector<Pair<int, double> > &resources = game.get_planet_resources(PLANET_MARS);
+    bool iron_slot_found = false;
+    bool copper_slot_found = false;
+    for (size_t i = 0; i < resources.size(); ++i)
+    {
+        if (resources[i].key == ITEM_IRON_BAR)
+            iron_slot_found = true;
+        else if (resources[i].key == ITEM_COPPER_BAR)
+            copper_slot_found = true;
+    }
+
+    FT_ASSERT(iron_slot_found);
+    FT_ASSERT(copper_slot_found);
+
+    return 1;
+}
+
 int verify_lore_log_retention()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));

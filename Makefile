@@ -157,7 +157,11 @@ fclean: clean
 
 re: fclean all
 
-check_sfml:
-	@pkg-config --exists sfml-graphics || (echo "SFML not found, installing..." && sudo apt-get update && sudo apt-get install -y libsfml-dev)
 
+check_sfml:
+	@if ! pkg-config --exists sfml-graphics sfml-window sfml-system sfml-audio; then \
+		printf "Error: SFML development libraries not found.\n" >&2; \
+		printf "Please install libsfml-dev (or the appropriate SFML package for your platform) and ensure pkg-config can locate it.\n" >&2; \
+		exit 1; \
+	fi
 .PHONY: all clean fclean re debug dirs test check_sfml
