@@ -59,6 +59,7 @@ private:
     };
 
     friend int verify_supply_route_key_collisions();
+    friend int verify_lore_log_retention();
 
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
@@ -72,7 +73,9 @@ private:
     CombatManager                                _combat;
     BuildingManager                              _buildings;
     AchievementManager                           _achievements;
+    static const size_t                          LORE_LOG_MAX_ENTRIES = 512;
     ft_vector<ft_string>                         _lore_log;
+    void                                        append_lore_entry(const ft_string &entry);
     int                                          _difficulty;
     double                                       _resource_multiplier;
     double                                       _quest_time_scale;

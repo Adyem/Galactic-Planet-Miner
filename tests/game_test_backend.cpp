@@ -136,10 +136,8 @@ int verify_backend_roundtrip()
     ft_string redirect_response;
     int redirect_status = redirect_client.send_state(payload, redirect_response);
     redirect_backend_thread.join();
-    FT_ASSERT(redirect_status >= 400);
-    FT_ASSERT_EQ(fallback_size + payload_size, redirect_response.size());
-    FT_ASSERT_EQ(0, ft_strncmp(redirect_response.c_str(), fallback_prefix.c_str(), static_cast<size_t>(fallback_size)));
-    FT_ASSERT_EQ(0, ft_strcmp(redirect_response.c_str() + fallback_size, payload.c_str()));
+    FT_ASSERT_EQ(302, redirect_status);
+    FT_ASSERT_EQ(redirect_payload, redirect_response);
 
     MalformedResponseServerConfig redirect_game_config(redirect_port, redirect_payload);
     ft_thread redirect_game_thread = start_malformed_response_server(redirect_game_config);
@@ -149,11 +147,9 @@ int verify_backend_roundtrip()
     size_t redirect_lore_before = redirect_game.get_lore_log().size();
     redirect_game.add_ore(PLANET_TERRA, ORE_IRON, 1);
     redirect_game_thread.join();
-    FT_ASSERT(!redirect_game.is_backend_online());
+    FT_ASSERT(redirect_game.is_backend_online());
     const ft_vector<ft_string> &redirect_log = redirect_game.get_lore_log();
-    FT_ASSERT_EQ(redirect_lore_before + 1, redirect_log.size());
-    const ft_string &redirect_entry = redirect_log[redirect_lore_before];
-    FT_ASSERT_EQ(0, ft_strncmp(redirect_entry.c_str(), offline_prefix.c_str(), offline_prefix.size()));
+    FT_ASSERT_EQ(redirect_lore_before, redirect_log.size());
 
     BackendClient client(ft_string("127.0.0.1:8080"), ft_string("/"));
     ft_string response;
@@ -179,6 +175,33 @@ int verify_backend_roundtrip()
     online_game.add_ore(PLANET_TERRA, ORE_IRON, 1);
     FT_ASSERT(online_game.is_backend_online());
     FT_ASSERT_EQ(online_lore_before, online_game.get_lore_log().size());
+    return 1;
+}
+
+int verify_lore_log_retention()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    const size_t limit = Game::LORE_LOG_MAX_ENTRIES;
+    const size_t total_entries = limit + 10;
+
+    for (size_t i = 0; i < total_entries; ++i)
+    {
+        ft_string entry("Lore entry ");
+        entry.append(ft_to_string(i));
+        game.append_lore_entry(entry);
+    }
+
+    const ft_vector<ft_string> &log = game.get_lore_log();
+    FT_ASSERT_EQ(limit, log.size());
+
+    ft_string expected_first("Lore entry ");
+    expected_first.append(ft_to_string(total_entries - limit));
+    FT_ASSERT_EQ(expected_first, log[0]);
+
+    ft_string expected_last("Lore entry ");
+    expected_last.append(ft_to_string(total_entries - 1));
+    FT_ASSERT_EQ(expected_last, log[log.size() - 1]);
+
     return 1;
 }
 

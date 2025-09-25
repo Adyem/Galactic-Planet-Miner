@@ -23,6 +23,9 @@ int main()
     if (!verify_backend_roundtrip())
         return 0;
 
+    if (!verify_lore_log_retention())
+        return 0;
+
     if (!verify_fractional_resource_accumulation())
         return 0;
 

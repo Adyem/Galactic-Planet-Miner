@@ -178,7 +178,7 @@ void Game::handle_quest_completion(int quest_id)
         entry = ft_string("Farmer Daisy chronicles rebel banners rising over Zalthor's liberated shipyards.");
     }
     if (entry.size() > 0)
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
     this->record_quest_achievement(quest_id);
     ft_string tag("quest_completed_");
     tag.append(ft_to_string(quest_id));
@@ -231,7 +231,7 @@ void Game::handle_quest_failure(int quest_id)
         entry = ft_string("Old Miner Joe recounts how the liberation bid falters and obsidian caches are seized.");
     }
     if (entry.size() > 0)
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
 }
 
 void Game::handle_quest_choice_prompt(int quest_id)
@@ -239,7 +239,7 @@ void Game::handle_quest_choice_prompt(int quest_id)
     if (quest_id != QUEST_CRITICAL_DECISION)
         return ;
     ft_string entry("Navigator Zara's sacrifice forces a reckoning over Captain Blackthorne's fate.");
-    this->_lore_log.push_back(entry);
+    this->append_lore_entry(entry);
 }
 
 void Game::handle_quest_choice_resolution(int quest_id, int choice_id)
@@ -260,7 +260,7 @@ void Game::handle_quest_choice_resolution(int quest_id, int choice_id)
         entry = ft_string("Sparing Blackthorne yields encoded crystal data that Professor Lumen studies for hidden conspiracies.");
     }
     if (entry.size() > 0)
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
     this->record_quest_achievement(quest_id);
 }
 

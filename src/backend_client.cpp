@@ -63,10 +63,12 @@ int BackendClient::send_state(const ft_string &state, ft_string &response)
     if (http_status >= 200 && http_status < 300)
         return (http_status);
 
-    set_offline_echo_response(response, state);
     if (http_status == 0)
+    {
+        set_offline_echo_response(response, state);
         return (fallback_status);
-    if (http_status >= 400)
+    }
+    if (http_status >= 100)
         return (http_status);
     return (fallback_status);
 }

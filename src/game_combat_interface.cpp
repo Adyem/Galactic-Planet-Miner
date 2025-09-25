@@ -41,7 +41,7 @@ bool Game::start_raider_assault(int planet_id, double difficulty, int control_mo
     ft_string entry("Navigator Zara signals a raider incursion on planet ");
     entry.append(ft_to_string(planet_id));
     entry.append(ft_string(": defenses are mobilizing."));
-    this->_lore_log.push_back(entry);
+    this->append_lore_entry(entry);
     return true;
 }
 

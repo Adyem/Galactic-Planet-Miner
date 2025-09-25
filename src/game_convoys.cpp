@@ -225,7 +225,7 @@ void Game::trigger_route_assault(ft_supply_route &route)
     entry.append(ft_string(" escalate into a direct assault on planet "));
     entry.append(ft_to_string(planet_id));
     entry.append(ft_string("."));
-    this->_lore_log.push_back(entry);
+    this->append_lore_entry(entry);
     double relief = route.threat_level - (ROUTE_ESCALATION_THRESHOLD - 1.0);
     if (relief < 2.5)
         relief = 2.5;
@@ -258,7 +258,7 @@ void Game::trigger_branch_assault(int planet_id, double difficulty, bool order_b
         entry = ft_string("Captain Blackthorne rallies the liberation strike on planet ");
     entry.append(ft_to_string(planet_id));
     entry.append(ft_string("."));
-    this->_lore_log.push_back(entry);
+    this->append_lore_entry(entry);
 }
 
 int Game::count_active_convoys_for_contract(int contract_id) const
@@ -488,7 +488,7 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
             entry.append(ft_string("blunt raider odds"));
         entry.append(ft_string("."));
     }
-    this->_lore_log.push_back(entry);
+    this->append_lore_entry(entry);
     return amount;
 }
 
@@ -841,7 +841,7 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
     }
     else
         entry.append(ft_string(", and the defenseless freighters limped onward."));
-    this->_lore_log.push_back(entry);
+    this->append_lore_entry(entry);
     this->accelerate_contract(convoy.contract_id, 0.5);
 }
 
@@ -879,7 +879,7 @@ void Game::finalize_convoy(ft_supply_convoy &convoy)
             else
                 entry.append(ft_string("kept raiders at bay."));
         }
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
     }
     else
     {
@@ -893,7 +893,7 @@ void Game::finalize_convoy(ft_supply_convoy &convoy)
         entry.append(ft_string(" to "));
         entry.append(ft_to_string(convoy.destination_planet_id));
         entry.append(ft_string(" failed to arrive."));
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
     }
     this->handle_contract_completion(convoy);
     convoy.escort_fleet_id = 0;
@@ -1091,7 +1091,7 @@ void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
         ft_string record_entry("Quartermaster Nia records a new convoy streak of ");
         record_entry.append(ft_to_string(this->_current_delivery_streak));
         record_entry.append(ft_string(" successful deliveries."));
-        this->_lore_log.push_back(record_entry);
+        this->append_lore_entry(record_entry);
     }
     while (this->_next_streak_milestone_index < this->_streak_milestones.size() &&
            this->_current_delivery_streak >= this->_streak_milestones[this->_next_streak_milestone_index])
@@ -1100,7 +1100,7 @@ void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
         ft_string entry("Logistics crews celebrate ");
         entry.append(ft_to_string(milestone));
         entry.append(ft_string(" convoys arriving uninterrupted."));
-        this->_lore_log.push_back(entry);
+        this->append_lore_entry(entry);
         this->_next_streak_milestone_index += 1;
     }
     this->record_achievement_event(ACHIEVEMENT_EVENT_CONVOY_DELIVERED, 1);
@@ -1134,7 +1134,7 @@ void Game::record_convoy_delivery(const ft_supply_convoy &convoy)
                     veterancy_entry.append(ft_string(" after weathering a raid."));
                 else
                     veterancy_entry.append(ft_string("."));
-                this->_lore_log.push_back(veterancy_entry);
+                this->append_lore_entry(veterancy_entry);
             }
         }
     }
@@ -1156,7 +1156,7 @@ void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_
         ft_string streak_entry("Quartermaster Nia laments the end of a ");
         streak_entry.append(ft_to_string(this->_current_delivery_streak));
         streak_entry.append(ft_string(" convoy streak."));
-        this->_lore_log.push_back(streak_entry);
+        this->append_lore_entry(streak_entry);
     }
     this->reset_delivery_streak();
     if (destroyed_by_raid)
@@ -1170,14 +1170,14 @@ void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_
             raid_entry.append(ft_to_string(convoy.escort_fleet_id));
             raid_entry.append(ft_string(" could not turn the tide."));
         }
-        this->_lore_log.push_back(raid_entry);
+        this->append_lore_entry(raid_entry);
     }
     else if (had_escort)
     {
         ft_string escort_entry("Escort fleet #");
         escort_entry.append(ft_to_string(convoy.escort_fleet_id));
         escort_entry.append(ft_string(" returns without its charge."));
-        this->_lore_log.push_back(escort_entry);
+        this->append_lore_entry(escort_entry);
     }
     if (had_escort)
     {
@@ -1206,7 +1206,7 @@ void Game::record_convoy_loss(const ft_supply_convoy &convoy, bool destroyed_by_
                 }
                 else
                     veterancy_entry.append(ft_string(", leaving no remaining escort bonus."));
-                this->_lore_log.push_back(veterancy_entry);
+                this->append_lore_entry(veterancy_entry);
             }
         }
     }
