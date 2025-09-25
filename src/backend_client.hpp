@@ -8,6 +8,7 @@ class BackendClient
 private:
     ft_string _host;
     ft_string _path;
+    ft_string _port;
 
 public:
     BackendClient(const ft_string &host, const ft_string &path);
