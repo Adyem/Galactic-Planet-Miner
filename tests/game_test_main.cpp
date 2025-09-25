@@ -120,6 +120,8 @@ int main()
         return 0;
     if (!verify_save_system_prevents_building_instance_wraparound())
         return 0;
+    if (!verify_save_system_compact_building_serialization())
+        return 0;
     if (!verify_save_system_rejects_overlarge_ship_ids())
         return 0;
     if (!verify_save_system_limits_inflated_ship_counts())

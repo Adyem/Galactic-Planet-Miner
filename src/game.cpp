@@ -2,6 +2,7 @@
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
 #include "../libft/Template/set.hpp"
+#include "../libft/Math/math.hpp"
 
 void Game::append_lore_entry(const ft_string &entry)
 {
@@ -221,10 +222,9 @@ void Game::tick(double seconds)
         ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
         if (planet)
         {
-            const ft_vector<Pair<int, double> > &resources = planet->get_resources();
-            if (resources.size() > 0)
+            int reward_ore = this->select_planet_resource_for_assault(planet, 0, true);
+            if (reward_ore != 0)
             {
-                int reward_ore = resources[0].key;
                 planet->add_resource(reward_ore, 3);
                 this->send_state(planet_id, reward_ore);
             }
@@ -258,10 +258,9 @@ void Game::tick(double seconds)
         ft_sharedptr<ft_planet> planet = this->get_planet(planet_id);
         if (planet)
         {
-            const ft_vector<Pair<int, double> > &resources = planet->get_resources();
-            if (resources.size() > 0)
+            int penalty_ore = this->select_planet_resource_for_assault(planet, 2, false);
+            if (penalty_ore != 0)
             {
-                int penalty_ore = resources[0].key;
                 planet->sub_resource(penalty_ore, 2);
                 this->send_state(planet_id, penalty_ore);
             }
@@ -285,6 +284,59 @@ void Game::tick(double seconds)
                 this->_rebellion_branch_pending_assault = 0;
         }
     }
+}
+
+int Game::select_planet_resource_for_assault(const ft_sharedptr<ft_planet> &planet, int minimum_stock, bool allow_stock_fallback) const noexcept
+{
+    if (!planet)
+        return 0;
+    const ft_vector<Pair<int, double> > &resources = planet->get_resources();
+    int selected_ore = 0;
+    double selected_rate = 0.0;
+    int selected_stock = 0;
+    bool has_rate_candidate = false;
+    const double epsilon = 0.0000001;
+    for (size_t i = 0; i < resources.size(); ++i)
+    {
+        int ore_id = resources[i].key;
+        double rate = resources[i].value;
+        if (rate <= 0.0)
+            continue;
+        int stock = planet->get_resource(ore_id);
+        if (stock < minimum_stock)
+            continue;
+        if (!has_rate_candidate || rate > selected_rate + epsilon)
+        {
+            selected_ore = ore_id;
+            selected_rate = rate;
+            selected_stock = stock;
+            has_rate_candidate = true;
+        }
+        else if (math_fabs(rate - selected_rate) <= epsilon && stock > selected_stock)
+        {
+            selected_ore = ore_id;
+            selected_stock = stock;
+        }
+    }
+    if (has_rate_candidate)
+        return selected_ore;
+    if (!allow_stock_fallback)
+        return 0;
+    int fallback_ore = 0;
+    int fallback_stock = 0;
+    for (size_t i = 0; i < resources.size(); ++i)
+    {
+        int ore_id = resources[i].key;
+        int stock = planet->get_resource(ore_id);
+        if (stock < minimum_stock)
+            continue;
+        if (stock > fallback_stock)
+        {
+            fallback_ore = ore_id;
+            fallback_stock = stock;
+        }
+    }
+    return fallback_ore;
 }
 
 Pair<int, Game::ft_resource_accumulator> *Game::get_resource_accumulator(int planet_id, int ore_id, bool create)
@@ -386,12 +438,26 @@ void Game::send_state(int planet_id, int ore_id)
     ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);
     if (!planet)
         return ;
+
+    int amount = planet->get_resource(ore_id);
+    Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_last_sent_resources.find(planet_id);
+    if (this->_backend_online && planet_entry != ft_nullptr)
+    {
+        ft_sharedptr<ft_map<int, int> > &ore_map_ptr = planet_entry->value;
+        if (ore_map_ptr)
+        {
+            Pair<int, int> *ore_entry = ore_map_ptr->find(ore_id);
+            if (ore_entry != ft_nullptr && ore_entry->value == amount)
+                return ;
+        }
+    }
+
     ft_string body("{\"planet\":");
     body.append(ft_to_string(planet_id));
     body.append(",\"ore\":");
     body.append(ft_to_string(ore_id));
     body.append(",\"amount\":");
-    body.append(ft_to_string(planet->get_resource(ore_id)));
+    body.append(ft_to_string(amount));
     body.append("}");
     ft_string response;
     int status = this->_backend.send_state(body, response);
@@ -421,6 +487,31 @@ void Game::send_state(int planet_id, int ore_id)
         this->_backend_online = true;
         ft_string entry("Operations report: backend connection restored.");
         this->append_lore_entry(entry);
+    }
+
+    if (!offline)
+    {
+        if (planet_entry == ft_nullptr)
+        {
+            ft_sharedptr<ft_map<int, int> > ore_map(new ft_map<int, int>());
+            this->_last_sent_resources.insert(planet_id, ore_map);
+            planet_entry = this->_last_sent_resources.find(planet_id);
+        }
+        if (planet_entry != ft_nullptr)
+        {
+            ft_sharedptr<ft_map<int, int> > &ore_map_ptr = planet_entry->value;
+            if (!ore_map_ptr)
+            {
+                ft_sharedptr<ft_map<int, int> > replacement(new ft_map<int, int>());
+                planet_entry->value = replacement;
+            }
+            ft_sharedptr<ft_map<int, int> > &ore_map_ref = planet_entry->value;
+            Pair<int, int> *ore_entry = ore_map_ref->find(ore_id);
+            if (ore_entry == ft_nullptr)
+                ore_map_ref->insert(ore_id, amount);
+            else
+                ore_entry->value = amount;
+        }
     }
 }
 

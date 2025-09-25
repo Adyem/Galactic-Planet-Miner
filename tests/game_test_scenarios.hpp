@@ -45,6 +45,7 @@ int verify_save_system_sanitizes_ship_movement_stats();
 int verify_save_system_invalid_inputs();
 int verify_save_system_rejects_oversized_building_grids();
 int verify_save_system_prevents_building_instance_wraparound();
+int verify_save_system_compact_building_serialization();
 int verify_save_system_rejects_overlarge_ship_ids();
 int verify_save_system_limits_inflated_ship_counts();
 int verify_save_system_recovers_underreported_ship_counts();
