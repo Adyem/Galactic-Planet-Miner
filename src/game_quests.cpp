@@ -1,12 +1,13 @@
 #include "game.hpp"
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
+#include "ft_map_snapshot.hpp"
 
 void Game::build_quest_context(ft_quest_context &context) const
 {
-    size_t planet_count = this->_planets.size();
-    const Pair<int, ft_sharedptr<ft_planet> > *planet_entries = this->_planets.end();
-    planet_entries -= planet_count;
+    ft_vector<Pair<int, ft_sharedptr<ft_planet> > > planet_entries;
+    ft_map_snapshot(this->_planets, planet_entries);
+    size_t planet_count = planet_entries.size();
     for (size_t i = 0; i < planet_count; ++i)
     {
         const ft_sharedptr<ft_planet> &planet = planet_entries[i].value;
@@ -33,19 +34,17 @@ void Game::build_quest_context(ft_quest_context &context) const
     context.research_status.insert(RESEARCH_REPAIR_DRONE_TECHNOLOGY, this->_research.is_completed(RESEARCH_REPAIR_DRONE_TECHNOLOGY) ? 1 : 0);
     context.research_status.insert(RESEARCH_CAPITAL_SHIP_INITIATIVE, this->_research.is_completed(RESEARCH_CAPITAL_SHIP_INITIATIVE) ? 1 : 0);
 
-    size_t fleet_count = this->_fleets.size();
-    const Pair<int, ft_sharedptr<ft_fleet> > *fleet_entries = this->_fleets.end();
-    fleet_entries -= fleet_count;
-    for (size_t i = 0; i < fleet_count; ++i)
+    ft_vector<Pair<int, ft_sharedptr<ft_fleet> > > fleet_entries;
+    ft_map_snapshot(this->_fleets, fleet_entries);
+    for (size_t i = 0; i < fleet_entries.size(); ++i)
     {
         const ft_sharedptr<ft_fleet> &fleet = fleet_entries[i].value;
         context.total_ship_count += fleet->get_ship_count();
         context.total_ship_hp += fleet->get_total_ship_hp();
     }
-    size_t garrison_count = this->_planet_fleets.size();
-    const Pair<int, ft_sharedptr<ft_fleet> > *garrison_entries = this->_planet_fleets.end();
-    garrison_entries -= garrison_count;
-    for (size_t i = 0; i < garrison_count; ++i)
+    ft_vector<Pair<int, ft_sharedptr<ft_fleet> > > garrison_entries;
+    ft_map_snapshot(this->_planet_fleets, garrison_entries);
+    for (size_t i = 0; i < garrison_entries.size(); ++i)
     {
         const ft_sharedptr<ft_fleet> &fleet = garrison_entries[i].value;
         context.total_ship_count += fleet->get_ship_count();
@@ -56,11 +55,11 @@ void Game::build_quest_context(ft_quest_context &context) const
     context.delivery_streak = this->_current_delivery_streak;
     double total_threat = 0.0;
     double max_threat = 0.0;
-    size_t route_count = this->_supply_routes.size();
+    ft_vector<Pair<RouteKey, ft_supply_route> > route_entries;
+    ft_map_snapshot(this->_supply_routes, route_entries);
+    size_t route_count = route_entries.size();
     if (route_count > 0)
     {
-        const Pair<RouteKey, ft_supply_route> *route_entries = this->_supply_routes.end();
-        route_entries -= route_count;
         for (size_t i = 0; i < route_count; ++i)
         {
             double threat = route_entries[i].value.threat_level;

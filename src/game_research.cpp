@@ -1,6 +1,7 @@
 #include "game.hpp"
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Template/pair.hpp"
+#include "ft_map_snapshot.hpp"
 
 bool Game::can_pay_research_cost(const ft_vector<Pair<int, int> > &costs) const
 {
@@ -9,10 +10,9 @@ bool Game::can_pay_research_cost(const ft_vector<Pair<int, int> > &costs) const
         int ore_id = costs[i].key;
         int required = costs[i].value;
         int total = 0;
-        size_t count = this->_planets.size();
-        const Pair<int, ft_sharedptr<ft_planet> > *entries = this->_planets.end();
-        entries -= count;
-        for (size_t j = 0; j < count; ++j)
+        ft_vector<Pair<int, ft_sharedptr<ft_planet> > > entries;
+        ft_map_snapshot(this->_planets, entries);
+        for (size_t j = 0; j < entries.size(); ++j)
         {
             const ft_sharedptr<ft_planet> &planet = entries[j].value;
             total += planet->get_resource(ore_id);
@@ -33,10 +33,9 @@ void Game::pay_research_cost(const ft_vector<Pair<int, int> > &costs)
         int remaining = costs[i].value;
         if (remaining <= 0)
             continue;
-        size_t count = this->_planets.size();
-        Pair<int, ft_sharedptr<ft_planet> > *entries = this->_planets.end();
-        entries -= count;
-        for (size_t j = 0; j < count && remaining > 0; ++j)
+        ft_vector<Pair<int, ft_sharedptr<ft_planet> > > entries;
+        ft_map_snapshot(this->_planets, entries);
+        for (size_t j = 0; j < entries.size() && remaining > 0; ++j)
         {
             ft_sharedptr<ft_planet> planet = entries[j].value;
             int available = planet->get_resource(ore_id);
@@ -103,13 +102,13 @@ void Game::handle_research_completion(int research_id)
     else if (research_id == RESEARCH_ESCAPE_POD_LIFELINE)
     {
         this->_escape_pod_protocol = true;
-        size_t saved = this->_escape_pod_rescued.size();
-        if (saved > 0)
+        ft_vector<Pair<int, bool> > entries;
+        ft_map_snapshot(this->_escape_pod_rescued, entries);
+        for (size_t i = 0; i < entries.size(); ++i)
         {
-            Pair<int, bool> *entries = this->_escape_pod_rescued.end();
-            entries -= saved;
-            for (size_t i = 0; i < saved; ++i)
-                entries[i].value = false;
+            Pair<int, bool> *entry = this->_escape_pod_rescued.find(entries[i].key);
+            if (entry != ft_nullptr)
+                entry->value = false;
         }
     }
     this->record_achievement_event(ACHIEVEMENT_EVENT_RESEARCH_COMPLETED, 1);

@@ -103,6 +103,10 @@ struct ft_planet_build_state
     ft_map<int, ft_building_instance> instances;
 
     ft_planet_build_state();
+    ft_planet_build_state(const ft_planet_build_state &other);
+    ft_planet_build_state &operator=(const ft_planet_build_state &other);
+    ft_planet_build_state(ft_planet_build_state &&other) noexcept;
+    ft_planet_build_state &operator=(ft_planet_build_state &&other) noexcept;
 };
 
 class BuildingManager

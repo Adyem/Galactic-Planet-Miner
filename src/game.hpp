@@ -156,8 +156,24 @@ private:
         {}
     };
 
+    struct ft_pending_resource_update
+    {
+        int planet_id;
+        int ore_id;
+        int amount;
+
+        ft_pending_resource_update()
+            : planet_id(0), ore_id(0), amount(0)
+        {}
+
+        ft_pending_resource_update(int planet, int ore, int value)
+            : planet_id(planet), ore_id(ore), amount(value)
+        {}
+    };
+
     ft_map<int, ft_sharedptr<ft_vector<Pair<int, ft_resource_accumulator> > > > _resource_deficits;
     ft_map<int, ft_sharedptr<ft_map<int, int> > > _last_sent_resources;
+    ft_map<int, ft_sharedptr<ft_map<int, int> > > _pending_resource_updates;
     int                                          _next_route_id;
     int                                          _next_convoy_id;
     int                                          _next_contract_id;
@@ -196,6 +212,10 @@ private:
     ft_sharedptr<ft_fleet> get_planet_fleet(int id);
     ft_sharedptr<const ft_fleet> get_planet_fleet(int id) const;
     void send_state(int planet_id, int ore_id);
+    void queue_pending_resource_update(int planet_id, int ore_id, int amount);
+    void clear_pending_resource_update(int planet_id, int ore_id);
+    bool flush_pending_resource_updates();
+    bool dispatch_resource_update(int planet_id, int ore_id, int amount);
     int select_planet_resource_for_assault(const ft_sharedptr<ft_planet> &planet, int minimum_stock, bool allow_stock_fallback) const noexcept;
     Pair<int, ft_resource_accumulator> *get_resource_accumulator(int planet_id, int ore_id, bool create);
     void unlock_planet(int planet_id);
