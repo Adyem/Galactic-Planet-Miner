@@ -3,6 +3,7 @@
 #include "../libft/Template/pair.hpp"
 #include "../libft/Template/set.hpp"
 #include "../libft/Math/math.hpp"
+#include "ft_map_snapshot.hpp"
 
 void Game::append_lore_entry(const ft_string &entry)
 {
@@ -111,13 +112,13 @@ Game::~Game()
 
 void Game::produce(double seconds)
 {
-    size_t planet_count = this->_planets.size();
-    Pair<int, ft_sharedptr<ft_planet> > *entries = this->_planets.end();
-    entries -= planet_count;
+    ft_vector<Pair<int, ft_sharedptr<ft_planet> > > planet_entries;
+    ft_map_snapshot(this->_planets, planet_entries);
+    size_t planet_count = planet_entries.size();
     for (size_t i = 0; i < planet_count; ++i)
     {
-        int planet_id = entries[i].key;
-        ft_sharedptr<ft_planet> planet = entries[i].value;
+        int planet_id = planet_entries[i].key;
+        ft_sharedptr<ft_planet> planet = planet_entries[i].value;
         if (!planet)
             continue;
         ft_vector<Pair<int, int> > produced = planet->produce(seconds);
@@ -209,12 +210,12 @@ void Game::tick(double seconds)
     this->process_supply_contracts(seconds);
     this->advance_convoys(seconds);
     this->_buildings.tick(*this, seconds);
-    size_t count = this->_fleets.size();
-    Pair<int, ft_sharedptr<ft_fleet> > *entries = this->_fleets.end();
-    entries -= count;
+    ft_vector<Pair<int, ft_sharedptr<ft_fleet> > > fleet_entries;
+    ft_map_snapshot(this->_fleets, fleet_entries);
+    size_t count = fleet_entries.size();
     for (size_t i = 0; i < count; ++i)
     {
-        ft_sharedptr<ft_fleet> fleet = entries[i].value;
+        ft_sharedptr<ft_fleet> fleet = fleet_entries[i].value;
         fleet->tick(seconds);
     }
     ft_vector<int> completed;
@@ -477,31 +478,49 @@ ft_sharedptr<const ft_fleet> Game::get_planet_fleet(int id) const
     return entry->value;
 }
 
-void Game::send_state(int planet_id, int ore_id)
+void Game::queue_pending_resource_update(int planet_id, int ore_id, int amount)
 {
-    ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);
-    if (!planet)
+    Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_pending_resource_updates.find(planet_id);
+    if (planet_entry == ft_nullptr)
+    {
+        ft_sharedptr<ft_map<int, int> > ore_map(new ft_map<int, int>());
+        this->_pending_resource_updates.insert(planet_id, ore_map);
+        planet_entry = this->_pending_resource_updates.find(planet_id);
+    }
+    if (planet_entry == ft_nullptr)
         return ;
-
-    int amount = planet->get_resource(ore_id);
-    if (!this->_backend_online)
+    ft_sharedptr<ft_map<int, int> > &ore_map_ptr = planet_entry->value;
+    if (!ore_map_ptr)
     {
-        long current_time_ms = ft_time_ms();
-        if (this->_backend_next_retry_ms != 0 && current_time_ms < this->_backend_next_retry_ms)
-            return ;
+        ft_sharedptr<ft_map<int, int> > replacement(new ft_map<int, int>());
+        planet_entry->value = replacement;
     }
-    Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_last_sent_resources.find(planet_id);
-    if (this->_backend_online && planet_entry != ft_nullptr)
-    {
-        ft_sharedptr<ft_map<int, int> > &ore_map_ptr = planet_entry->value;
-        if (ore_map_ptr)
-        {
-            Pair<int, int> *ore_entry = ore_map_ptr->find(ore_id);
-            if (ore_entry != ft_nullptr && ore_entry->value == amount)
-                return ;
-        }
-    }
+    ft_sharedptr<ft_map<int, int> > &ore_map_ref = planet_entry->value;
+    Pair<int, int> *ore_entry = ore_map_ref->find(ore_id);
+    if (ore_entry == ft_nullptr)
+        ore_map_ref->insert(ore_id, amount);
+    else
+        ore_entry->value = amount;
+}
 
+void Game::clear_pending_resource_update(int planet_id, int ore_id)
+{
+    Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_pending_resource_updates.find(planet_id);
+    if (planet_entry == ft_nullptr)
+        return ;
+    ft_sharedptr<ft_map<int, int> > ore_map_ptr = planet_entry->value;
+    if (!ore_map_ptr)
+    {
+        this->_pending_resource_updates.remove(planet_id);
+        return ;
+    }
+    ore_map_ptr->remove(ore_id);
+    if (ore_map_ptr->size() == 0)
+        this->_pending_resource_updates.remove(planet_id);
+}
+
+bool Game::dispatch_resource_update(int planet_id, int ore_id, int amount)
+{
     ft_string body("{\"planet\":");
     body.append(ft_to_string(planet_id));
     body.append(",\"ore\":");
@@ -543,44 +562,114 @@ void Game::send_state(int planet_id, int ore_id)
             entry.append("). Switching to offline mode.");
             this->append_lore_entry(entry);
         }
+        return false;
     }
-    else
+
+    this->_backend_retry_delay_ms = 0;
+    this->_backend_next_retry_ms = 0;
+    bool was_offline = !this->_backend_online;
+    this->_backend_online = true;
+    if (was_offline)
     {
-        this->_backend_retry_delay_ms = 0;
-        this->_backend_next_retry_ms = 0;
-        bool was_offline = !this->_backend_online;
-        this->_backend_online = true;
-        if (was_offline)
+        ft_string entry("Operations report: backend connection restored.");
+        this->append_lore_entry(entry);
+    }
+
+    Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_last_sent_resources.find(planet_id);
+    if (planet_entry == ft_nullptr)
+    {
+        ft_sharedptr<ft_map<int, int> > ore_map(new ft_map<int, int>());
+        this->_last_sent_resources.insert(planet_id, ore_map);
+        planet_entry = this->_last_sent_resources.find(planet_id);
+    }
+    if (planet_entry != ft_nullptr)
+    {
+        ft_sharedptr<ft_map<int, int> > &ore_map_ptr = planet_entry->value;
+        if (!ore_map_ptr)
         {
-            ft_string entry("Operations report: backend connection restored.");
-            this->append_lore_entry(entry);
+            ft_sharedptr<ft_map<int, int> > replacement(new ft_map<int, int>());
+            planet_entry->value = replacement;
+        }
+        ft_sharedptr<ft_map<int, int> > &ore_map_ref = planet_entry->value;
+        Pair<int, int> *ore_entry = ore_map_ref->find(ore_id);
+        if (ore_entry == ft_nullptr)
+            ore_map_ref->insert(ore_id, amount);
+        else
+            ore_entry->value = amount;
+    }
+    return true;
+}
+
+bool Game::flush_pending_resource_updates()
+{
+    ft_vector<Pair<int, ft_sharedptr<ft_map<int, int> > > > planet_entries;
+    ft_map_snapshot(this->_pending_resource_updates, planet_entries);
+    size_t pending_planet_count = planet_entries.size();
+    if (pending_planet_count == 0)
+        return true;
+
+    ft_vector<ft_pending_resource_update> updates;
+    for (size_t i = 0; i < pending_planet_count; ++i)
+    {
+        int planet_id = planet_entries[i].key;
+        ft_sharedptr<ft_map<int, int> > ore_map_ptr = planet_entries[i].value;
+        if (!ore_map_ptr)
+            continue;
+        ft_vector<Pair<int, int> > ore_entries;
+        ft_map_snapshot(*ore_map_ptr, ore_entries);
+        size_t ore_count = ore_entries.size();
+        if (ore_count == 0)
+            continue;
+        for (size_t j = 0; j < ore_count; ++j)
+        {
+            ft_pending_resource_update update(planet_id, ore_entries[j].key, ore_entries[j].value);
+            updates.push_back(update);
         }
     }
 
-    if (!offline)
+    size_t update_count = updates.size();
+    for (size_t index = 0; index < update_count; ++index)
     {
-        if (planet_entry == ft_nullptr)
-        {
-            ft_sharedptr<ft_map<int, int> > ore_map(new ft_map<int, int>());
-            this->_last_sent_resources.insert(planet_id, ore_map);
-            planet_entry = this->_last_sent_resources.find(planet_id);
-        }
+        const ft_pending_resource_update &update = updates[index];
+        if (!this->dispatch_resource_update(update.planet_id, update.ore_id, update.amount))
+            return false;
+        this->clear_pending_resource_update(update.planet_id, update.ore_id);
+    }
+    return true;
+}
+
+void Game::send_state(int planet_id, int ore_id)
+{
+    ft_sharedptr<const ft_planet> planet = this->get_planet(planet_id);
+    if (!planet)
+        return ;
+
+    int amount = planet->get_resource(ore_id);
+    if (this->_backend_online)
+    {
+        Pair<int, ft_sharedptr<ft_map<int, int> > > *planet_entry = this->_last_sent_resources.find(planet_id);
         if (planet_entry != ft_nullptr)
         {
             ft_sharedptr<ft_map<int, int> > &ore_map_ptr = planet_entry->value;
-            if (!ore_map_ptr)
+            if (ore_map_ptr)
             {
-                ft_sharedptr<ft_map<int, int> > replacement(new ft_map<int, int>());
-                planet_entry->value = replacement;
+                Pair<int, int> *ore_entry = ore_map_ptr->find(ore_id);
+                if (ore_entry != ft_nullptr && ore_entry->value == amount)
+                    return ;
             }
-            ft_sharedptr<ft_map<int, int> > &ore_map_ref = planet_entry->value;
-            Pair<int, int> *ore_entry = ore_map_ref->find(ore_id);
-            if (ore_entry == ft_nullptr)
-                ore_map_ref->insert(ore_id, amount);
-            else
-                ore_entry->value = amount;
         }
     }
+
+    this->queue_pending_resource_update(planet_id, ore_id, amount);
+
+    if (!this->_backend_online)
+    {
+        long current_time_ms = ft_time_ms();
+        if (this->_backend_next_retry_ms != 0 && current_time_ms < this->_backend_next_retry_ms)
+            return ;
+    }
+
+    this->flush_pending_resource_updates();
 }
 
 void Game::unlock_planet(int planet_id)
@@ -883,11 +972,11 @@ bool Game::get_achievement_info(int achievement_id, ft_achievement_info &out) co
 
 void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &snapshot)
 {
-    size_t count = snapshot.size();
+    ft_vector<Pair<int, ft_sharedptr<ft_planet> > > entries;
+    ft_map_snapshot(snapshot, entries);
+    size_t count = entries.size();
     if (count == 0)
         return ;
-    const Pair<int, ft_sharedptr<ft_planet> > *entries = snapshot.end();
-    entries -= count;
     for (size_t i = 0; i < count; ++i)
     {
         int planet_id = entries[i].key;
@@ -948,26 +1037,22 @@ void Game::apply_planet_snapshot(const ft_map<int, ft_sharedptr<ft_planet> > &sn
 void Game::apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snapshot)
 {
     ft_vector<int> to_remove;
-    size_t existing_count = this->_fleets.size();
-    if (existing_count > 0)
+    ft_vector<Pair<int, ft_sharedptr<ft_fleet> > > existing_entries;
+    ft_map_snapshot(this->_fleets, existing_entries);
+    for (size_t i = 0; i < existing_entries.size(); ++i)
     {
-        const Pair<int, ft_sharedptr<ft_fleet> > *existing_entries = this->_fleets.end();
-        existing_entries -= existing_count;
-        for (size_t i = 0; i < existing_count; ++i)
-        {
-            int fleet_id = existing_entries[i].key;
-            if (snapshot.find(fleet_id) == ft_nullptr)
-                to_remove.push_back(fleet_id);
-        }
+        int fleet_id = existing_entries[i].key;
+        if (snapshot.find(fleet_id) == ft_nullptr)
+            to_remove.push_back(fleet_id);
     }
     for (size_t i = 0; i < to_remove.size(); ++i)
         this->remove_fleet(to_remove[i], -1, -1);
 
-    size_t count = snapshot.size();
+    ft_vector<Pair<int, ft_sharedptr<ft_fleet> > > entries;
+    ft_map_snapshot(snapshot, entries);
+    size_t count = entries.size();
     if (count == 0)
         return ;
-    const Pair<int, ft_sharedptr<ft_fleet> > *entries = snapshot.end();
-    entries -= count;
     int capital_ship_total = this->count_capital_ships_in_collection(this->_planet_fleets);
     if (capital_ship_total < 0)
         capital_ship_total = 0;

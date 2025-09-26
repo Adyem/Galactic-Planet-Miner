@@ -1,6 +1,21 @@
 #include "game.hpp"
 #include "../libft/Libft/libft.hpp"
+#include "../libft/Math/math.hpp"
 #include "../libft/Template/pair.hpp"
+#include "ft_map_snapshot.hpp"
+
+static double preserve_contract_elapsed(double elapsed, double interval)
+{
+    if (interval <= 0.0)
+        return 0.0;
+    double remainder = elapsed - interval;
+    if (remainder <= 0.0)
+        return interval;
+    double overflow = math_fmod(remainder, interval);
+    if (overflow < 0.0)
+        overflow += interval;
+    return interval + overflow;
+}
 
 static const double ROUTE_ESCALATION_THRESHOLD = 5.0;
 static const double ROUTE_ESCALATION_TRIGGER_TIME = 60.0;
@@ -144,12 +159,9 @@ void Game::decay_all_route_threat(double seconds)
 {
     if (seconds <= 0.0)
         return ;
-    size_t count = this->_supply_routes.size();
-    if (count == 0)
-        return ;
-    Pair<RouteKey, ft_supply_route> *entries = this->_supply_routes.end();
-    entries -= count;
-    for (size_t i = 0; i < count; ++i)
+    ft_vector<Pair<RouteKey, ft_supply_route> > entries;
+    ft_map_snapshot(this->_supply_routes, entries);
+    for (size_t i = 0; i < entries.size(); ++i)
         this->decay_route_threat(entries[i].value, seconds);
 }
 
@@ -967,7 +979,8 @@ void Game::process_supply_contracts(double seconds)
         {
             if (this->has_active_convoy_for_contract(contract.id))
             {
-                contract.elapsed_seconds = contract.interval_seconds;
+                contract.elapsed_seconds = preserve_contract_elapsed(contract.elapsed_seconds,
+                                                                      contract.interval_seconds);
                 break;
             }
             ft_sharedptr<ft_planet> origin = this->get_planet(contract.origin_planet_id);
@@ -989,7 +1002,8 @@ void Game::process_supply_contracts(double seconds)
                 }
                 if (projected_stock >= contract.minimum_stock)
                 {
-                    contract.elapsed_seconds = contract.interval_seconds;
+                    contract.elapsed_seconds = preserve_contract_elapsed(contract.elapsed_seconds,
+                                                                          contract.interval_seconds);
                     break;
                 }
             }

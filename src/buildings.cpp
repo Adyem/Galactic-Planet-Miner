@@ -2,6 +2,7 @@
 #include "game.hpp"
 #include "research.hpp"
 #include "../libft/Libft/libft.hpp"
+#include "ft_map_snapshot.hpp"
 
 void BuildingManager::clone_from(const BuildingManager &other)
 {
@@ -11,21 +12,16 @@ void BuildingManager::clone_from(const BuildingManager &other)
     this->_crafting_speed_multiplier = other._crafting_speed_multiplier;
     this->_global_energy_multiplier = other._global_energy_multiplier;
     this->_building_unlocks.clear();
-    size_t unlock_count = other._building_unlocks.size();
-    if (unlock_count > 0)
-    {
-        const Pair<int, bool> *unlock_entries = other._building_unlocks.end();
-        unlock_entries -= unlock_count;
-        for (size_t i = 0; i < unlock_count; ++i)
-            this->_building_unlocks.insert(unlock_entries[i].key, unlock_entries[i].value);
-    }
+    ft_vector<Pair<int, bool> > unlock_entries;
+    ft_map_snapshot(other._building_unlocks, unlock_entries);
+    for (size_t i = 0; i < unlock_entries.size(); ++i)
+        this->_building_unlocks.insert(unlock_entries[i].key, unlock_entries[i].value);
     this->_planets.clear();
-    size_t planet_count = other._planets.size();
-    if (planet_count == 0)
+    ft_vector<Pair<int, ft_planet_build_state> > entries;
+    ft_map_snapshot(other._planets, entries);
+    if (entries.size() == 0)
         return ;
-    const Pair<int, ft_planet_build_state> *entries = other._planets.end();
-    entries -= planet_count;
-    for (size_t i = 0; i < planet_count; ++i)
+    for (size_t i = 0; i < entries.size(); ++i)
     {
         const ft_planet_build_state &source = entries[i].value;
         this->_planets.insert(entries[i].key, ft_planet_build_state());
@@ -59,14 +55,10 @@ void BuildingManager::clone_from(const BuildingManager &other)
                 state.grid.push_back(source.grid[j]);
         }
         state.instances.clear();
-        size_t instance_count = source.instances.size();
-        if (instance_count > 0)
-        {
-            const Pair<int, ft_building_instance> *inst_entries = source.instances.end();
-            inst_entries -= instance_count;
-            for (size_t j = 0; j < instance_count; ++j)
-                state.instances.insert(inst_entries[j].key, inst_entries[j].value);
-        }
+        ft_vector<Pair<int, ft_building_instance> > inst_entries;
+        ft_map_snapshot(source.instances, inst_entries);
+        for (size_t j = 0; j < inst_entries.size(); ++j)
+            state.instances.insert(inst_entries[j].key, inst_entries[j].value);
     }
 }
 
@@ -174,10 +166,9 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
     state.convoy_speed_bonus = 0.0;
     state.convoy_raid_risk_modifier = 0.0;
     state.energy_deficit_pressure = 0.0;
-    size_t count = state.instances.size();
-    Pair<int, ft_building_instance> *entries = state.instances.end();
-    entries -= count;
-    for (size_t i = 0; i < count; ++i)
+    ft_vector<Pair<int, ft_building_instance> > entries;
+    ft_map_snapshot(state.instances, entries);
+    for (size_t i = 0; i < entries.size(); ++i)
     {
         ft_building_instance &instance = entries[i].value;
         const ft_building_definition *definition = this->get_definition(instance.definition_id);
@@ -502,10 +493,9 @@ int BuildingManager::get_building_count(int planet_id, int building_id) const
     if (state == ft_nullptr)
         return 0;
     int count = 0;
-    size_t total = state->instances.size();
-    const Pair<int, ft_building_instance> *entries = state->instances.end();
-    entries -= total;
-    for (size_t i = 0; i < total; ++i)
+    ft_vector<Pair<int, ft_building_instance> > entries;
+    ft_map_snapshot(state->instances, entries);
+    for (size_t i = 0; i < entries.size(); ++i)
     {
         if (entries[i].value.definition_id == building_id)
             ++count;
@@ -609,14 +599,20 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
         state.energy_consumption = state.energy_generation;
     }
     state.logistic_usage = 0;
-    size_t total = state.instances.size();
-    Pair<int, ft_building_instance> *entries = state.instances.end();
-    entries -= total;
-    for (size_t i = 0; i < total; ++i)
-        entries[i].value.active = false;
-    for (size_t i = 0; i < total; ++i)
+    ft_vector<Pair<int, ft_building_instance> > instance_entries;
+    ft_map_snapshot(state.instances, instance_entries);
+    for (size_t i = 0; i < instance_entries.size(); ++i)
     {
-        ft_building_instance &instance = entries[i].value;
+        Pair<int, ft_building_instance> *entry = state.instances.find(instance_entries[i].key);
+        if (entry != ft_nullptr)
+            entry->value.active = false;
+    }
+    for (size_t i = 0; i < instance_entries.size(); ++i)
+    {
+        Pair<int, ft_building_instance> *entry = state.instances.find(instance_entries[i].key);
+        if (entry == ft_nullptr)
+            continue;
+        ft_building_instance &instance = entry->value;
         const ft_building_definition *definition = this->get_definition(instance.definition_id);
         if (definition == ft_nullptr)
             continue;
@@ -656,9 +652,12 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
         state.logistic_usage += definition->logistic_cost;
         state.energy_consumption += energy_cost;
     }
-    for (size_t i = 0; i < total; ++i)
+    for (size_t i = 0; i < instance_entries.size(); ++i)
     {
-        ft_building_instance &instance = entries[i].value;
+        Pair<int, ft_building_instance> *entry = state.instances.find(instance_entries[i].key);
+        if (entry == ft_nullptr)
+            continue;
+        ft_building_instance &instance = entry->value;
         const ft_building_definition *definition = this->get_definition(instance.definition_id);
         if (definition == ft_nullptr)
             continue;
@@ -685,9 +684,8 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
 
 void BuildingManager::tick(Game &game, double seconds)
 {
-    size_t count = this->_planets.size();
-    Pair<int, ft_planet_build_state> *entries = this->_planets.end();
-    entries -= count;
-    for (size_t i = 0; i < count; ++i)
+    ft_vector<Pair<int, ft_planet_build_state> > entries;
+    ft_map_snapshot(this->_planets, entries);
+    for (size_t i = 0; i < entries.size(); ++i)
         this->tick_planet(game, entries[i].value, seconds);
 }
