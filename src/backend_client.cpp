@@ -48,6 +48,22 @@ namespace
         }
     }
 
+    ft_string sanitize_host_input(const ft_string &raw)
+    {
+        const char *begin = raw.c_str();
+        if (begin == ft_nullptr)
+            return ft_string();
+        const char *trim_start = begin;
+        while (*trim_start != '\0' && ft_isspace(*trim_start))
+            trim_start += 1;
+        const char *trim_end = trim_start + ft_strlen(trim_start);
+        while (trim_end > trim_start && ft_isspace(*(trim_end - 1)))
+            trim_end -= 1;
+        ft_string sanitized;
+        assign_substring(sanitized, trim_start, trim_end);
+        return sanitized;
+    }
+
     bool is_numeric_range(const char *begin, const char *end)
     {
         if (begin == end)
@@ -66,7 +82,8 @@ namespace
 BackendClient::BackendClient(const ft_string &host, const ft_string &path)
     : _host(host), _path(path), _port(), _use_ssl(false)
 {
-    const char *input = host.c_str();
+    ft_string sanitized_input = sanitize_host_input(host);
+    const char *input = sanitized_input.c_str();
     const char *scheme_separator = ft_strstr(input, "://");
     const char *authority_start;
     if (scheme_separator != ft_nullptr)
