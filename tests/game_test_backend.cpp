@@ -239,6 +239,13 @@ int verify_backend_host_parsing()
     FT_ASSERT_EQ(expected_path_port, scheme_with_path.get_port_for_testing());
     FT_ASSERT(scheme_with_path.get_use_ssl_for_testing());
 
+    BackendClient whitespace_client(ft_string("  https://example.net:9090  "), ft_string("/"));
+    ft_string expected_whitespace_host("example.net");
+    FT_ASSERT_EQ(expected_whitespace_host, whitespace_client.get_host_for_testing());
+    ft_string expected_whitespace_port("9090");
+    FT_ASSERT_EQ(expected_whitespace_port, whitespace_client.get_port_for_testing());
+    FT_ASSERT(whitespace_client.get_use_ssl_for_testing());
+
     return 1;
 }
 
