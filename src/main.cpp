@@ -400,17 +400,49 @@ namespace
 
     void render_menu(sf::RenderWindow &window, const ft_ui_menu &menu, const sf::Font &font, const sf::Vector2u &window_size)
     {
-        window.clear(sf::Color::Black);
+        window.clear(sf::Color(12, 16, 28));
 
         const ft_vector<ft_menu_item> &items = menu.get_items();
         const int hovered_index = menu.get_hovered_index();
         const int selected_index = menu.get_selected_index();
 
+        const float scale_x = compute_axis_scale(window_size.x, kVirtualReferenceWidth);
         const float scale_y = compute_axis_scale(window_size.y, kVirtualReferenceHeight);
         float       character_size_f = 32.0f * scale_y;
         if (character_size_f < 18.0f)
             character_size_f = 18.0f;
         const unsigned int character_size = static_cast<unsigned int>(character_size_f + 0.5f);
+
+        sf::Text title_text;
+        title_text.setFont(font);
+        title_text.setString("Galactic Planet Miner");
+        float title_size_f = 64.0f * scale_y;
+        if (title_size_f < 28.0f)
+            title_size_f = 28.0f;
+        title_text.setCharacterSize(static_cast<unsigned int>(title_size_f + 0.5f));
+        title_text.setFillColor(sf::Color(220, 220, 245));
+        const sf::FloatRect title_bounds = title_text.getLocalBounds();
+        title_text.setOrigin(title_bounds.left + (title_bounds.width / 2.0f), title_bounds.top + (title_bounds.height / 2.0f));
+        title_text.setPosition(static_cast<float>(window_size.x) / 2.0f, 96.0f * scale_y);
+        window.draw(title_text);
+
+        sf::Text commander_text;
+        commander_text.setFont(font);
+        ft_string commander_line("Commander: ");
+        if (g_commander_name.empty())
+            commander_line.append("Commander");
+        else
+            commander_line.append(g_commander_name.c_str());
+        commander_text.setString(commander_line.c_str());
+        float commander_size_f = 22.0f * scale_y;
+        if (commander_size_f < 16.0f)
+            commander_size_f = 16.0f;
+        commander_text.setCharacterSize(static_cast<unsigned int>(commander_size_f + 0.5f));
+        commander_text.setFillColor(sf::Color(180, 190, 220));
+        const sf::FloatRect commander_bounds = commander_text.getLocalBounds();
+        commander_text.setOrigin(commander_bounds.left + (commander_bounds.width / 2.0f), commander_bounds.top + (commander_bounds.height / 2.0f));
+        commander_text.setPosition(static_cast<float>(window_size.x) / 2.0f, 160.0f * scale_y);
+        window.draw(commander_text);
 
         const size_t count = items.size();
         for (size_t index = 0; index < count; ++index)
@@ -421,15 +453,21 @@ namespace
             background_shape.setPosition(static_cast<float>(item.bounds.left), static_cast<float>(item.bounds.top));
             background_shape.setSize(sf::Vector2f(static_cast<float>(item.bounds.width), static_cast<float>(item.bounds.height)));
 
+            float outline_thickness = 2.0f * scale_x;
+            if (outline_thickness < 1.0f)
+                outline_thickness = 1.0f;
+            background_shape.setOutlineThickness(outline_thickness);
+            background_shape.setOutlineColor(sf::Color(100, 120, 190));
+
             const bool is_selected = static_cast<int>(index) == selected_index;
             const bool is_hovered = static_cast<int>(index) == hovered_index;
 
             if (is_selected)
-                background_shape.setFillColor(sf::Color(60, 60, 60));
+                background_shape.setFillColor(sf::Color(70, 90, 140));
             else if (is_hovered)
-                background_shape.setFillColor(sf::Color(40, 40, 40));
+                background_shape.setFillColor(sf::Color(50, 70, 110));
             else
-                background_shape.setFillColor(sf::Color(20, 20, 20));
+                background_shape.setFillColor(sf::Color(30, 40, 70));
 
             window.draw(background_shape);
 
@@ -437,7 +475,7 @@ namespace
             label.setFont(font);
             label.setString(item.label.c_str());
             label.setCharacterSize(character_size);
-            label.setFillColor(sf::Color::White);
+            label.setFillColor(sf::Color(245, 245, 255));
 
             const sf::FloatRect bounds = label.getLocalBounds();
             const float origin_x = bounds.left + (bounds.width / 2.0f);
@@ -514,9 +552,6 @@ int main()
 
     if (window.isOpen())
     {
-        g_commander_name = prompt_for_commander_name(window, menu_font);
-        if (!window.isOpen())
-            return 0;
         if (g_commander_name.empty())
             g_commander_name = ft_string("Commander");
         load_profile_for_commander(g_commander_name, window, menu);
