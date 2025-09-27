@@ -3,6 +3,7 @@
 #include "player_profile.hpp"
 
 #include "../libft/CPP_class/class_nullptr.hpp"
+#include "../libft/Libft/libft.hpp"
 
 #include <SFML/Config.hpp>
 #include <SFML/Graphics.hpp>
@@ -341,14 +342,55 @@ namespace
             const char *paths[] = {
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                 "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-                "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+                "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                "/System/Library/Fonts/SFNSDisplay.ttf",
+                "/System/Library/Fonts/SFNS.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+                "/Library/Fonts/Arial.ttf",
+                "C\\\Windows\\Fonts\\segoeui.ttf",
+                "C\\\Windows\\Fonts\\arial.ttf",
+                "C\\\Windows\\Fonts\\calibri.ttf"
             };
 
             const size_t path_count = sizeof(paths) / sizeof(paths[0]);
+            bool        loaded = false;
             for (size_t index = 0; index < path_count; ++index)
             {
                 if (fallback_font.loadFromFile(paths[index]))
+                {
+                    loaded = true;
                     break;
+                }
+            }
+
+            if (!loaded)
+            {
+                const char *windows_directory = ft_getenv("WINDIR");
+                if (windows_directory != ft_nullptr && windows_directory[0] != '\0')
+                {
+                    ft_string fonts_directory(windows_directory);
+                    const size_t dir_length = fonts_directory.size();
+                    if (dir_length > 0U)
+                    {
+                        const char last_character = fonts_directory[dir_length - 1U];
+                        if (last_character != '\\' && last_character != '/')
+                            fonts_directory.append("\\");
+                    }
+                    fonts_directory.append("Fonts\\");
+
+                    const char *windows_fonts[] = {"segoeui.ttf", "arial.ttf", "calibri.ttf"};
+                    const size_t windows_font_count = sizeof(windows_fonts) / sizeof(windows_fonts[0]);
+                    for (size_t index = 0; index < windows_font_count; ++index)
+                    {
+                        ft_string candidate = fonts_directory;
+                        candidate.append(windows_fonts[index]);
+                        if (fallback_font.loadFromFile(candidate.c_str()))
+                        {
+                            loaded = true;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
