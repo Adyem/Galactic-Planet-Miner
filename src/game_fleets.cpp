@@ -77,6 +77,10 @@ bool Game::is_ship_type_available(int ship_type) const
         if (this->_capital_ship_limit <= 0)
             return false;
         return true;
+    case SHIP_RAIDER_CORVETTE:
+    case SHIP_RAIDER_DESTROYER:
+    case SHIP_RAIDER_BATTLESHIP:
+        return false;
     default:
         return true;
     }

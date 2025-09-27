@@ -24,7 +24,10 @@ enum e_ship_id
     SHIP_FRIGATE_SUPPORT,
     SHIP_CAPITAL_CARRIER,
     SHIP_CAPITAL_DREADNOUGHT,
-    SHIP_CAPITAL_BATTLESHIP = SHIP_CAPITAL
+    SHIP_CAPITAL_BATTLESHIP = SHIP_CAPITAL,
+    SHIP_RAIDER_CORVETTE = 101,
+    SHIP_RAIDER_DESTROYER = 102,
+    SHIP_RAIDER_BATTLESHIP = 103
 };
 
 enum e_misc_location_id
@@ -78,6 +81,7 @@ struct ft_ship
     int max_shield;
     double max_speed;
     double acceleration;
+    double deceleration;
     double turn_speed;
     double optimal_range;
     double max_range;
@@ -90,7 +94,7 @@ struct ft_ship
     ft_ship()
         : id(0), type(0), armor(0), hp(0), shield(0), max_hp(0),
           max_shield(0), max_speed(18.0), acceleration(4.0),
-          turn_speed(60.0), optimal_range(180.0), max_range(240.0),
+          deceleration(3.5), turn_speed(60.0), optimal_range(180.0), max_range(240.0),
           base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
           outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
           unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
@@ -99,7 +103,7 @@ struct ft_ship
     ft_ship(int i, int t)
         : id(i), type(t), armor(0), hp(0), shield(0), max_hp(0),
           max_shield(0), max_speed(18.0), acceleration(4.0),
-          turn_speed(60.0), optimal_range(180.0), max_range(240.0),
+          deceleration(3.5), turn_speed(60.0), optimal_range(180.0), max_range(240.0),
           base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
           outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
           unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),

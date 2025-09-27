@@ -140,21 +140,22 @@ void CombatManager::build_raider_fleet(ft_combat_encounter &encounter,
     encounter.raider_fleet = ft_sharedptr<ft_fleet>(new ft_fleet(-(encounter.planet_id + 1000)));
     ft_fleet &fleet = *encounter.raider_fleet;
     fleet.set_location_planet(encounter.planet_id);
-    this->add_raider_ship(fleet, SHIP_RADAR, 60, 20, 12, scale);
-    this->add_raider_ship(fleet, SHIP_RADAR, 60, 20, 12, scale);
-    this->add_raider_ship(fleet, SHIP_SHIELD, 50, 30, 8, scale);
+    this->add_raider_ship(fleet, SHIP_RAIDER_CORVETTE, 88, 28, 16, scale);
+    this->add_raider_ship(fleet, SHIP_RAIDER_CORVETTE, 88, 28, 16, scale);
+    this->add_raider_ship(fleet, SHIP_RAIDER_DESTROYER, 132, 46, 22, scale);
+    this->add_raider_ship(fleet, SHIP_SHIELD, 52, 32, 10, scale);
     this->add_raider_ship(fleet, SHIP_SALVAGE, 50, 10, 18, scale);
 
     double energy_remaining = energy_pressure;
-    while (energy_remaining >= 0.5)
+    while (energy_remaining >= 0.8)
     {
-        this->add_raider_ship(fleet, SHIP_RADAR, 58, 18, 10, scale);
-        energy_remaining -= 0.5;
+        this->add_raider_ship(fleet, SHIP_RAIDER_DESTROYER, 126, 42, 20, scale);
+        energy_remaining -= 0.8;
     }
-    if (energy_remaining >= 0.2)
-        this->add_raider_ship(fleet, SHIP_RADAR, 58, 18, 10, scale);
+    if (energy_remaining >= 0.4)
+        this->add_raider_ship(fleet, SHIP_RAIDER_CORVETTE, 84, 26, 16, scale);
     if (energy_pressure >= 1.0)
-        this->add_raider_ship(fleet, SHIP_SHIELD, 60, 36, 12, scale);
+        this->add_raider_ship(fleet, SHIP_RAIDER_DESTROYER, 140, 52, 24, scale);
 
     int heavy = 0;
     if (narrative_pressure >= 0.3)
@@ -162,7 +163,7 @@ void CombatManager::build_raider_fleet(ft_combat_encounter &encounter,
     if (narrative_pressure >= 0.9)
         heavy = 2;
     for (int i = 0; i < heavy; ++i)
-        this->add_raider_ship(fleet, SHIP_CAPITAL, 140, 60, 30, scale);
+        this->add_raider_ship(fleet, SHIP_RAIDER_BATTLESHIP, 220, 90, 40, scale);
 
     double attack_multiplier = 1.25;
     if (difficulty > 0.0)

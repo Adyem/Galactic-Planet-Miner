@@ -11,6 +11,7 @@ namespace
         int     shield;
         double  max_speed;
         double  acceleration;
+        double  deceleration;
         double  turn_speed;
         double  optimal_range;
         double  max_range;
@@ -23,7 +24,7 @@ namespace
 
         ship_profile()
             : armor(18), hp(180), shield(60), max_speed(18.0), acceleration(4.0),
-              turn_speed(60.0), optimal_range(180.0), max_range(240.0),
+              deceleration(3.5), turn_speed(60.0), optimal_range(180.0), max_range(240.0),
               base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
               outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
               unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
@@ -42,6 +43,7 @@ namespace
             profile.shield = 180;
             profile.max_speed = 21.0;
             profile.acceleration = 5.5;
+            profile.deceleration = 5.0;
             profile.turn_speed = 95.0;
             profile.optimal_range = 205.0;
             profile.max_range = 265.0;
@@ -55,6 +57,7 @@ namespace
             profile.shield = 70;
             profile.max_speed = 26.0;
             profile.acceleration = 6.5;
+            profile.deceleration = 6.2;
             profile.turn_speed = 110.0;
             profile.optimal_range = 235.0;
             profile.max_range = 320.0;
@@ -70,6 +73,7 @@ namespace
             profile.shield = 50;
             profile.max_speed = 16.0;
             profile.acceleration = 3.5;
+            profile.deceleration = 3.0;
             profile.turn_speed = 70.0;
             profile.optimal_range = 185.0;
             profile.max_range = 225.0;
@@ -85,6 +89,7 @@ namespace
             profile.shield = 200;
             profile.max_speed = 18.5;
             profile.acceleration = 3.2;
+            profile.deceleration = 2.4;
             profile.turn_speed = 48.0;
             profile.optimal_range = 225.0;
             profile.max_range = 290.0;
@@ -100,6 +105,7 @@ namespace
             profile.shield = 60;
             profile.max_speed = 19.0;
             profile.acceleration = 4.2;
+            profile.deceleration = 3.6;
             profile.turn_speed = 72.0;
             profile.optimal_range = 175.0;
             profile.max_range = 215.0;
@@ -115,6 +121,7 @@ namespace
             profile.shield = 90;
             profile.max_speed = 23.0;
             profile.acceleration = 5.8;
+            profile.deceleration = 5.4;
             profile.turn_speed = 95.0;
             profile.optimal_range = 190.0;
             profile.max_range = 235.0;
@@ -127,6 +134,7 @@ namespace
             profile.shield = 80;
             profile.max_speed = 30.0;
             profile.acceleration = 7.2;
+            profile.deceleration = 7.0;
             profile.turn_speed = 130.0;
             profile.optimal_range = 165.0;
             profile.max_range = 210.0;
@@ -135,12 +143,45 @@ namespace
             profile.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
             profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
             break;
+        case SHIP_RAIDER_CORVETTE:
+            profile.armor = 24;
+            profile.hp = 190;
+            profile.shield = 70;
+            profile.max_speed = 27.0;
+            profile.acceleration = 6.8;
+            profile.deceleration = 6.3;
+            profile.turn_speed = 118.0;
+            profile.optimal_range = 185.0;
+            profile.max_range = 245.0;
+            profile.base_damage = 9.5;
+            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
+            break;
+        case SHIP_RAIDER_DESTROYER:
+            profile.armor = 36;
+            profile.hp = 260;
+            profile.shield = 110;
+            profile.max_speed = 20.5;
+            profile.acceleration = 4.8;
+            profile.deceleration = 4.0;
+            profile.turn_speed = 92.0;
+            profile.optimal_range = 210.0;
+            profile.max_range = 280.0;
+            profile.base_damage = 12.5;
+            profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            break;
         case SHIP_REPAIR_DRONE:
             profile.armor = 8;
             profile.hp = 110;
             profile.shield = 90;
             profile.max_speed = 22.0;
             profile.acceleration = 6.8;
+            profile.deceleration = 6.4;
             profile.turn_speed = 140.0;
             profile.optimal_range = 155.0;
             profile.max_range = 205.0;
@@ -156,6 +197,7 @@ namespace
             profile.shield = 200;
             profile.max_speed = 21.0;
             profile.acceleration = 5.2;
+            profile.deceleration = 4.6;
             profile.turn_speed = 110.0;
             profile.optimal_range = 215.0;
             profile.max_range = 275.0;
@@ -172,6 +214,7 @@ namespace
             profile.shield = 130;
             profile.max_speed = 20.0;
             profile.acceleration = 4.6;
+            profile.deceleration = 4.0;
             profile.turn_speed = 85.0;
             profile.optimal_range = 205.0;
             profile.max_range = 265.0;
@@ -184,6 +227,7 @@ namespace
             profile.shield = 150;
             profile.max_speed = 19.0;
             profile.acceleration = 4.3;
+            profile.deceleration = 3.7;
             profile.turn_speed = 80.0;
             profile.optimal_range = 225.0;
             profile.max_range = 285.0;
@@ -199,6 +243,7 @@ namespace
             profile.shield = 240;
             profile.max_speed = 18.0;
             profile.acceleration = 3.0;
+            profile.deceleration = 2.2;
             profile.turn_speed = 46.0;
             profile.optimal_range = 240.0;
             profile.max_range = 320.0;
@@ -214,10 +259,27 @@ namespace
             profile.shield = 180;
             profile.max_speed = 17.5;
             profile.acceleration = 2.6;
+            profile.deceleration = 1.8;
             profile.turn_speed = 42.0;
             profile.optimal_range = 245.0;
             profile.max_range = 330.0;
             profile.base_damage = 18.0;
+            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            break;
+        case SHIP_RAIDER_BATTLESHIP:
+            profile.armor = 68;
+            profile.hp = 430;
+            profile.shield = 210;
+            profile.max_speed = 18.0;
+            profile.acceleration = 3.0;
+            profile.deceleration = 2.1;
+            profile.turn_speed = 50.0;
+            profile.optimal_range = 240.0;
+            profile.max_range = 320.0;
+            profile.base_damage = 16.0;
             profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
@@ -239,6 +301,7 @@ namespace
         ship.max_shield = profile.shield;
         ship.max_speed = profile.max_speed;
         ship.acceleration = profile.acceleration;
+        ship.deceleration = profile.deceleration;
         ship.turn_speed = profile.turn_speed;
         ship.optimal_range = profile.optimal_range;
         ship.max_range = profile.max_range;
@@ -807,6 +870,12 @@ double ft_fleet::get_ship_damage_baseline(int ship_type) noexcept
         return 13.5;
     case SHIP_CAPITAL_DREADNOUGHT:
         return 18.0;
+    case SHIP_RAIDER_CORVETTE:
+        return 9.5;
+    case SHIP_RAIDER_DESTROYER:
+        return 12.5;
+    case SHIP_RAIDER_BATTLESHIP:
+        return 16.0;
     case SHIP_CAPITAL:
         return 15.0;
     default:
@@ -822,6 +891,8 @@ bool is_capital_ship_type(int ship_type) noexcept
     if (ship_type == SHIP_CAPITAL_CARRIER)
         return true;
     if (ship_type == SHIP_CAPITAL_DREADNOUGHT)
+        return true;
+    if (ship_type == SHIP_RAIDER_BATTLESHIP)
         return true;
     return false;
 }

@@ -284,6 +284,9 @@ public:
     ~Game();
 
     void produce(double seconds);
+    void update_gameplay(double milliseconds);
+    void update_combat(double milliseconds);
+    void tick_milliseconds(double milliseconds);
     void tick(double seconds);
 
     int get_difficulty() const { return this->_difficulty; }

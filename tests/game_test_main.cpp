@@ -106,6 +106,12 @@ int main()
         return 0;
     if (!verify_range_aware_combat_power())
         return 0;
+    if (!verify_raider_ship_maneuver_profiles())
+        return 0;
+    if (!verify_combat_tracker_deceleration())
+        return 0;
+    if (!verify_raider_ships_unavailable_to_players())
+        return 0;
     if (!compare_generator_support())
         return 0;
     if (!inspect_support_ship_positioning())
