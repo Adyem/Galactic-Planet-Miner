@@ -347,9 +347,9 @@ namespace
                 "/System/Library/Fonts/SFNS.ttf",
                 "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
                 "/Library/Fonts/Arial.ttf",
-                "C\\\Windows\\Fonts\\segoeui.ttf",
-                "C\\\Windows\\Fonts\\arial.ttf",
-                "C\\\Windows\\Fonts\\calibri.ttf"
+                "C:\\Windows\\Fonts\\segoeui.ttf",
+                "C:\\Windows\\Fonts\\arial.ttf",
+                "C:\\Windows\\Fonts\\calibri.ttf"
             };
 
             const size_t path_count = sizeof(paths) / sizeof(paths[0]);
