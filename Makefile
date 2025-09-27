@@ -22,6 +22,8 @@ SRC_COMMON  = \
     $(SRC_DIR)/combat_tracks.cpp \
     $(SRC_DIR)/combat_formations.cpp \
     $(SRC_DIR)/combat_tick.cpp \
+    $(SRC_DIR)/game_bootstrap.cpp \
+    $(SRC_DIR)/player_profile.cpp \
     $(SRC_DIR)/quests.cpp \
     $(SRC_DIR)/research.cpp \
     $(SRC_DIR)/game_research.cpp \
