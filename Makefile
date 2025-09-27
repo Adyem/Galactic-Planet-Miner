@@ -168,4 +168,9 @@ check_sfml:
 		printf "Please install libsfml-dev (or the appropriate SFML package for your platform) and ensure pkg-config can locate it.\n" >&2; \
 		exit 1; \
 	fi
+	@if ! pkg-config --atleast-version=2.6 sfml-graphics; then \
+		printf "Error: Galactic Planet Miner now requires SFML 2.6 or newer.\n" >&2; \
+		printf "Please upgrade your SFML installation before building.\n" >&2; \
+		exit 1; \
+	fi
 .PHONY: all clean fclean re debug dirs test check_sfml

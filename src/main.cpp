@@ -6,6 +6,11 @@
 
 #include <SFML/Config.hpp>
 #include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+
+#if !((SFML_VERSION_MAJOR > 2) || (SFML_VERSION_MAJOR == 2 && SFML_VERSION_MINOR >= 6))
+#error "Galactic Planet Miner now requires SFML 2.6 or newer"
+#endif
 
 #include <cstddef>
 
@@ -296,30 +301,16 @@ namespace
         player_profile_save(g_active_profile);
     }
 
-    const sf::Font &resolve_menu_font(sf::Font &owned_font)
+    const sf::Font &resolve_menu_font(const sf::Font *provided_font)
     {
-        const char *font_candidates[] = {
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-            "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
-            ft_nullptr
-        };
+        if (provided_font == ft_nullptr)
+            return sf::Font::getDefaultFont();
 
-        size_t index = 0;
-        while (font_candidates[index] != ft_nullptr)
-        {
-            if (owned_font.loadFromFile(font_candidates[index]))
-                return owned_font;
-            ++index;
-        }
+        const sf::Font::Info font_info = provided_font->getInfo();
+        if (font_info.family.empty())
+            return sf::Font::getDefaultFont();
 
-#if (SFML_VERSION_MAJOR > 2) || (SFML_VERSION_MAJOR == 2 && SFML_VERSION_MINOR >= 6)
-        return sf::Font::getDefaultFont();
-#else
-        return owned_font;
-#endif
+        return *provided_font;
     }
 
     void render_menu(sf::RenderWindow &window, const ft_ui_menu &menu, const sf::Font &font, const sf::Vector2u &window_size)
@@ -434,8 +425,7 @@ int main()
     ft_ui_menu menu;
     update_menu_for_window_size(menu, window.getSize());
 
-    sf::Font font;
-    const sf::Font &menu_font = resolve_menu_font(font);
+    const sf::Font &menu_font = resolve_menu_font(ft_nullptr);
 
     if (window.isOpen())
     {
