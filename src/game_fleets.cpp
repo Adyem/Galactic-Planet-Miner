@@ -61,19 +61,26 @@ bool Game::is_ship_type_available(int ship_type) const
         if (!this->_shield_support_unlocked)
             return false;
         return true;
-    case SHIP_FRIGATE_ESCORT:
-    case SHIP_FRIGATE_SUPPORT:
+    case SHIP_FRIGATE_JUGGERNAUT:
+    case SHIP_FRIGATE_CARRIER:
+    case SHIP_FRIGATE_SOVEREIGN:
+    case SHIP_FRIGATE_PREEMPTOR:
+    case SHIP_FRIGATE_PROTECTOR:
+    case SHIP_FRIGATE_ECLIPSE:
         if (!this->_research.is_completed(RESEARCH_AUXILIARY_FRIGATE_DEVELOPMENT))
             return false;
         return true;
-    case SHIP_CAPITAL_CARRIER:
-    case SHIP_CAPITAL_DREADNOUGHT:
+    case SHIP_CAPITAL_NOVA:
+    case SHIP_CAPITAL_OBSIDIAN:
+    case SHIP_CAPITAL_PREEMPTOR:
+    case SHIP_CAPITAL_PROTECTOR:
+    case SHIP_CAPITAL_ECLIPSE:
         if (!this->_research.is_completed(RESEARCH_AUXILIARY_FRIGATE_DEVELOPMENT))
             return false;
         if (this->_capital_ship_limit <= 0)
             return false;
         return true;
-    case SHIP_CAPITAL:
+    case SHIP_CAPITAL_JUGGERNAUT:
         if (this->_capital_ship_limit <= 0)
             return false;
         return true;

@@ -176,23 +176,32 @@ Ship identifiers now span the complete combat roster:
 - `SHIP_SHIELD` (1) – Guardian cruiser that screens the line.
 - `SHIP_RADAR` (2) – Tactical scout that coordinates flanking strikes.
 - `SHIP_SALVAGE` (3) – Heavy hauler for post-battle recovery.
-- `SHIP_CAPITAL` (4) / `SHIP_CAPITAL_BATTLESHIP` – Battleship-class flagship.
+- `SHIP_CAPITAL_JUGGERNAUT` (4) / `SHIP_CAPITAL` / `SHIP_CAPITAL_BATTLESHIP` – Celestial Juggernaut flagship that doubles as a cargo platform.
 - `SHIP_TRANSPORT` (5) – Logistic shuttle that ferries supplies between fleets.
 - `SHIP_CORVETTE` (6) – Fast attack corvette unlocked with Armament Enhancement I.
 - `SHIP_INTERCEPTOR` (7) – Strike interceptor fielded after Armament Enhancement II.
 - `SHIP_REPAIR_DRONE` (8) – Automated hull repair platform from Repair Drone Technology.
 - `SHIP_SUNFLARE_SLOOP` (9) – Helios-aligned support craft that recharges shields.
-- `SHIP_FRIGATE_ESCORT` (10) – Auxiliary escort frigate unlocked via Auxiliary Frigate Development.
-- `SHIP_FRIGATE_SUPPORT` (11) – Support frigate that bolsters both hull and shield sustain.
-- `SHIP_CAPITAL_CARRIER` (12) – Carrier capital hull granted by Auxiliary Frigate Development.
-- `SHIP_CAPITAL_DREADNOUGHT` (13) – Dreadnought hull available alongside the carrier.
+- `SHIP_FRIGATE_SOVEREIGN` (10) / `SHIP_FRIGATE_ESCORT` – Sovereign escort frigate for battle-line reinforcement.
+- `SHIP_FRIGATE_PROTECTOR` (11) / `SHIP_FRIGATE_SUPPORT` – Protector support frigate that bolsters shield regeneration.
+- `SHIP_CAPITAL_NOVA` (12) / `SHIP_CAPITAL_CARRIER` – Nova Carrier that deploys strike craft support wings.
+- `SHIP_CAPITAL_OBSIDIAN` (13) / `SHIP_CAPITAL_DREADNOUGHT` – Obsidian Sovereign dreadnought geared for direct assaults.
+- `SHIP_CAPITAL_PREEMPTOR` (14) – Long-range Preemptor siege platform unlocked alongside auxiliary capital research.
+- `SHIP_CAPITAL_PROTECTOR` (15) – Aurora Protector bulwark that emphasizes shield projection.
+- `SHIP_CAPITAL_ECLIPSE` (16) – Eclipse Monolith support capital capable of remote hull repairs.
+- `SHIP_FRIGATE_JUGGERNAUT` (17) – Juggernaut-class frigate that supplements convoy capacity.
+- `SHIP_FRIGATE_CARRIER` (18) – Carrier frigate that fields light drone complements.
+- `SHIP_FRIGATE_PREEMPTOR` (19) – Preemptor artillery frigate that provides ranged fire support.
+- `SHIP_FRIGATE_ECLIPSE` (20) – Eclipse repair frigate that restores allied hull integrity in combat.
 
 Research milestones gate construction: Crafting Mastery enables transports, Armament
 Enhancement tiers unlock corvettes and interceptors, Shield Technology enables
 Sunflare sloops, Repair Drone Technology deploys automated drones, and Auxiliary
-Frigate Development expands the auxiliary frigate and capital roster while raising
-the global capital ship limit to two hulls. Capital Ship Initiative is still required
-for the first flagship slot. Sunflare sloops and repair drones also provide tangible
+Frigate Development expands the auxiliary frigate and capital roster—including
+the Nova Carrier, Obsidian Sovereign, Preemptor, Aurora Protector, Eclipse Monolith,
+and their frigate counterparts—while raising the global capital ship limit to two
+hulls. Capital Ship Initiative is still required for the first flagship slot. Sunflare
+sloops and repair drones also provide tangible
 combat benefits—when docked during an assault they regenerate defender shields and hull,
 scaling with the number of support craft on the field.
 

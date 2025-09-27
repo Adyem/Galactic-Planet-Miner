@@ -22,21 +22,21 @@ int verify_ship_range_defaults()
     FT_ASSERT(shield != ft_nullptr);
     FT_ASSERT(math_fabs(shield->optimal_range - 205.0) < 1e-6);
     FT_ASSERT(math_fabs(shield->max_range - 265.0) < 1e-6);
-    FT_ASSERT(math_fabs(shield->base_damage - 5.5) < 1e-6);
+    FT_ASSERT(math_fabs(shield->base_damage - 20.0) < 1e-6);
 
     int radar_id = fleet.create_ship(SHIP_RADAR);
     const ft_ship *radar = fleet.get_ship(radar_id);
     FT_ASSERT(radar != ft_nullptr);
     FT_ASSERT(math_fabs(radar->optimal_range - 235.0) < 1e-6);
     FT_ASSERT(math_fabs(radar->max_range - 320.0) < 1e-6);
-    FT_ASSERT(math_fabs(radar->base_damage - 4.5) < 1e-6);
+    FT_ASSERT(math_fabs(radar->base_damage - 25.0) < 1e-6);
 
     int corvette_id = fleet.create_ship(SHIP_CORVETTE);
     const ft_ship *corvette = fleet.get_ship(corvette_id);
     FT_ASSERT(corvette != ft_nullptr);
     FT_ASSERT(math_fabs(corvette->optimal_range - 190.0) < 1e-6);
     FT_ASSERT(math_fabs(corvette->max_range - 235.0) < 1e-6);
-    FT_ASSERT(math_fabs(corvette->base_damage - 8.0) < 1e-6);
+    FT_ASSERT(math_fabs(corvette->base_damage - 30.0) < 1e-6);
 
     return 1;
 }
@@ -120,6 +120,74 @@ int verify_range_aware_combat_power()
     FT_ASSERT(raider_low_hp > 1.5);
     FT_ASSERT(raider_low_hp < 1.7);
 
+    return 1;
+}
+
+struct expected_ship_profile
+{
+    int    type;
+    int    hp;
+    int    shield;
+    double damage;
+    int    role;
+};
+
+static bool compare_ship_profile(const ft_ship *ship,
+    const expected_ship_profile &expected)
+{
+    if (ship == ft_nullptr)
+        return false;
+    if (ship->hp != expected.hp)
+        return false;
+    if (ship->max_hp != expected.hp)
+        return false;
+    if (ship->shield != expected.shield)
+        return false;
+    if (ship->max_shield != expected.shield)
+        return false;
+    if (math_fabs(ship->base_damage - expected.damage) > 1e-6)
+        return false;
+    if (ship->role != expected.role)
+        return false;
+    return true;
+}
+
+int verify_design_doc_ship_roster()
+{
+    const expected_ship_profile design_doc_ships[] = {
+        {SHIP_SHIELD, 120, 150, 20.0, SHIP_ROLE_SUPPORT},
+        {SHIP_RADAR, 110, 80, 25.0, SHIP_ROLE_SUPPORT},
+        {SHIP_SALVAGE, 110, 70, 5.0, SHIP_ROLE_TRANSPORT},
+        {SHIP_TRANSPORT, 100, 50, 10.0, SHIP_ROLE_TRANSPORT},
+        {SHIP_CORVETTE, 100, 75, 30.0, SHIP_ROLE_LINE},
+        {SHIP_INTERCEPTOR, 90, 60, 40.0, SHIP_ROLE_LINE},
+        {SHIP_REPAIR_DRONE, 80, 40, 5.0, SHIP_ROLE_SUPPORT},
+        {SHIP_SUNFLARE_SLOOP, 80, 60, 10.0, SHIP_ROLE_SUPPORT},
+        {SHIP_CAPITAL_JUGGERNAUT, 550, 100, 80.0, SHIP_ROLE_TRANSPORT},
+        {SHIP_CAPITAL_NOVA, 530, 120, 35.0, SHIP_ROLE_SUPPORT},
+        {SHIP_CAPITAL_OBSIDIAN, 600, 80, 85.0, SHIP_ROLE_LINE},
+        {SHIP_CAPITAL_PREEMPTOR, 520, 110, 250.0, SHIP_ROLE_LINE},
+        {SHIP_CAPITAL_PROTECTOR, 540, 200, 82.0, SHIP_ROLE_SUPPORT},
+        {SHIP_CAPITAL_ECLIPSE, 1000, 0, 70.0, SHIP_ROLE_SUPPORT},
+        {SHIP_FRIGATE_JUGGERNAUT, 150, 100, 50.0, SHIP_ROLE_TRANSPORT},
+        {SHIP_FRIGATE_CARRIER, 140, 90, 45.0, SHIP_ROLE_SUPPORT},
+        {SHIP_FRIGATE_SOVEREIGN, 160, 110, 55.0, SHIP_ROLE_LINE},
+        {SHIP_FRIGATE_PREEMPTOR, 130, 95, 100.0, SHIP_ROLE_LINE},
+        {SHIP_FRIGATE_PROTECTOR, 145, 100, 48.0, SHIP_ROLE_SUPPORT},
+        {SHIP_FRIGATE_ECLIPSE, 325, 0, 40.0, SHIP_ROLE_SUPPORT}
+    };
+
+    ft_fleet fleet(777);
+    const size_t count = sizeof(design_doc_ships) / sizeof(design_doc_ships[0]);
+    for (size_t i = 0; i < count; ++i)
+    {
+        int uid = fleet.create_ship(design_doc_ships[i].type);
+        FT_ASSERT(uid != 0);
+        const ft_ship *ship = fleet.get_ship(uid);
+        FT_ASSERT(compare_ship_profile(ship, design_doc_ships[i]));
+    }
+
+    FT_ASSERT(fleet.get_ship_count() == static_cast<int>(count));
     return 1;
 }
 
