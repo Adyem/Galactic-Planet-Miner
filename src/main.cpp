@@ -8,6 +8,17 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 
+#if defined(__has_include)
+# if __has_include(<SFML/Graphics/DefaultFont.hpp>)
+#  include <SFML/Graphics/DefaultFont.hpp>
+#  define FT_SFML_HAS_DEFAULT_FONT 1
+# endif
+#endif
+
+#ifndef FT_SFML_HAS_DEFAULT_FONT
+# define FT_SFML_HAS_DEFAULT_FONT 0
+#endif
+
 #if !((SFML_VERSION_MAJOR > 2) || (SFML_VERSION_MAJOR == 2 && SFML_VERSION_MINOR >= 6))
 #error "Galactic Planet Miner now requires SFML 2.6 or newer"
 #endif
@@ -114,7 +125,7 @@ namespace
                     if (code_point == 8U)
                     {
                         if (!input_value.empty())
-                            input_value.resize(input_value.size() - 1U);
+                            input_value.erase(input_value.size() - 1U, 1U);
                     }
                     else if (code_point == 13U)
                     {
@@ -122,7 +133,7 @@ namespace
                     }
                     else if (code_point >= 32U && code_point < 127U)
                     {
-                        input_value.push_back(static_cast<char>(code_point));
+                        input_value.append(static_cast<char>(code_point));
                     }
                 }
                 else if (event.type == sf::Event::KeyPressed)
@@ -134,7 +145,7 @@ namespace
                     else if (event.key.code == sf::Keyboard::BackSpace)
                     {
                         if (!input_value.empty())
-                            input_value.resize(input_value.size() - 1U);
+                            input_value.erase(input_value.size() - 1U, 1U);
                     }
                 }
             }
@@ -303,6 +314,7 @@ namespace
 
     const sf::Font &resolve_menu_font(const sf::Font *provided_font)
     {
+#if FT_SFML_HAS_DEFAULT_FONT
         if (provided_font == ft_nullptr)
             return sf::Font::getDefaultFont();
 
@@ -311,6 +323,37 @@ namespace
             return sf::Font::getDefaultFont();
 
         return *provided_font;
+#else
+        if (provided_font != ft_nullptr)
+        {
+            const sf::Font::Info font_info = provided_font->getInfo();
+            if (!font_info.family.empty())
+                return *provided_font;
+        }
+
+        static sf::Font fallback_font;
+        static bool     fallback_attempted = false;
+
+        if (!fallback_attempted)
+        {
+            fallback_attempted = true;
+
+            const char *paths[] = {
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+            };
+
+            const size_t path_count = sizeof(paths) / sizeof(paths[0]);
+            for (size_t index = 0; index < path_count; ++index)
+            {
+                if (fallback_font.loadFromFile(paths[index]))
+                    break;
+            }
+        }
+
+        return fallback_font;
+#endif
     }
 
     void render_menu(sf::RenderWindow &window, const ft_ui_menu &menu, const sf::Font &font, const sf::Vector2u &window_size)
