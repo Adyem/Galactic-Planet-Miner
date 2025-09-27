@@ -104,6 +104,8 @@ int main()
         return 0;
     if (!verify_ship_range_defaults())
         return 0;
+    if (!verify_design_doc_ship_roster())
+        return 0;
     if (!verify_range_aware_combat_power())
         return 0;
     if (!verify_raider_ship_maneuver_profiles())

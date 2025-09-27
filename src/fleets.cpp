@@ -32,263 +32,386 @@ namespace
         {}
     };
 
+    struct ship_profile_table
+    {
+        ship_profile profiles[SHIP_RAIDER_BATTLESHIP + 1];
+
+        ship_profile_table()
+        {
+            for (int i = 0; i <= SHIP_RAIDER_BATTLESHIP; ++i)
+                profiles[i] = ship_profile();
+
+            ship_profile &transport = profiles[SHIP_TRANSPORT];
+            transport.armor = 18;
+            transport.hp = 100;
+            transport.shield = 50;
+            transport.max_speed = 19.0;
+            transport.acceleration = 4.2;
+            transport.deceleration = 3.6;
+            transport.turn_speed = 72.0;
+            transport.optimal_range = 175.0;
+            transport.max_range = 215.0;
+            transport.base_damage = 10.0;
+            transport.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            transport.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+            transport.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            transport.role = SHIP_ROLE_TRANSPORT;
+
+            ship_profile &corvette = profiles[SHIP_CORVETTE];
+            corvette.armor = 28;
+            corvette.hp = 100;
+            corvette.shield = 75;
+            corvette.max_speed = 23.0;
+            corvette.acceleration = 5.8;
+            corvette.deceleration = 5.4;
+            corvette.turn_speed = 95.0;
+            corvette.optimal_range = 190.0;
+            corvette.max_range = 235.0;
+            corvette.base_damage = 30.0;
+            corvette.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+
+            ship_profile &shield = profiles[SHIP_SHIELD];
+            shield.armor = 35;
+            shield.hp = 120;
+            shield.shield = 150;
+            shield.max_speed = 21.0;
+            shield.acceleration = 5.5;
+            shield.deceleration = 5.0;
+            shield.turn_speed = 95.0;
+            shield.optimal_range = 205.0;
+            shield.max_range = 265.0;
+            shield.base_damage = 20.0;
+            shield.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            shield.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            shield.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &radar = profiles[SHIP_RADAR];
+            radar.armor = 10;
+            radar.hp = 110;
+            radar.shield = 80;
+            radar.max_speed = 26.0;
+            radar.acceleration = 6.5;
+            radar.deceleration = 6.2;
+            radar.turn_speed = 110.0;
+            radar.optimal_range = 235.0;
+            radar.max_range = 320.0;
+            radar.base_damage = 25.0;
+            radar.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            radar.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            radar.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            radar.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &salvage = profiles[SHIP_SALVAGE];
+            salvage.armor = 22;
+            salvage.hp = 110;
+            salvage.shield = 70;
+            salvage.max_speed = 16.0;
+            salvage.acceleration = 3.5;
+            salvage.deceleration = 3.0;
+            salvage.turn_speed = 70.0;
+            salvage.optimal_range = 185.0;
+            salvage.max_range = 225.0;
+            salvage.base_damage = 5.0;
+            salvage.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            salvage.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            salvage.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            salvage.role = SHIP_ROLE_TRANSPORT;
+
+            ship_profile &interceptor = profiles[SHIP_INTERCEPTOR];
+            interceptor.armor = 20;
+            interceptor.hp = 90;
+            interceptor.shield = 60;
+            interceptor.max_speed = 30.0;
+            interceptor.acceleration = 7.2;
+            interceptor.deceleration = 7.0;
+            interceptor.turn_speed = 130.0;
+            interceptor.optimal_range = 165.0;
+            interceptor.max_range = 210.0;
+            interceptor.base_damage = 40.0;
+            interceptor.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            interceptor.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            interceptor.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+
+            ship_profile &repair_drone = profiles[SHIP_REPAIR_DRONE];
+            repair_drone.armor = 8;
+            repair_drone.hp = 80;
+            repair_drone.shield = 40;
+            repair_drone.max_speed = 22.0;
+            repair_drone.acceleration = 6.8;
+            repair_drone.deceleration = 6.4;
+            repair_drone.turn_speed = 140.0;
+            repair_drone.optimal_range = 155.0;
+            repair_drone.max_range = 205.0;
+            repair_drone.base_damage = 5.0;
+            repair_drone.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            repair_drone.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            repair_drone.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            repair_drone.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &sunflare = profiles[SHIP_SUNFLARE_SLOOP];
+            sunflare.armor = 32;
+            sunflare.hp = 80;
+            sunflare.shield = 60;
+            sunflare.max_speed = 21.0;
+            sunflare.acceleration = 5.2;
+            sunflare.deceleration = 4.6;
+            sunflare.turn_speed = 110.0;
+            sunflare.optimal_range = 215.0;
+            sunflare.max_range = 275.0;
+            sunflare.base_damage = 10.0;
+            sunflare.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            sunflare.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
+            sunflare.unescorted_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            sunflare.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            sunflare.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &capital_juggernaut = profiles[SHIP_CAPITAL_JUGGERNAUT];
+            capital_juggernaut.armor = 70;
+            capital_juggernaut.hp = 550;
+            capital_juggernaut.shield = 100;
+            capital_juggernaut.max_speed = 18.5;
+            capital_juggernaut.acceleration = 3.0;
+            capital_juggernaut.deceleration = 2.3;
+            capital_juggernaut.turn_speed = 45.0;
+            capital_juggernaut.optimal_range = 200.0;
+            capital_juggernaut.max_range = 260.0;
+            capital_juggernaut.base_damage = 80.0;
+            capital_juggernaut.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            capital_juggernaut.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_juggernaut.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            capital_juggernaut.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            capital_juggernaut.role = SHIP_ROLE_TRANSPORT;
+
+            ship_profile &capital_nova = profiles[SHIP_CAPITAL_NOVA];
+            capital_nova.armor = 60;
+            capital_nova.hp = 530;
+            capital_nova.shield = 120;
+            capital_nova.max_speed = 18.0;
+            capital_nova.acceleration = 3.0;
+            capital_nova.deceleration = 2.2;
+            capital_nova.turn_speed = 46.0;
+            capital_nova.optimal_range = 240.0;
+            capital_nova.max_range = 320.0;
+            capital_nova.base_damage = 35.0;
+            capital_nova.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            capital_nova.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_nova.unescorted_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            capital_nova.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            capital_nova.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &capital_obsidian = profiles[SHIP_CAPITAL_OBSIDIAN];
+            capital_obsidian.armor = 80;
+            capital_obsidian.hp = 600;
+            capital_obsidian.shield = 80;
+            capital_obsidian.max_speed = 17.5;
+            capital_obsidian.acceleration = 2.6;
+            capital_obsidian.deceleration = 1.8;
+            capital_obsidian.turn_speed = 42.0;
+            capital_obsidian.optimal_range = 230.0;
+            capital_obsidian.max_range = 310.0;
+            capital_obsidian.base_damage = 85.0;
+            capital_obsidian.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            capital_obsidian.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_obsidian.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            capital_obsidian.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+
+            ship_profile &capital_preemptor = profiles[SHIP_CAPITAL_PREEMPTOR];
+            capital_preemptor.armor = 68;
+            capital_preemptor.hp = 520;
+            capital_preemptor.shield = 110;
+            capital_preemptor.max_speed = 17.0;
+            capital_preemptor.acceleration = 2.5;
+            capital_preemptor.deceleration = 1.9;
+            capital_preemptor.turn_speed = 40.0;
+            capital_preemptor.optimal_range = 320.0;
+            capital_preemptor.max_range = 420.0;
+            capital_preemptor.base_damage = 250.0;
+            capital_preemptor.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_preemptor.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_preemptor.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_preemptor.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+
+            ship_profile &capital_protector = profiles[SHIP_CAPITAL_PROTECTOR];
+            capital_protector.armor = 72;
+            capital_protector.hp = 540;
+            capital_protector.shield = 200;
+            capital_protector.max_speed = 18.0;
+            capital_protector.acceleration = 2.8;
+            capital_protector.deceleration = 2.1;
+            capital_protector.turn_speed = 44.0;
+            capital_protector.optimal_range = 210.0;
+            capital_protector.max_range = 280.0;
+            capital_protector.base_damage = 82.0;
+            capital_protector.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            capital_protector.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_protector.unescorted_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            capital_protector.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            capital_protector.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &capital_eclipse = profiles[SHIP_CAPITAL_ECLIPSE];
+            capital_eclipse.armor = 90;
+            capital_eclipse.hp = 1000;
+            capital_eclipse.shield = 0;
+            capital_eclipse.max_speed = 16.0;
+            capital_eclipse.acceleration = 2.2;
+            capital_eclipse.deceleration = 1.6;
+            capital_eclipse.turn_speed = 36.0;
+            capital_eclipse.optimal_range = 160.0;
+            capital_eclipse.max_range = 220.0;
+            capital_eclipse.base_damage = 70.0;
+            capital_eclipse.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_eclipse.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            capital_eclipse.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            capital_eclipse.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+            capital_eclipse.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &frigate_juggernaut = profiles[SHIP_FRIGATE_JUGGERNAUT];
+            frigate_juggernaut.armor = 42;
+            frigate_juggernaut.hp = 150;
+            frigate_juggernaut.shield = 100;
+            frigate_juggernaut.max_speed = 20.0;
+            frigate_juggernaut.acceleration = 4.6;
+            frigate_juggernaut.deceleration = 4.0;
+            frigate_juggernaut.turn_speed = 85.0;
+            frigate_juggernaut.optimal_range = 205.0;
+            frigate_juggernaut.max_range = 265.0;
+            frigate_juggernaut.base_damage = 50.0;
+            frigate_juggernaut.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            frigate_juggernaut.role = SHIP_ROLE_TRANSPORT;
+
+            ship_profile &frigate_carrier = profiles[SHIP_FRIGATE_CARRIER];
+            frigate_carrier.armor = 36;
+            frigate_carrier.hp = 140;
+            frigate_carrier.shield = 90;
+            frigate_carrier.max_speed = 19.5;
+            frigate_carrier.acceleration = 4.2;
+            frigate_carrier.deceleration = 3.6;
+            frigate_carrier.turn_speed = 82.0;
+            frigate_carrier.optimal_range = 220.0;
+            frigate_carrier.max_range = 280.0;
+            frigate_carrier.base_damage = 45.0;
+            frigate_carrier.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            frigate_carrier.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_carrier.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_carrier.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_carrier.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &frigate_sovereign = profiles[SHIP_FRIGATE_SOVEREIGN];
+            frigate_sovereign.armor = 44;
+            frigate_sovereign.hp = 160;
+            frigate_sovereign.shield = 110;
+            frigate_sovereign.max_speed = 20.5;
+            frigate_sovereign.acceleration = 4.8;
+            frigate_sovereign.deceleration = 4.2;
+            frigate_sovereign.turn_speed = 88.0;
+            frigate_sovereign.optimal_range = 210.0;
+            frigate_sovereign.max_range = 270.0;
+            frigate_sovereign.base_damage = 55.0;
+            frigate_sovereign.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+
+            ship_profile &frigate_preemptor = profiles[SHIP_FRIGATE_PREEMPTOR];
+            frigate_preemptor.armor = 34;
+            frigate_preemptor.hp = 130;
+            frigate_preemptor.shield = 95;
+            frigate_preemptor.max_speed = 21.0;
+            frigate_preemptor.acceleration = 4.9;
+            frigate_preemptor.deceleration = 4.3;
+            frigate_preemptor.turn_speed = 90.0;
+            frigate_preemptor.optimal_range = 260.0;
+            frigate_preemptor.max_range = 330.0;
+            frigate_preemptor.base_damage = 100.0;
+            frigate_preemptor.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+
+            ship_profile &frigate_protector = profiles[SHIP_FRIGATE_PROTECTOR];
+            frigate_protector.armor = 38;
+            frigate_protector.hp = 145;
+            frigate_protector.shield = 100;
+            frigate_protector.max_speed = 19.0;
+            frigate_protector.acceleration = 4.3;
+            frigate_protector.deceleration = 3.7;
+            frigate_protector.turn_speed = 80.0;
+            frigate_protector.optimal_range = 225.0;
+            frigate_protector.max_range = 285.0;
+            frigate_protector.base_damage = 48.0;
+            frigate_protector.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            frigate_protector.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_protector.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_protector.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &frigate_eclipse = profiles[SHIP_FRIGATE_ECLIPSE];
+            frigate_eclipse.armor = 40;
+            frigate_eclipse.hp = 325;
+            frigate_eclipse.shield = 0;
+            frigate_eclipse.max_speed = 18.0;
+            frigate_eclipse.acceleration = 3.8;
+            frigate_eclipse.deceleration = 3.2;
+            frigate_eclipse.turn_speed = 78.0;
+            frigate_eclipse.optimal_range = 200.0;
+            frigate_eclipse.max_range = 260.0;
+            frigate_eclipse.base_damage = 40.0;
+            frigate_eclipse.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
+            frigate_eclipse.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_eclipse.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_eclipse.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+            frigate_eclipse.role = SHIP_ROLE_SUPPORT;
+
+            ship_profile &raider_corvette = profiles[SHIP_RAIDER_CORVETTE];
+            raider_corvette.armor = 24;
+            raider_corvette.hp = 190;
+            raider_corvette.shield = 70;
+            raider_corvette.max_speed = 27.0;
+            raider_corvette.acceleration = 6.8;
+            raider_corvette.deceleration = 6.3;
+            raider_corvette.turn_speed = 118.0;
+            raider_corvette.optimal_range = 185.0;
+            raider_corvette.max_range = 245.0;
+            raider_corvette.base_damage = 9.5;
+            raider_corvette.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            raider_corvette.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
+            raider_corvette.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            raider_corvette.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
+
+            ship_profile &raider_destroyer = profiles[SHIP_RAIDER_DESTROYER];
+            raider_destroyer.armor = 36;
+            raider_destroyer.hp = 260;
+            raider_destroyer.shield = 110;
+            raider_destroyer.max_speed = 20.5;
+            raider_destroyer.acceleration = 4.8;
+            raider_destroyer.deceleration = 4.0;
+            raider_destroyer.turn_speed = 92.0;
+            raider_destroyer.optimal_range = 210.0;
+            raider_destroyer.max_range = 280.0;
+            raider_destroyer.base_damage = 12.5;
+            raider_destroyer.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            raider_destroyer.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            raider_destroyer.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            raider_destroyer.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
+
+            ship_profile &raider_battleship = profiles[SHIP_RAIDER_BATTLESHIP];
+            raider_battleship.armor = 68;
+            raider_battleship.hp = 430;
+            raider_battleship.shield = 210;
+            raider_battleship.max_speed = 18.0;
+            raider_battleship.acceleration = 3.0;
+            raider_battleship.deceleration = 2.1;
+            raider_battleship.turn_speed = 50.0;
+            raider_battleship.optimal_range = 240.0;
+            raider_battleship.max_range = 320.0;
+            raider_battleship.base_damage = 16.0;
+            raider_battleship.combat_behavior = SHIP_BEHAVIOR_CHARGE;
+            raider_battleship.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
+            raider_battleship.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
+            raider_battleship.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
+        }
+    };
+
     ship_profile get_ship_profile(int type)
     {
-        ship_profile profile;
-        switch (type)
-        {
-        case SHIP_SHIELD:
-            profile.armor = 35;
-            profile.hp = 180;
-            profile.shield = 180;
-            profile.max_speed = 21.0;
-            profile.acceleration = 5.5;
-            profile.deceleration = 5.0;
-            profile.turn_speed = 95.0;
-            profile.optimal_range = 205.0;
-            profile.max_range = 265.0;
-            profile.base_damage = 5.5;
-            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            break;
-        case SHIP_RADAR:
-            profile.armor = 10;
-            profile.hp = 120;
-            profile.shield = 70;
-            profile.max_speed = 26.0;
-            profile.acceleration = 6.5;
-            profile.deceleration = 6.2;
-            profile.turn_speed = 110.0;
-            profile.optimal_range = 235.0;
-            profile.max_range = 320.0;
-            profile.base_damage = 4.5;
-            profile.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.role = SHIP_ROLE_SUPPORT;
-            break;
-        case SHIP_SALVAGE:
-            profile.armor = 22;
-            profile.hp = 200;
-            profile.shield = 50;
-            profile.max_speed = 16.0;
-            profile.acceleration = 3.5;
-            profile.deceleration = 3.0;
-            profile.turn_speed = 70.0;
-            profile.optimal_range = 185.0;
-            profile.max_range = 225.0;
-            profile.base_damage = 4.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.role = SHIP_ROLE_TRANSPORT;
-            break;
-        case SHIP_CAPITAL:
-            profile.armor = 65;
-            profile.hp = 360;
-            profile.shield = 200;
-            profile.max_speed = 18.5;
-            profile.acceleration = 3.2;
-            profile.deceleration = 2.4;
-            profile.turn_speed = 48.0;
-            profile.optimal_range = 225.0;
-            profile.max_range = 290.0;
-            profile.base_damage = 15.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
-            break;
-        case SHIP_TRANSPORT:
-            profile.armor = 18;
-            profile.hp = 190;
-            profile.shield = 60;
-            profile.max_speed = 19.0;
-            profile.acceleration = 4.2;
-            profile.deceleration = 3.6;
-            profile.turn_speed = 72.0;
-            profile.optimal_range = 175.0;
-            profile.max_range = 215.0;
-            profile.base_damage = 3.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.role = SHIP_ROLE_TRANSPORT;
-            break;
-        case SHIP_CORVETTE:
-            profile.armor = 28;
-            profile.hp = 220;
-            profile.shield = 90;
-            profile.max_speed = 23.0;
-            profile.acceleration = 5.8;
-            profile.deceleration = 5.4;
-            profile.turn_speed = 95.0;
-            profile.optimal_range = 190.0;
-            profile.max_range = 235.0;
-            profile.base_damage = 8.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
-            break;
-        case SHIP_INTERCEPTOR:
-            profile.armor = 20;
-            profile.hp = 170;
-            profile.shield = 80;
-            profile.max_speed = 30.0;
-            profile.acceleration = 7.2;
-            profile.deceleration = 7.0;
-            profile.turn_speed = 130.0;
-            profile.optimal_range = 165.0;
-            profile.max_range = 210.0;
-            profile.base_damage = 9.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            break;
-        case SHIP_RAIDER_CORVETTE:
-            profile.armor = 24;
-            profile.hp = 190;
-            profile.shield = 70;
-            profile.max_speed = 27.0;
-            profile.acceleration = 6.8;
-            profile.deceleration = 6.3;
-            profile.turn_speed = 118.0;
-            profile.optimal_range = 185.0;
-            profile.max_range = 245.0;
-            profile.base_damage = 9.5;
-            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_RETREAT;
-            break;
-        case SHIP_RAIDER_DESTROYER:
-            profile.armor = 36;
-            profile.hp = 260;
-            profile.shield = 110;
-            profile.max_speed = 20.5;
-            profile.acceleration = 4.8;
-            profile.deceleration = 4.0;
-            profile.turn_speed = 92.0;
-            profile.optimal_range = 210.0;
-            profile.max_range = 280.0;
-            profile.base_damage = 12.5;
-            profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            break;
-        case SHIP_REPAIR_DRONE:
-            profile.armor = 8;
-            profile.hp = 110;
-            profile.shield = 90;
-            profile.max_speed = 22.0;
-            profile.acceleration = 6.8;
-            profile.deceleration = 6.4;
-            profile.turn_speed = 140.0;
-            profile.optimal_range = 155.0;
-            profile.max_range = 205.0;
-            profile.base_damage = 2.5;
-            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.role = SHIP_ROLE_SUPPORT;
-            break;
-        case SHIP_SUNFLARE_SLOOP:
-            profile.armor = 32;
-            profile.hp = 240;
-            profile.shield = 200;
-            profile.max_speed = 21.0;
-            profile.acceleration = 5.2;
-            profile.deceleration = 4.6;
-            profile.turn_speed = 110.0;
-            profile.optimal_range = 215.0;
-            profile.max_range = 275.0;
-            profile.base_damage = 4.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.role = SHIP_ROLE_SUPPORT;
-            break;
-        case SHIP_FRIGATE_ESCORT:
-            profile.armor = 42;
-            profile.hp = 280;
-            profile.shield = 130;
-            profile.max_speed = 20.0;
-            profile.acceleration = 4.6;
-            profile.deceleration = 4.0;
-            profile.turn_speed = 85.0;
-            profile.optimal_range = 205.0;
-            profile.max_range = 265.0;
-            profile.base_damage = 11.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            break;
-        case SHIP_FRIGATE_SUPPORT:
-            profile.armor = 38;
-            profile.hp = 260;
-            profile.shield = 150;
-            profile.max_speed = 19.0;
-            profile.acceleration = 4.3;
-            profile.deceleration = 3.7;
-            profile.turn_speed = 80.0;
-            profile.optimal_range = 225.0;
-            profile.max_range = 285.0;
-            profile.base_damage = 7.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
-            profile.role = SHIP_ROLE_SUPPORT;
-            break;
-        case SHIP_CAPITAL_CARRIER:
-            profile.armor = 60;
-            profile.hp = 340;
-            profile.shield = 240;
-            profile.max_speed = 18.0;
-            profile.acceleration = 3.0;
-            profile.deceleration = 2.2;
-            profile.turn_speed = 46.0;
-            profile.optimal_range = 240.0;
-            profile.max_range = 320.0;
-            profile.base_damage = 13.5;
-            profile.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
-            break;
-        case SHIP_CAPITAL_DREADNOUGHT:
-            profile.armor = 75;
-            profile.hp = 400;
-            profile.shield = 180;
-            profile.max_speed = 17.5;
-            profile.acceleration = 2.6;
-            profile.deceleration = 1.8;
-            profile.turn_speed = 42.0;
-            profile.optimal_range = 245.0;
-            profile.max_range = 330.0;
-            profile.base_damage = 18.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
-            break;
-        case SHIP_RAIDER_BATTLESHIP:
-            profile.armor = 68;
-            profile.hp = 430;
-            profile.shield = 210;
-            profile.max_speed = 18.0;
-            profile.acceleration = 3.0;
-            profile.deceleration = 2.1;
-            profile.turn_speed = 50.0;
-            profile.optimal_range = 240.0;
-            profile.max_range = 320.0;
-            profile.base_damage = 16.0;
-            profile.combat_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
-            profile.unescorted_behavior = SHIP_BEHAVIOR_CHARGE;
-            profile.low_hp_behavior = SHIP_BEHAVIOR_LAST_STAND;
-            break;
-        default:
-            break;
-        }
-        return profile;
+        static const ship_profile_table table;
+
+        if (type < 0 || type > SHIP_RAIDER_BATTLESHIP)
+            return table.profiles[0];
+        return table.profiles[type];
     }
 
     void assign_ship_defaults(ft_ship &ship)
@@ -844,56 +967,25 @@ void ft_fleet::tick(double seconds) noexcept
 
 double ft_fleet::get_ship_damage_baseline(int ship_type) noexcept
 {
-    switch (ship_type)
-    {
-    case SHIP_SHIELD:
-        return 5.5;
-    case SHIP_RADAR:
-        return 4.5;
-    case SHIP_SALVAGE:
-        return 4.0;
-    case SHIP_TRANSPORT:
-        return 3.0;
-    case SHIP_CORVETTE:
-        return 8.0;
-    case SHIP_INTERCEPTOR:
-        return 9.0;
-    case SHIP_REPAIR_DRONE:
-        return 2.5;
-    case SHIP_SUNFLARE_SLOOP:
-        return 4.0;
-    case SHIP_FRIGATE_ESCORT:
-        return 11.0;
-    case SHIP_FRIGATE_SUPPORT:
-        return 7.0;
-    case SHIP_CAPITAL_CARRIER:
-        return 13.5;
-    case SHIP_CAPITAL_DREADNOUGHT:
-        return 18.0;
-    case SHIP_RAIDER_CORVETTE:
-        return 9.5;
-    case SHIP_RAIDER_DESTROYER:
-        return 12.5;
-    case SHIP_RAIDER_BATTLESHIP:
-        return 16.0;
-    case SHIP_CAPITAL:
-        return 15.0;
-    default:
-        break;
-    }
-    return 4.0;
+    ship_profile profile = get_ship_profile(ship_type);
+    return profile.base_damage;
 }
 
 bool is_capital_ship_type(int ship_type) noexcept
 {
-    if (ship_type == SHIP_CAPITAL)
+    switch (ship_type)
+    {
+    case SHIP_CAPITAL_JUGGERNAUT:
+    case SHIP_CAPITAL_NOVA:
+    case SHIP_CAPITAL_OBSIDIAN:
+    case SHIP_CAPITAL_PREEMPTOR:
+    case SHIP_CAPITAL_PROTECTOR:
+    case SHIP_CAPITAL_ECLIPSE:
+    case SHIP_RAIDER_BATTLESHIP:
         return true;
-    if (ship_type == SHIP_CAPITAL_CARRIER)
-        return true;
-    if (ship_type == SHIP_CAPITAL_DREADNOUGHT)
-        return true;
-    if (ship_type == SHIP_RAIDER_BATTLESHIP)
-        return true;
+    default:
+        break;
+    }
     return false;
 }
 

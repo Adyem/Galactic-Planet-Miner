@@ -67,16 +67,23 @@ namespace
         case SHIP_SHIELD:
         case SHIP_RADAR:
         case SHIP_SALVAGE:
-        case SHIP_CAPITAL:
         case SHIP_TRANSPORT:
         case SHIP_CORVETTE:
         case SHIP_INTERCEPTOR:
         case SHIP_REPAIR_DRONE:
         case SHIP_SUNFLARE_SLOOP:
-        case SHIP_FRIGATE_ESCORT:
-        case SHIP_FRIGATE_SUPPORT:
-        case SHIP_CAPITAL_CARRIER:
-        case SHIP_CAPITAL_DREADNOUGHT:
+        case SHIP_FRIGATE_JUGGERNAUT:
+        case SHIP_FRIGATE_CARRIER:
+        case SHIP_FRIGATE_SOVEREIGN:
+        case SHIP_FRIGATE_PREEMPTOR:
+        case SHIP_FRIGATE_PROTECTOR:
+        case SHIP_FRIGATE_ECLIPSE:
+        case SHIP_CAPITAL_JUGGERNAUT:
+        case SHIP_CAPITAL_NOVA:
+        case SHIP_CAPITAL_OBSIDIAN:
+        case SHIP_CAPITAL_PREEMPTOR:
+        case SHIP_CAPITAL_PROTECTOR:
+        case SHIP_CAPITAL_ECLIPSE:
         case SHIP_RAIDER_CORVETTE:
         case SHIP_RAIDER_DESTROYER:
         case SHIP_RAIDER_BATTLESHIP:

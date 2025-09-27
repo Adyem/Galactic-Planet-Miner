@@ -217,17 +217,29 @@ void CombatManager::apply_support(const ft_combat_encounter &encounter,
                 continue;
             if (ship->hp <= 0 && ship->shield <= 0)
                 continue;
-            if (ship->type == SHIP_SUNFLARE_SLOOP)
-                sunflare_count += 1;
-            else if (ship->type == SHIP_FRIGATE_SUPPORT)
+            switch (ship->type)
             {
+            case SHIP_SUNFLARE_SLOOP:
+                sunflare_count += 1;
+                break;
+            case SHIP_FRIGATE_CARRIER:
+            case SHIP_FRIGATE_PROTECTOR:
                 sunflare_count += 1;
                 drone_count += 1;
-            }
-            else if (ship->type == SHIP_CAPITAL_CARRIER)
-            {
+                break;
+            case SHIP_FRIGATE_ECLIPSE:
+                drone_count += 1;
+                break;
+            case SHIP_CAPITAL_NOVA:
+            case SHIP_CAPITAL_PROTECTOR:
                 sunflare_count += 2;
                 drone_count += 1;
+                break;
+            case SHIP_CAPITAL_ECLIPSE:
+                drone_count += 2;
+                break;
+            default:
+                break;
             }
             if (ship->type == SHIP_REPAIR_DRONE)
                 drone_count += 1;

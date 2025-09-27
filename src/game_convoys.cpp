@@ -643,15 +643,24 @@ int Game::calculate_fleet_escort_rating(const ft_fleet &fleet) const
         case SHIP_CORVETTE:
             rating += 3;
             break;
-        case SHIP_FRIGATE_ESCORT:
+        case SHIP_FRIGATE_SOVEREIGN:
+        case SHIP_FRIGATE_PREEMPTOR:
             rating += 6;
             break;
-        case SHIP_FRIGATE_SUPPORT:
+        case SHIP_FRIGATE_JUGGERNAUT:
+            rating += 5;
+            break;
+        case SHIP_FRIGATE_CARRIER:
+        case SHIP_FRIGATE_PROTECTOR:
+        case SHIP_FRIGATE_ECLIPSE:
             rating += 4;
             break;
-        case SHIP_CAPITAL:
-        case SHIP_CAPITAL_CARRIER:
-        case SHIP_CAPITAL_DREADNOUGHT:
+        case SHIP_CAPITAL_JUGGERNAUT:
+        case SHIP_CAPITAL_NOVA:
+        case SHIP_CAPITAL_OBSIDIAN:
+        case SHIP_CAPITAL_PREEMPTOR:
+        case SHIP_CAPITAL_PROTECTOR:
+        case SHIP_CAPITAL_ECLIPSE:
             rating += 7;
             break;
         case SHIP_SUNFLARE_SLOOP:

@@ -26,6 +26,7 @@ int evaluate_focus_fire_cooldowns();
 int validate_tactical_pause_behaviors();
 int verify_ship_range_defaults();
 int verify_range_aware_combat_power();
+int verify_design_doc_ship_roster();
 int verify_raider_ship_maneuver_profiles();
 int verify_combat_tracker_deceleration();
 int verify_raider_ships_unavailable_to_players();
