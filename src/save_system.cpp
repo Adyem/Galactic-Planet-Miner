@@ -77,6 +77,9 @@ namespace
         case SHIP_FRIGATE_SUPPORT:
         case SHIP_CAPITAL_CARRIER:
         case SHIP_CAPITAL_DREADNOUGHT:
+        case SHIP_RAIDER_CORVETTE:
+        case SHIP_RAIDER_DESTROYER:
+        case SHIP_RAIDER_BATTLESHIP:
             return true;
         default:
             return false;
@@ -672,6 +675,12 @@ ft_string SaveSystem::serialize_fleets(const ft_map<int, ft_sharedptr<ft_fleet> 
                 if (!save_system_add_item(document, group, key.c_str(), acceleration_value.c_str()))
                     return save_system_abort_serialization(document);
                 key = base_key;
+                key.append("_deceleration");
+                long deceleration_scaled = this->scale_double_to_long(ship->deceleration);
+                ft_string deceleration_value = ft_to_string(deceleration_scaled);
+                if (!save_system_add_item(document, group, key.c_str(), deceleration_value.c_str()))
+                    return save_system_abort_serialization(document);
+                key = base_key;
                 key.append("_turn_speed");
                 long turn_speed_scaled = this->scale_double_to_long(ship->turn_speed);
                 ft_string turn_speed_value = ft_to_string(turn_speed_scaled);
@@ -913,6 +922,17 @@ bool SaveSystem::deserialize_fleets(const char *content,
                     ship_snapshot.acceleration = 0.0;
             }
             key = base_key;
+            key.append("_deceleration");
+            json_item *deceleration_item = json_find_item(current, key.c_str());
+            if (deceleration_item)
+            {
+                ship_snapshot.deceleration = this->unscale_long_to_double(ft_atol(deceleration_item->value));
+                if (!save_system_is_finite(ship_snapshot.deceleration))
+                    ship_snapshot.deceleration = 0.0;
+                else if (ship_snapshot.deceleration < 0.0)
+                    ship_snapshot.deceleration = 0.0;
+            }
+            key = base_key;
             key.append("_turn_speed");
             json_item *turn_speed_item = json_find_item(current, key.c_str());
             if (turn_speed_item)
@@ -973,6 +993,8 @@ bool SaveSystem::deserialize_fleets(const char *content,
                 ship_snapshot.max_speed = 0.0;
             if (!save_system_is_finite(ship_snapshot.acceleration) || ship_snapshot.acceleration < 0.0)
                 ship_snapshot.acceleration = 0.0;
+            if (!save_system_is_finite(ship_snapshot.deceleration) || ship_snapshot.deceleration < 0.0)
+                ship_snapshot.deceleration = ship_snapshot.acceleration;
             if (!save_system_is_finite(ship_snapshot.turn_speed) || ship_snapshot.turn_speed < 0.0)
                 ship_snapshot.turn_speed = 0.0;
             fleet->add_ship_snapshot(ship_snapshot);

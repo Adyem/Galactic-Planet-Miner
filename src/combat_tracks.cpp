@@ -70,6 +70,9 @@ void CombatManager::sync_raider_tracks(ft_combat_encounter &encounter)
         tracker.acceleration = ship_data->acceleration;
         if (tracker.acceleration < 0.5)
             tracker.acceleration = 0.5;
+        tracker.deceleration = ship_data->deceleration;
+        if (tracker.deceleration < 0.3)
+            tracker.deceleration = 0.3;
         tracker.turn_speed = ship_data->turn_speed;
         if (tracker.turn_speed < 10.0)
             tracker.turn_speed = 10.0;
@@ -192,6 +195,9 @@ void CombatManager::sync_defender_tracks(ft_combat_encounter &encounter,
             tracker.acceleration = ship_data->acceleration;
             if (tracker.acceleration < 0.5)
                 tracker.acceleration = 0.5;
+            tracker.deceleration = ship_data->deceleration;
+            if (tracker.deceleration < 0.3)
+                tracker.deceleration = 0.3;
             tracker.turn_speed = ship_data->turn_speed;
             if (tracker.turn_speed < 10.0)
                 tracker.turn_speed = 10.0;
@@ -278,6 +284,9 @@ void CombatManager::initialize_tracker(ft_ship_tracker &tracker, int ship_uid,
     tracker.acceleration = ship.acceleration;
     if (tracker.acceleration < 0.5)
         tracker.acceleration = 0.5;
+    tracker.deceleration = ship.deceleration;
+    if (tracker.deceleration < 0.3)
+        tracker.deceleration = 0.3;
     tracker.turn_speed = ship.turn_speed;
     if (tracker.turn_speed < 10.0)
         tracker.turn_speed = 10.0;
@@ -458,18 +467,21 @@ void CombatManager::update_tracks(ft_map<int, ft_ship_tracker> &tracks,
             continue;
         }
         double distance = math_sqrt(distance_sq);
-        double speed_step = tracker.acceleration * seconds;
-        if (speed_step < 0.0)
-            speed_step = 0.0;
+        double accel_step = tracker.acceleration * seconds;
+        if (accel_step < 0.0)
+            accel_step = 0.0;
+        double decel_step = tracker.deceleration * seconds;
+        if (decel_step < 0.0)
+            decel_step = 0.0;
         if (tracker.current_speed < desired_speed)
         {
-            tracker.current_speed += speed_step;
+            tracker.current_speed += accel_step;
             if (tracker.current_speed > desired_speed)
                 tracker.current_speed = desired_speed;
         }
         else
         {
-            tracker.current_speed -= speed_step;
+            tracker.current_speed -= decel_step;
             if (tracker.current_speed < desired_speed)
                 tracker.current_speed = desired_speed;
         }

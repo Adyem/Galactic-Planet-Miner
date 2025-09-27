@@ -204,8 +204,11 @@ void Game::produce(double seconds)
     }
 }
 
-void Game::tick(double seconds)
+void Game::update_gameplay(double milliseconds)
 {
+    double seconds = milliseconds * 0.001;
+    if (seconds < 0.0)
+        seconds = 0.0;
     this->produce(seconds);
     this->process_supply_contracts(seconds);
     this->advance_convoys(seconds);
@@ -235,7 +238,13 @@ void Game::tick(double seconds)
         this->handle_quest_failure(quest_failed[i]);
     for (size_t i = 0; i < quest_choices.size(); ++i)
         this->handle_quest_choice_prompt(quest_choices[i]);
+}
 
+void Game::update_combat(double milliseconds)
+{
+    double seconds = milliseconds * 0.001;
+    if (seconds < 0.0)
+        seconds = 0.0;
     ft_vector<int> assault_completed;
     ft_vector<int> assault_failed;
     this->_combat.tick(seconds, this->_fleets, this->_planet_fleets, assault_completed, assault_failed);
@@ -307,6 +316,20 @@ void Game::tick(double seconds)
                 this->_rebellion_branch_pending_assault = 0;
         }
     }
+}
+
+void Game::tick_milliseconds(double milliseconds)
+{
+    if (milliseconds < 0.0)
+        milliseconds = 0.0;
+    this->update_gameplay(milliseconds);
+    this->update_combat(milliseconds);
+}
+
+void Game::tick(double seconds)
+{
+    double milliseconds = seconds * 1000.0;
+    this->tick_milliseconds(milliseconds);
 }
 
 int Game::select_planet_resource_for_assault(const ft_sharedptr<ft_planet> &planet, int minimum_stock, bool allow_stock_fallback) const noexcept

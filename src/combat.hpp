@@ -51,6 +51,7 @@ private:
         double                base_advance_bias;
         double                max_speed;
         double                acceleration;
+        double                deceleration;
         double                turn_speed;
         double                current_speed;
         double                optimal_range;
@@ -76,7 +77,7 @@ private:
               vertical_layer(0.0), advance_bias(0.0), drift_origin(0.0),
               drift_speed(0.6), base_preferred_radius(30.0),
               base_advance_bias(0.0), max_speed(18.0), acceleration(4.0),
-              turn_speed(60.0), current_speed(0.0), optimal_range(180.0),
+              deceleration(3.5), turn_speed(60.0), current_speed(0.0), optimal_range(180.0),
               max_range(240.0), base_damage(4.0), flank(false),
               base_flank(false), requires_escort(false), role(SHIP_ROLE_LINE),
               max_hp(0), max_shield(0), normal_behavior(SHIP_BEHAVIOR_LINE_HOLD),

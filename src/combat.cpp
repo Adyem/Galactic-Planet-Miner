@@ -69,7 +69,7 @@ bool CombatManager::start_raider_assault(int planet_id, double difficulty,
     if (!encounter.raider_fleet)
         encounter.raider_fleet = ft_sharedptr<ft_fleet>(new ft_fleet(-planet_id));
     if (encounter.raider_fleet && !encounter.raider_fleet->has_operational_ships())
-        this->add_raider_ship(*encounter.raider_fleet, SHIP_RADAR, 48, 14, 10, difficulty <= 0.0 ? 1.0 : difficulty);
+        this->add_raider_ship(*encounter.raider_fleet, SHIP_RAIDER_CORVETTE, 72, 24, 14, difficulty <= 0.0 ? 1.0 : difficulty);
     this->sync_raider_tracks(encounter);
     encounter.spike_timer = 0.0;
     encounter.spike_time_remaining = 0.0;

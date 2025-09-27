@@ -30,7 +30,9 @@ SRC_COMMON  = \
     $(SRC_DIR)/game_fleets.cpp \
     $(SRC_DIR)/game_combat_interface.cpp \
     $(SRC_DIR)/game.cpp \
-    $(SRC_DIR)/save_system.cpp
+    $(SRC_DIR)/save_system.cpp \
+    $(SRC_DIR)/ui_input.cpp \
+    $(SRC_DIR)/ui_menu.cpp
 SRC_MAIN    = $(SRC_DIR)/main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
