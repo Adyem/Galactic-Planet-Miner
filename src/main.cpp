@@ -58,12 +58,42 @@ namespace
 #else
         static sf::Font font;
         static bool     loaded = false;
+        static bool     attempted = false;
 
-        if (!loaded)
+        if (!attempted)
         {
-            loaded = font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
-            if (!loaded)
-                loaded = font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf");
+            attempted = true;
+
+            const char *font_paths[] = {
+                "fonts/DejaVuSans.ttf",
+                "fonts/LiberationSans-Regular.ttf",
+                "assets/fonts/DejaVuSans.ttf",
+                "assets/fonts/LiberationSans-Regular.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+                "/System/Library/Fonts/SFNSDisplay.ttf",
+                "/System/Library/Fonts/Supplemental/Arial.ttf",
+                "/Library/Fonts/Arial.ttf",
+                "C:/Windows/Fonts/segoeui.ttf",
+                "C:/Windows/Fonts/arial.ttf",
+                "C:/Windows/Fonts/calibri.ttf"
+            };
+
+            const size_t path_count = sizeof(font_paths) / sizeof(font_paths[0]);
+            for (size_t index = 0; index < path_count; ++index)
+            {
+                const char *path = font_paths[index];
+                if (path == ft_nullptr)
+                    continue;
+
+                if (font.loadFromFile(path))
+                {
+                    loaded = true;
+                    break;
+                }
+            }
         }
 
         return font;
