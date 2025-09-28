@@ -168,15 +168,16 @@ int BackendClient::send_state(const ft_string &state, ft_string &response)
     const char *port_cstr = ft_nullptr;
     if (!this->_port.empty())
         port_cstr = this->_port.c_str();
-    int status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, this->_use_ssl, port_cstr);
+
+    const int fallback_status = 503;
+    int       status = http_post(this->_host.c_str(), this->_path.c_str(), state, response, this->_use_ssl, port_cstr);
     if (status != 0)
     {
         set_offline_echo_response(response, state);
-        return (status);
+        return (fallback_status);
     }
 
     int http_status = extract_http_status_code(response);
-    const int fallback_status = 503;
     if (http_status >= 200 && http_status < 300)
         return (http_status);
 
