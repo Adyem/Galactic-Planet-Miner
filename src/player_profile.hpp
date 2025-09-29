@@ -2,6 +2,7 @@
 #define PLAYER_PROFILE_HPP
 
 #include "../libft/CPP_class/class_string_class.hpp"
+#include "../libft/Template/vector.hpp"
 
 struct PlayerProfilePreferences
 {
@@ -15,5 +16,8 @@ struct PlayerProfilePreferences
 bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, const ft_string &commander_name) noexcept;
 bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept;
 ft_string player_profile_resolve_path(const ft_string &commander_name) noexcept;
+bool player_profile_list(ft_vector<ft_string> &out_profiles) noexcept;
+bool player_profile_delete(const ft_string &commander_name) noexcept;
+ft_string player_profile_resolve_save_directory(const ft_string &commander_name) noexcept;
 
 #endif
