@@ -125,13 +125,13 @@ else
     LDFLAGS     = $(LIBFT) -lssl -lcrypto -ldl -lpthread -lreadline
 endif
 
-SFML_LIBS   = $(shell pkg-config --libs sfml-graphics sfml-window sfml-system sfml-audio 2>/dev/null)
-SFML_CFLAGS = $(shell pkg-config --cflags sfml-graphics sfml-window sfml-system sfml-audio 2>/dev/null)
+SDL_LIBS    = $(shell pkg-config --libs sdl2 SDL2_ttf 2>/dev/null)
+SDL_CFLAGS  = $(shell pkg-config --cflags sdl2 SDL2_ttf 2>/dev/null)
 
 OBJS        = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 TEST_OBJS   = $(SRC_TEST:%.cpp=$(OBJ_DIR)/%.o)
 
-all: check_sfml dirs $(TARGET) test
+all: check_sdl dirs $(TARGET) test
 
 dirs:
 	-$(MKDIR) $(OBJ_DIR)
@@ -142,10 +142,10 @@ debug:
 
 $(OBJ_DIR)/%.o: %.cpp
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) $(SFML_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(SDL_CFLAGS) -c $< -o $@
 
 $(TARGET): $(LIBFT) $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $@ $(SFML_LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
 
 test: $(LIBFT) $(TEST_OBJS)
 	$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(LDFLAGS)
@@ -162,15 +162,10 @@ fclean: clean
 re: fclean all
 
 
-check_sfml:
-	@if ! pkg-config --exists sfml-graphics sfml-window sfml-system sfml-audio; then \
-		printf "Error: SFML development libraries not found.\n" >&2; \
-		printf "Please install libsfml-dev (or the appropriate SFML package for your platform) and ensure pkg-config can locate it.\n" >&2; \
+check_sdl:
+	@if ! pkg-config --exists sdl2 SDL2_ttf; then \
+		printf "Error: SDL2 development libraries (SDL2 and SDL2_ttf) not found.\n" >&2; \
+		printf "Please install the SDL2 and SDL2_ttf development packages for your platform and ensure pkg-config can locate them.\n" >&2; \
 		exit 1; \
 	fi
-	@if ! pkg-config --atleast-version=2.6 sfml-graphics; then \
-		printf "Error: Galactic Planet Miner now requires SFML 2.6 or newer.\n" >&2; \
-		printf "Please upgrade your SFML installation before building.\n" >&2; \
-		exit 1; \
-	fi
-.PHONY: all clean fclean re debug dirs test check_sfml
+.PHONY: all clean fclean re debug dirs test check_sdl
