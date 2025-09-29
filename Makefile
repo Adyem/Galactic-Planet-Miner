@@ -24,6 +24,8 @@ SRC_COMMON  = \
     $(SRC_DIR)/combat_tick.cpp \
     $(SRC_DIR)/game_bootstrap.cpp \
     $(SRC_DIR)/player_profile.cpp \
+    $(SRC_DIR)/font_util.cpp \
+    $(SRC_DIR)/main_menu.cpp \
     $(SRC_DIR)/quests.cpp \
     $(SRC_DIR)/research.cpp \
     $(SRC_DIR)/game_research.cpp \
@@ -34,7 +36,10 @@ SRC_COMMON  = \
     $(SRC_DIR)/game.cpp \
     $(SRC_DIR)/save_system.cpp \
     $(SRC_DIR)/ui_input.cpp \
-    $(SRC_DIR)/ui_menu.cpp
+    $(SRC_DIR)/ui_menu.cpp \
+    $(SRC_DIR)/profile_entry_flow.cpp \
+    $(SRC_DIR)/profile_management_flow.cpp \
+    $(SRC_DIR)/profile_preferences.cpp
 SRC_MAIN    = $(SRC_DIR)/main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
