@@ -6,12 +6,12 @@ basic game state management and communication with a backend server using the `l
 ## Building and Testing
 
 Before compiling, make sure the `libft` submodule is available so the custom containers, JSON
-helpers, and test harness can link correctly. The game now targets SFML 2.6 or newer so that it can
-use the engine's embedded default font and modern window APIs:
+helpers, and test harness can link correctly. The game now targets SDL2 along with SDL2_ttf so that
+it can render the start menu with hardware acceleration and crisp font rasterization:
 
 ```sh
 git submodule update --init --recursive
-pkg-config --modversion sfml-graphics   # Should report 2.6.x or later
+pkg-config --modversion sdl2 SDL2_ttf
 ```
 
 ### Running the suite

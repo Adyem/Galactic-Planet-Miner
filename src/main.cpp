@@ -3,24 +3,8 @@
 #include "../libft/CPP_class/class_nullptr.hpp"
 #include "../libft/Libft/libft.hpp"
 
-#include <SFML/Config.hpp>
-#include <SFML/Graphics.hpp>
-#include <SFML/Window.hpp>
-
-#if defined(__has_include)
-# if __has_include(<SFML/Graphics/DefaultFont.hpp>)
-#  include <SFML/Graphics/DefaultFont.hpp>
-#  define FT_SFML_HAS_DEFAULT_FONT 1
-# endif
-#endif
-
-#ifndef FT_SFML_HAS_DEFAULT_FONT
-# define FT_SFML_HAS_DEFAULT_FONT 0
-#endif
-
-#if !((SFML_VERSION_MAJOR > 2) || (SFML_VERSION_MAJOR == 2 && SFML_VERSION_MINOR >= 6))
-#error "Galactic Planet Miner now requires SFML 2.6 or newer"
-#endif
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 
 namespace
 {
@@ -51,53 +35,64 @@ namespace
         return items;
     }
 
-    const sf::Font &resolve_menu_font()
+    TTF_Font *resolve_font(int point_size)
     {
-#if FT_SFML_HAS_DEFAULT_FONT
-        return sf::Font::getDefaultFont();
-#else
-        static sf::Font font;
-        static bool     loaded = false;
-        static bool     attempted = false;
-
-        if (!attempted)
+        struct font_cache_entry
         {
-            attempted = true;
+            int       size;
+            TTF_Font *font;
+            bool      attempted;
+        };
 
-            const char *font_paths[] = {
-                "fonts/DejaVuSans.ttf",
-                "fonts/LiberationSans-Regular.ttf",
-                "assets/fonts/DejaVuSans.ttf",
-                "assets/fonts/LiberationSans-Regular.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-                "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-                "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
-                "/System/Library/Fonts/SFNSDisplay.ttf",
-                "/System/Library/Fonts/Supplemental/Arial.ttf",
-                "/Library/Fonts/Arial.ttf",
-                "C:/Windows/Fonts/segoeui.ttf",
-                "C:/Windows/Fonts/arial.ttf",
-                "C:/Windows/Fonts/calibri.ttf"
-            };
+        static font_cache_entry font_cache[] = {
+            {48, ft_nullptr, false},
+            {28, ft_nullptr, false}
+        };
 
-            const size_t path_count = sizeof(font_paths) / sizeof(font_paths[0]);
-            for (size_t index = 0; index < path_count; ++index)
+        for (size_t index = 0; index < sizeof(font_cache) / sizeof(font_cache[0]); ++index)
+        {
+            font_cache_entry &entry = font_cache[index];
+            if (entry.size != point_size)
+                continue;
+
+            if (!entry.attempted)
             {
-                const char *path = font_paths[index];
-                if (path == ft_nullptr)
-                    continue;
+                entry.attempted = true;
 
-                if (font.loadFromFile(path))
+                const char *font_paths[] = {
+                    "fonts/DejaVuSans.ttf",
+                    "fonts/LiberationSans-Regular.ttf",
+                    "assets/fonts/DejaVuSans.ttf",
+                    "assets/fonts/LiberationSans-Regular.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                    "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+                    "/System/Library/Fonts/SFNSDisplay.ttf",
+                    "/System/Library/Fonts/Supplemental/Arial.ttf",
+                    "/Library/Fonts/Arial.ttf",
+                    "C:/Windows/Fonts/segoeui.ttf",
+                    "C:/Windows/Fonts/arial.ttf",
+                    "C:/Windows/Fonts/calibri.ttf"
+                };
+
+                const size_t path_count = sizeof(font_paths) / sizeof(font_paths[0]);
+                for (size_t path_index = 0; path_index < path_count; ++path_index)
                 {
-                    loaded = true;
-                    break;
+                    const char *path = font_paths[path_index];
+                    if (path == ft_nullptr)
+                        continue;
+
+                    entry.font = TTF_OpenFont(path, point_size);
+                    if (entry.font != ft_nullptr)
+                        break;
                 }
             }
+
+            return entry.font;
         }
 
-        return font;
-#endif
+        return ft_nullptr;
     }
 
     const ft_menu_item *menu_item_from_index(const ft_ui_menu &menu, int index)
@@ -115,24 +110,56 @@ namespace
         return &items[converted_index];
     }
 
-    void handle_menu_activation(const ft_menu_item &item, sf::RenderWindow &window)
+    void handle_menu_activation(const ft_menu_item &item, bool &running)
     {
         if (item.identifier == "exit")
-            window.close();
+            running = false;
     }
 
-    void render_menu(sf::RenderWindow &window, const ft_ui_menu &menu, const sf::Font &font)
+    SDL_Texture *create_text_texture(SDL_Renderer &renderer, TTF_Font &font, const ft_string &text, const SDL_Color &color, SDL_Rect &out_rect)
     {
-        window.clear(sf::Color(12, 16, 28));
+        if (text.c_str() == ft_nullptr)
+            return ft_nullptr;
 
-        sf::Text title;
-        title.setFont(font);
-        title.setString("Galactic Planet Miner");
-        title.setCharacterSize(48U);
-        title.setFillColor(sf::Color(220, 220, 245));
-        const sf::Vector2u size = window.getSize();
-        title.setPosition(static_cast<float>(size.x) / 2.0f - title.getLocalBounds().width / 2.0f, 96.0f);
-        window.draw(title);
+        SDL_Surface *surface = TTF_RenderUTF8_Blended(&font, text.c_str(), color);
+        if (surface == ft_nullptr)
+            return ft_nullptr;
+
+        SDL_Texture *texture = SDL_CreateTextureFromSurface(&renderer, surface);
+        if (texture != ft_nullptr)
+        {
+            out_rect.x = 0;
+            out_rect.y = 0;
+            out_rect.w = surface->w;
+            out_rect.h = surface->h;
+        }
+
+        SDL_FreeSurface(surface);
+        return texture;
+    }
+
+    void render_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font, int window_width, int window_height)
+    {
+        SDL_SetRenderDrawColor(&renderer, 12, 16, 28, 255);
+        SDL_RenderClear(&renderer);
+
+        int output_width = window_width;
+        int output_height = window_height;
+        SDL_GetRendererOutputSize(&renderer, &output_width, &output_height);
+
+        if (title_font != ft_nullptr)
+        {
+            SDL_Color title_color = {220, 220, 245, 255};
+            SDL_Rect  title_rect;
+            SDL_Texture *title_texture = create_text_texture(renderer, *title_font, ft_string("Galactic Planet Miner"), title_color, title_rect);
+            if (title_texture != ft_nullptr)
+            {
+                title_rect.x = output_width / 2 - title_rect.w / 2;
+                title_rect.y = 96;
+                SDL_RenderCopy(&renderer, title_texture, ft_nullptr, &title_rect);
+                SDL_DestroyTexture(title_texture);
+            }
+        }
 
         const ft_vector<ft_menu_item> &items = menu.get_items();
         const int hovered_index = menu.get_hovered_index();
@@ -142,106 +169,146 @@ namespace
         {
             const ft_menu_item &item = items[index];
 
-            sf::RectangleShape button;
-            button.setPosition(static_cast<float>(item.bounds.left), static_cast<float>(item.bounds.top));
-            button.setSize(sf::Vector2f(static_cast<float>(item.bounds.width), static_cast<float>(item.bounds.height)));
-
             const bool is_hovered = static_cast<int>(index) == hovered_index;
             const bool is_selected = static_cast<int>(index) == selected_index;
 
-            if (is_hovered)
-                button.setFillColor(sf::Color(56, 84, 140));
-            else if (is_selected)
-                button.setFillColor(sf::Color(40, 64, 112));
-            else
-                button.setFillColor(sf::Color(28, 36, 60));
+            const Uint8 r = is_hovered ? 56 : (is_selected ? 40 : 28);
+            const Uint8 g = is_hovered ? 84 : (is_selected ? 64 : 36);
+            const Uint8 b = is_hovered ? 140 : (is_selected ? 112 : 60);
 
-            button.setOutlineColor(sf::Color(90, 110, 160));
-            button.setOutlineThickness(2.0f);
-            window.draw(button);
+            SDL_Rect button_rect;
+            button_rect.x = item.bounds.left;
+            button_rect.y = item.bounds.top;
+            button_rect.w = item.bounds.width;
+            button_rect.h = item.bounds.height;
 
-            sf::Text label;
-            label.setFont(font);
-            label.setString(item.label.c_str());
-            label.setCharacterSize(28U);
-            label.setFillColor(sf::Color::White);
-            const sf::FloatRect bounds = label.getLocalBounds();
-            const float         label_x = static_cast<float>(item.bounds.left) + (static_cast<float>(item.bounds.width) - bounds.width) / 2.0f - bounds.left;
-            const float         label_y = static_cast<float>(item.bounds.top) + (static_cast<float>(item.bounds.height) - bounds.height) / 2.0f - bounds.top;
-            label.setPosition(label_x, label_y);
-            window.draw(label);
+            SDL_SetRenderDrawColor(&renderer, r, g, b, 255);
+            SDL_RenderFillRect(&renderer, &button_rect);
+
+            SDL_SetRenderDrawColor(&renderer, 90, 110, 160, 255);
+            SDL_RenderDrawRect(&renderer, &button_rect);
+
+            if (menu_font != ft_nullptr)
+            {
+                SDL_Color text_color = {255, 255, 255, 255};
+                SDL_Rect  text_rect;
+                SDL_Texture *text_texture = create_text_texture(renderer, *menu_font, item.label, text_color, text_rect);
+                if (text_texture != ft_nullptr)
+                {
+                    text_rect.x = item.bounds.left + (item.bounds.width - text_rect.w) / 2;
+                    text_rect.y = item.bounds.top + (item.bounds.height - text_rect.h) / 2;
+                    SDL_RenderCopy(&renderer, text_texture, ft_nullptr, &text_rect);
+                    SDL_DestroyTexture(text_texture);
+                }
+            }
         }
 
-        window.display();
+        SDL_RenderPresent(&renderer);
     }
 }
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(kWindowWidth, kWindowHeight), "Galactic Planet Miner", sf::Style::Default);
-    window.setVerticalSyncEnabled(true);
-    window.setKeyRepeatEnabled(false);
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
+        return 1;
+
+    if (TTF_Init() != 0)
+    {
+        SDL_Quit();
+        return 1;
+    }
+
+    SDL_Window *window = SDL_CreateWindow(
+        "Galactic Planet Miner",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        static_cast<int>(kWindowWidth),
+        static_cast<int>(kWindowHeight),
+        SDL_WINDOW_SHOWN);
+
+    if (window == ft_nullptr)
+    {
+        TTF_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == ft_nullptr)
+    {
+        SDL_DestroyWindow(window);
+        TTF_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     ft_ui_menu menu;
     menu.set_items(build_main_menu_items());
 
-    const sf::Font &menu_font = resolve_menu_font();
+    TTF_Font *title_font = resolve_font(48);
+    TTF_Font *menu_font = resolve_font(28);
 
-    while (window.isOpen())
+    bool running = true;
+
+    while (running)
     {
         ft_mouse_state    mouse_state;
         ft_keyboard_state keyboard_state;
         bool              activate_requested = false;
 
-        sf::Event event;
-        while (window.pollEvent(event))
+        SDL_Event event;
+        while (SDL_PollEvent(&event) == 1)
         {
-            if (event.type == sf::Event::Closed)
+            if (event.type == SDL_QUIT)
             {
-                window.close();
+                running = false;
             }
-            else if (event.type == sf::Event::MouseMoved)
+            else if (event.type == SDL_MOUSEMOTION)
             {
                 mouse_state.moved = true;
-                mouse_state.x = event.mouseMove.x;
-                mouse_state.y = event.mouseMove.y;
+                mouse_state.x = event.motion.x;
+                mouse_state.y = event.motion.y;
             }
-            else if (event.type == sf::Event::MouseButtonPressed)
+            else if (event.type == SDL_MOUSEBUTTONDOWN)
             {
-                if (event.mouseButton.button == sf::Mouse::Left)
+                if (event.button.button == SDL_BUTTON_LEFT)
                 {
                     mouse_state.left_pressed = true;
-                    mouse_state.x = event.mouseButton.x;
-                    mouse_state.y = event.mouseButton.y;
+                    mouse_state.x = event.button.x;
+                    mouse_state.y = event.button.y;
                 }
             }
-            else if (event.type == sf::Event::MouseButtonReleased)
+            else if (event.type == SDL_MOUSEBUTTONUP)
             {
-                if (event.mouseButton.button == sf::Mouse::Left)
+                if (event.button.button == SDL_BUTTON_LEFT)
                 {
                     mouse_state.left_released = true;
-                    mouse_state.x = event.mouseButton.x;
-                    mouse_state.y = event.mouseButton.y;
+                    mouse_state.x = event.button.x;
+                    mouse_state.y = event.button.y;
                 }
             }
-            else if (event.type == sf::Event::KeyPressed)
+            else if (event.type == SDL_KEYDOWN)
             {
-                if (event.key.code == sf::Keyboard::Up)
+                if (event.key.keysym.sym == SDLK_UP)
                     keyboard_state.pressed_up = true;
-                else if (event.key.code == sf::Keyboard::Down)
+                else if (event.key.keysym.sym == SDLK_DOWN)
                     keyboard_state.pressed_down = true;
-                else if (event.key.code == sf::Keyboard::Return || event.key.code == sf::Keyboard::Space)
+                else if (event.key.keysym.sym == SDLK_RETURN || event.key.keysym.sym == SDLK_SPACE)
                     activate_requested = true;
-                else if (event.key.code == sf::Keyboard::Escape)
-                    window.close();
+                else if (event.key.keysym.sym == SDLK_ESCAPE)
+                    running = false;
             }
         }
 
         if (!mouse_state.moved)
         {
-            const sf::Vector2i position = sf::Mouse::getPosition(window);
-            mouse_state.x = position.x;
-            mouse_state.y = position.y;
+            int x = 0;
+            int y = 0;
+            SDL_GetMouseState(&x, &y);
+            mouse_state.x = x;
+            mouse_state.y = y;
         }
 
         menu.handle_mouse_input(mouse_state);
@@ -252,18 +319,30 @@ int main()
             const int index = menu.get_hovered_index();
             const ft_menu_item *hovered_item = menu_item_from_index(menu, index);
             if (hovered_item != ft_nullptr)
-                handle_menu_activation(*hovered_item, window);
+                handle_menu_activation(*hovered_item, running);
         }
 
         if (activate_requested)
         {
             const ft_menu_item *selected_item = menu.get_selected_item();
             if (selected_item != ft_nullptr)
-                handle_menu_activation(*selected_item, window);
+                handle_menu_activation(*selected_item, running);
         }
 
-        render_menu(window, menu, menu_font);
+        int window_width = 0;
+        int window_height = 0;
+        SDL_GetWindowSize(window, &window_width, &window_height);
+        render_menu(*renderer, menu, title_font, menu_font, window_width, window_height);
     }
+
+    if (renderer != ft_nullptr)
+        SDL_DestroyRenderer(renderer);
+
+    if (window != ft_nullptr)
+        SDL_DestroyWindow(window);
+
+    TTF_Quit();
+    SDL_Quit();
 
     return 0;
 }
