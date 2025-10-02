@@ -220,6 +220,17 @@ int verify_backend_host_parsing()
     FT_ASSERT(scheme_without_port.get_port_for_testing().empty());
     FT_ASSERT(scheme_without_port.get_use_ssl_for_testing());
 
+    BackendClient uppercase_scheme(ft_string("HTTPS://example.com"), ft_string("/"));
+    FT_ASSERT_EQ(expected_scheme_host, uppercase_scheme.get_host_for_testing());
+    FT_ASSERT(uppercase_scheme.get_port_for_testing().empty());
+    FT_ASSERT(uppercase_scheme.get_use_ssl_for_testing());
+
+    BackendClient mixed_scheme(ft_string("Http://example.com:8080"), ft_string("/"));
+    FT_ASSERT_EQ(expected_scheme_host, mixed_scheme.get_host_for_testing());
+    ft_string expected_mixed_port("8080");
+    FT_ASSERT_EQ(expected_mixed_port, mixed_scheme.get_port_for_testing());
+    FT_ASSERT(!mixed_scheme.get_use_ssl_for_testing());
+
     BackendClient service_named_port(ft_string("localhost:http"), ft_string("/"));
     ft_string expected_service_host("localhost:http");
     FT_ASSERT_EQ(expected_service_host, service_named_port.get_host_for_testing());
