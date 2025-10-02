@@ -6,6 +6,7 @@
 
 namespace
 {
+#if GALACTIC_HAVE_SDL2
     constexpr unsigned int kMaxProfileNameLength = 24U;
 
     enum e_profile_append_result
@@ -188,11 +189,13 @@ namespace
 
         SDL_RenderPresent(&renderer);
     }
+#endif
 }
 
 ft_string run_profile_entry_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_vector<ft_string> *existing_profiles, bool &out_quit_requested)
 {
+#if GALACTIC_HAVE_SDL2
     if (window == ft_nullptr || renderer == ft_nullptr)
         return ft_string();
 
@@ -306,5 +309,14 @@ ft_string run_profile_entry_flow(SDL_Window *window, SDL_Renderer *renderer, TTF
         return ft_string();
 
     return profile_name;
+#else
+    (void)window;
+    (void)renderer;
+    (void)title_font;
+    (void)menu_font;
+    (void)existing_profiles;
+    out_quit_requested = true;
+    return ft_string();
+#endif
 }
 

@@ -2,6 +2,8 @@
 
 #include "libft/CPP_class/class_nullptr.hpp"
 
+#if GALACTIC_HAVE_SDL2
+
 namespace
 {
     struct font_cache_entry
@@ -87,4 +89,28 @@ SDL_Texture *create_text_texture(SDL_Renderer &renderer, TTF_Font &font, const f
     SDL_FreeSurface(surface);
     return texture;
 }
+
+#else
+
+TTF_Font *resolve_font(int point_size)
+{
+    (void)point_size;
+    return ft_nullptr;
+}
+
+SDL_Texture *create_text_texture(SDL_Renderer &renderer, TTF_Font &font, const ft_string &text,
+    const SDL_Color &color, SDL_Rect &out_rect)
+{
+    (void)renderer;
+    (void)font;
+    (void)text;
+    (void)color;
+    out_rect.x = 0;
+    out_rect.y = 0;
+    out_rect.w = 0;
+    out_rect.h = 0;
+    return ft_nullptr;
+}
+
+#endif
 
