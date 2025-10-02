@@ -4,6 +4,7 @@
 #include "libft/CPP_class/class_nullptr.hpp"
 #include "libft/CPP_class/class_ofstream.hpp"
 #include "libft/File/file_utils.hpp"
+#include "libft/File/open_dir.hpp"
 #include "libft/JSon/document.hpp"
 #include "libft/JSon/json.hpp"
 #include "libft/Libft/limits.hpp"
