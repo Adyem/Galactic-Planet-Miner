@@ -3,6 +3,7 @@
 #include "libft/CMA/CMA.hpp"
 #include "libft/CPP_class/class_nullptr.hpp"
 #include "libft/CPP_class/class_ofstream.hpp"
+#include "libft/File/file_utils.hpp"
 #include "libft/JSon/document.hpp"
 #include "libft/JSon/json.hpp"
 #include "libft/Libft/limits.hpp"
@@ -11,6 +12,90 @@
 namespace
 {
     const double kBootstrapRateScale = 1000000.0;
+    const char  *kBootstrapRootDirectory = "data";
+    const char  *kBootstrapSaveDirectory = "data/saves";
+
+    bool bootstrap_ensure_directory_exists(const ft_string &path) noexcept
+    {
+        if (path.empty())
+            return false;
+
+        int exists_result = file_dir_exists(path.c_str());
+        if (exists_result == 0)
+            return true;
+        if (exists_result < 0)
+            return false;
+        if (file_create_directory(path.c_str(), 0755) != 0)
+            return false;
+        return true;
+    }
+
+    bool bootstrap_ensure_directory_path_exists(const ft_string &path) noexcept
+    {
+        if (path.empty())
+            return false;
+
+        ft_string partial;
+        const char *raw = path.c_str();
+        for (size_t index = 0; raw[index] != '\0'; ++index)
+        {
+            const char character = raw[index];
+            if (character == '/' || character == '\\')
+            {
+                if (!partial.empty())
+                {
+                    if (!bootstrap_ensure_directory_exists(partial))
+                        return false;
+                }
+            }
+            partial.append(character);
+        }
+
+        if (!partial.empty())
+        {
+            if (!bootstrap_ensure_directory_exists(partial))
+                return false;
+        }
+        return true;
+    }
+
+    bool bootstrap_ensure_save_directory_exists() noexcept
+    {
+        if (!bootstrap_ensure_directory_exists(ft_string(kBootstrapRootDirectory)))
+            return false;
+        if (!bootstrap_ensure_directory_exists(ft_string(kBootstrapSaveDirectory)))
+            return false;
+        return true;
+    }
+
+    bool bootstrap_ensure_directory_for_file(const ft_string &file_path) noexcept
+    {
+        if (file_path.empty())
+            return false;
+
+        if (!bootstrap_ensure_save_directory_exists())
+            return false;
+
+        long last_separator = -1;
+        const char *raw = file_path.c_str();
+        for (long index = 0; raw[index] != '\0'; ++index)
+        {
+            const char character = raw[index];
+            if (character == '/' || character == '\\')
+                last_separator = index;
+        }
+
+        if (last_separator < 0)
+            return true;
+
+        ft_string directory;
+        for (long index = 0; index < last_separator; ++index)
+            directory.append(raw[index]);
+        if (directory.empty())
+            return true;
+
+        return bootstrap_ensure_directory_path_exists(directory);
+    }
 
     long bootstrap_scale_double(double value) noexcept
     {
@@ -178,8 +263,12 @@ bool game_bootstrap_write_quicksave(const GameBootstrapData &data, const char *f
     if (serialized.empty())
         return false;
 
+    ft_string target_path(file_path);
+    if (!bootstrap_ensure_directory_for_file(target_path))
+        return false;
+
     ft_ofstream stream;
-    if (stream.open(file_path) != 0)
+    if (stream.open(target_path.c_str()) != 0)
         return false;
     if (stream.write(serialized.c_str()) < 0)
     {

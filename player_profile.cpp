@@ -18,13 +18,20 @@
 
 namespace
 {
-    const char *kProfileDirectory = "profiles";
+    const char *kProfileRootDirectory = "data";
+    const char *kProfileDirectory = "data/profiles";
+
+    bool ensure_directory_exists(const ft_string &path) noexcept;
     const char *kProfileGroupName = "profile";
     const char *kProfileExtension = ".prof";
     const char *kProfileSaveDirectory = "saves";
 
     bool ensure_profile_directory_exists() noexcept
     {
+        ft_string root_directory(kProfileRootDirectory);
+        if (!ensure_directory_exists(root_directory))
+            return false;
+
         int exists_result = file_dir_exists(kProfileDirectory);
         if (exists_result == 0)
             return true;
