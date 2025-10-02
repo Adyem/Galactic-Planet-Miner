@@ -91,6 +91,9 @@ int main()
         return 0;
 
 
+    if (!verify_building_tick_state_persistence())
+        return 0;
+
     if (!compare_energy_pressure_scenarios())
         return 0;
     if (!verify_crafting_resume_requires_full_cycle())

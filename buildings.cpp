@@ -687,5 +687,10 @@ void BuildingManager::tick(Game &game, double seconds)
     ft_vector<Pair<int, ft_planet_build_state> > entries;
     ft_map_snapshot(this->_planets, entries);
     for (size_t i = 0; i < entries.size(); ++i)
-        this->tick_planet(game, entries[i].value, seconds);
+    {
+        Pair<int, ft_planet_build_state> *entry = this->_planets.find(entries[i].key);
+        if (entry == ft_nullptr)
+            continue;
+        this->tick_planet(game, entry->value, seconds);
+    }
 }
