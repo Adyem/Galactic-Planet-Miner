@@ -50,6 +50,14 @@ namespace
 
         menu.set_items(items);
 
+        ft_rect viewport = base_rect;
+        const int window_height = static_cast<int>(app_constants::kWindowHeight);
+        const int reserved_bottom = 220;
+        viewport.height = window_height - base_rect.top - reserved_bottom;
+        if (viewport.height < base_rect.height)
+            viewport.height = base_rect.height;
+        menu.set_viewport_bounds(viewport);
+
         if (select_create_item)
         {
             menu.set_selected_index(static_cast<int>(profile_count));
@@ -112,6 +120,27 @@ namespace
         const int hovered_index = menu.get_hovered_index();
         const int selected_index = menu.get_selected_index();
 
+        const ft_rect &viewport = menu.get_viewport_bounds();
+        const bool clip_enabled = viewport.width > 0 && viewport.height > 0;
+        SDL_Rect clip_rect;
+        clip_rect.x = 0;
+        clip_rect.y = 0;
+        clip_rect.w = 0;
+        clip_rect.h = 0;
+        int clip_bottom = 0;
+
+        if (clip_enabled)
+        {
+            clip_rect.x = viewport.left;
+            clip_rect.y = viewport.top;
+            clip_rect.w = viewport.width;
+            clip_rect.h = viewport.height;
+            clip_bottom = clip_rect.y + clip_rect.h;
+            SDL_RenderSetClipRect(&renderer, &clip_rect);
+        }
+
+        const int scroll_offset = menu.get_scroll_offset();
+
         for (size_t index = 0; index < items.size(); ++index)
         {
             const ft_menu_item &item = items[index];
@@ -125,9 +154,12 @@ namespace
 
             SDL_Rect button_rect;
             button_rect.x = item.bounds.left;
-            button_rect.y = item.bounds.top;
+            button_rect.y = item.bounds.top - scroll_offset;
             button_rect.w = item.bounds.width;
             button_rect.h = item.bounds.height;
+
+            if (clip_enabled && (button_rect.y + button_rect.h <= clip_rect.y || button_rect.y >= clip_bottom))
+                continue;
 
             SDL_SetRenderDrawColor(&renderer, r, g, b, 255);
             SDL_RenderFillRect(&renderer, &button_rect);
@@ -143,12 +175,15 @@ namespace
                 if (text_texture != ft_nullptr)
                 {
                     text_rect.x = item.bounds.left + (item.bounds.width - text_rect.w) / 2;
-                    text_rect.y = item.bounds.top + (item.bounds.height - text_rect.h) / 2;
+                    text_rect.y = button_rect.y + (item.bounds.height - text_rect.h) / 2;
                     SDL_RenderCopy(&renderer, text_texture, ft_nullptr, &text_rect);
                     SDL_DestroyTexture(text_texture);
                 }
             }
         }
+
+        if (clip_enabled)
+            SDL_RenderSetClipRect(&renderer, ft_nullptr);
 
         if (menu_font != ft_nullptr && !status_message.empty())
         {
