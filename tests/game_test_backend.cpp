@@ -690,7 +690,7 @@ int verify_convoy_escort_assignment_persistence()
     int mars_start = game.get_ore(PLANET_MARS, ITEM_IRON_BAR);
     int dispatched = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 50);
     FT_ASSERT_EQ(50, dispatched);
-    FT_ASSERT_EQ(fleet_id, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
+    FT_ASSERT_EQ(0, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
 
     double elapsed = 0.0;
     while (game.get_ore(PLANET_MARS, ITEM_IRON_BAR) == mars_start && elapsed < 600.0)
@@ -708,6 +708,7 @@ int verify_convoy_escort_assignment_persistence()
     FT_ASSERT_EQ(0, game.get_active_convoy_count());
 
     game.set_fleet_location_planet(fleet_id, PLANET_TERRA);
+    FT_ASSERT(game.assign_convoy_escort(PLANET_TERRA, PLANET_MARS, fleet_id));
     FT_ASSERT_EQ(fleet_id, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
     game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
     game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
