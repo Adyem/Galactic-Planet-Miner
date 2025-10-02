@@ -9,8 +9,8 @@
 #include "game_test_scenarios.hpp"
 #include "planets.hpp"
 #include "research.hpp"
-#include <chrono>
 #include <cstdint>
+#include "../libft/Time/time.hpp"
 
 struct MalformedResponseServerConfig
 {
@@ -69,7 +69,7 @@ static ft_thread start_malformed_response_server(MalformedResponseServerConfig &
 
 static void wait_for_server_start()
 {
-    ft_this_thread_sleep_for(std::chrono::milliseconds(50));
+    ft_this_thread_sleep_for(time_duration_ms_create(50));
 }
 
 int verify_backend_roundtrip()
@@ -109,7 +109,7 @@ int verify_backend_roundtrip()
     FT_ASSERT_EQ(offline_retry_delay, offline_game.get_backend_retry_delay_ms_for_testing());
     FT_ASSERT_EQ(offline_next_retry, offline_game.get_backend_next_retry_ms_for_testing());
     int wait_milliseconds = static_cast<int>(offline_retry_delay + 50);
-    ft_this_thread_sleep_for(std::chrono::milliseconds(wait_milliseconds));
+    ft_this_thread_sleep_for(time_duration_ms_create(wait_milliseconds));
     offline_game.add_ore(PLANET_TERRA, ORE_GOLD, 1);
     long second_retry_delay = offline_game.get_backend_retry_delay_ms_for_testing();
     FT_ASSERT(second_retry_delay >= offline_retry_delay);
