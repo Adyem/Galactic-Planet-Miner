@@ -45,6 +45,7 @@ int verify_supply_route_key_collisions();
 int verify_trade_relay_convoy_modifiers();
 int verify_convoy_escort_travel_speed();
 int verify_convoy_escort_assignment_persistence();
+int verify_convoy_escort_rating_excludes_active_escort();
 int verify_achievement_catalog();
 int verify_achievement_progression();
 int verify_quest_achievement_failures();

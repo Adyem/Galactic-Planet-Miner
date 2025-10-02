@@ -68,6 +68,9 @@ int main()
     if (!verify_convoy_escort_assignment_persistence())
         return 0;
 
+    if (!verify_convoy_escort_rating_excludes_active_escort())
+        return 0;
+
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
     if (!validate_initial_campaign_flow(game))
         return 0;

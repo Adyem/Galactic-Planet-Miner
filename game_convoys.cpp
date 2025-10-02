@@ -483,6 +483,9 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
     if (effective_destination > 48)
         effective_destination = 48;
     convoy.remaining_time = this->calculate_convoy_travel_time(route, effective_origin, effective_destination);
+    if (convoy.escort_fleet_id > 0)
+        this->set_fleet_location_travel(convoy.escort_fleet_id, origin_planet_id,
+                                        destination_planet_id, convoy.remaining_time);
     this->_active_convoys.insert(convoy.id, convoy);
     ft_string entry("Quartermaster Nia dispatches a convoy from ");
     entry.append(ft_to_string(origin_planet_id));
@@ -619,6 +622,8 @@ int Game::calculate_planet_escort_rating(int planet_id) const
         {
             const ft_sharedptr<ft_fleet> &fleet = entries[i].value;
             if (!fleet)
+                continue;
+            if (this->is_fleet_escorting_convoy(fleet->get_id()))
                 continue;
             ft_location loc = fleet->get_location();
             if (loc.type == LOCATION_PLANET && loc.from == planet_id)
@@ -948,6 +953,17 @@ void Game::finalize_convoy(ft_supply_convoy &convoy)
         entry.append(ft_to_string(convoy.destination_planet_id));
         entry.append(ft_string(" failed to arrive."));
         this->append_lore_entry(entry);
+    }
+    if (convoy.escort_fleet_id > 0)
+    {
+        ft_sharedptr<ft_fleet> escort = this->get_fleet(convoy.escort_fleet_id);
+        if (escort)
+        {
+            if (convoy.destroyed)
+                escort->set_location_planet(convoy.origin_planet_id);
+            else
+                escort->set_location_planet(convoy.destination_planet_id);
+        }
     }
     bool restore_route_escort = false;
     if (convoy.route_escort_claimed && convoy.escort_fleet_id > 0 && !convoy.destroyed)

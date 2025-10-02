@@ -772,3 +772,58 @@ int verify_convoy_escort_assignment_persistence()
 
     return 1;
 }
+
+int verify_convoy_escort_rating_excludes_active_escort()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    int baseline_rating = game.calculate_planet_escort_rating(PLANET_TERRA);
+
+    const int fleet_id = 9405;
+    game.create_fleet(fleet_id);
+    FT_ASSERT(game.create_ship(fleet_id, SHIP_SHIELD) != 0);
+    game.set_fleet_location_planet(fleet_id, PLANET_TERRA);
+
+    ft_sharedptr<ft_fleet> escort = game.get_fleet(fleet_id);
+    FT_ASSERT(escort);
+
+    int fleet_rating = game.calculate_fleet_escort_rating(*escort);
+    FT_ASSERT(fleet_rating > 0);
+
+    int combined_rating = game.calculate_planet_escort_rating(PLANET_TERRA);
+    FT_ASSERT_EQ(baseline_rating + fleet_rating, combined_rating);
+
+    Game::ft_supply_route *route = game.ensure_supply_route(PLANET_TERRA, PLANET_MARS);
+    FT_ASSERT(route != ft_nullptr);
+
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_IRON_BAR);
+    game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 50);
+    game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+
+    int convoy_id = game.dispatch_convoy(*route, PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 20, 0, fleet_id);
+    FT_ASSERT(convoy_id > 0);
+    FT_ASSERT_EQ(1, game.get_active_convoy_count());
+
+    ft_location traveling = game.get_fleet_location(fleet_id);
+    FT_ASSERT_EQ(LOCATION_TRAVEL, traveling.type);
+    FT_ASSERT_EQ(PLANET_TERRA, traveling.from);
+    FT_ASSERT_EQ(PLANET_MARS, traveling.to);
+
+    int rating_during_escort = game.calculate_planet_escort_rating(PLANET_TERRA);
+    FT_ASSERT_EQ(baseline_rating, rating_during_escort);
+
+    game.tick(600.0);
+
+    FT_ASSERT_EQ(0, game.get_active_convoy_count());
+
+    ft_location arrived = game.get_fleet_location(fleet_id);
+    FT_ASSERT_EQ(LOCATION_PLANET, arrived.type);
+    FT_ASSERT_EQ(PLANET_MARS, arrived.from);
+    FT_ASSERT_EQ(PLANET_MARS, arrived.to);
+
+    int rating_after = game.calculate_planet_escort_rating(PLANET_TERRA);
+    FT_ASSERT_EQ(baseline_rating, rating_after);
+
+    return 1;
+}
