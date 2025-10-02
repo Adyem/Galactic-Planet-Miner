@@ -83,6 +83,8 @@ LIBFT_COMPILE_FLAGS = -Wall -Werror -Wextra -std=c++17 -Wmissing-declarations \
 
 CFLAGS = $(COMPILE_FLAGS)
 
+DEBUG ?= 0
+
 ifeq ($(OS),Windows_NT)
     MKDIR   = mkdir
     RMDIR   = rmdir /S /Q
@@ -117,6 +119,7 @@ ifeq ($(DEBUG),1)
     TARGET     = $(NAME_DEBUG)
     LIBFT      = $(LIBFT_DIR)/Full_Libft_debug.a
 else
+    CFLAGS    += -DDEBUG=0
     TARGET     = $(NAME)
     LIBFT      = $(LIBFT_DIR)/Full_Libft.a
 endif
@@ -135,14 +138,16 @@ SDL_CFLAGS  = $(shell pkg-config --cflags sdl2 SDL2_ttf 2>/dev/null)
 OBJS        = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 TEST_OBJS   = $(SRC_TEST:%.cpp=$(OBJ_DIR)/%.o)
 
-all: check_sdl dirs $(TARGET) test
+all: build test
+
+build: check_sdl dirs $(TARGET)
 
 dirs:
 	-$(MKDIR) $(OBJ_DIR)
 	-$(MKDIR) $(OBJ_DIR_DEBUG)
 
 debug:
-	$(MAKE) all DEBUG=1
+	$(MAKE) build DEBUG=1
 
 $(OBJ_DIR)/%.o: %.cpp
 	@$(MKDIR) $(dir $@)
@@ -172,4 +177,4 @@ check_sdl:
 		printf "Please install the SDL2 and SDL2_ttf development packages for your platform and ensure pkg-config can locate them.\n" >&2; \
 		exit 1; \
 	fi
-.PHONY: all clean fclean re debug dirs test check_sdl
+.PHONY: all build clean fclean re debug dirs test check_sdl

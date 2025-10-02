@@ -1,10 +1,12 @@
 #include "player_profile.hpp"
 
 #include "libft/CPP_class/class_nullptr.hpp"
+#include "libft/Errno/errno.hpp"
 #include "libft/Libft/libft.hpp"
 #include "libft/JSon/document.hpp"
 #include "libft/File/open_dir.hpp"
 #include "libft/File/file_utils.hpp"
+#include "libft/Printf/printf.hpp"
 #include "libft/Template/algorithm.hpp"
 
 #include <sys/stat.h>
@@ -14,6 +16,12 @@
 #else
 #    include <unistd.h>
 #    define ft_rmdir rmdir
+#endif
+
+#if DEBUG
+#    define PROFILE_DEBUG_PRINT(...) pf_printf_fd(2, __VA_ARGS__)
+#else
+#    define PROFILE_DEBUG_PRINT(...) do { } while (0)
 #endif
 
 namespace
@@ -26,6 +34,57 @@ namespace
     const char *kProfileExtension = ".prof";
     const char *kProfileSaveDirectory = "saves";
 
+    void log_profile_errno(const char *stage, const ft_string *path = ft_nullptr, const char *detail = ft_nullptr) noexcept
+    {
+#if DEBUG
+        int error_code = ft_errno;
+        const char *error_message = ft_strerror(error_code);
+        if (error_message == ft_nullptr)
+            error_message = "Unknown error";
+        if (path != ft_nullptr && !path->empty())
+        {
+            if (detail != ft_nullptr && detail[0] != '\0')
+            {
+                PROFILE_DEBUG_PRINT("[Profile] %s for \"%s\" (%s) failed: %s (%d)\n", stage, path->c_str(), detail,
+                    error_message, error_code);
+                return;
+            }
+            PROFILE_DEBUG_PRINT("[Profile] %s for \"%s\" failed: %s (%d)\n", stage, path->c_str(), error_message, error_code);
+            return;
+        }
+        if (detail != ft_nullptr && detail[0] != '\0')
+        {
+            PROFILE_DEBUG_PRINT("[Profile] %s (%s) failed: %s (%d)\n", stage, detail, error_message, error_code);
+            return;
+        }
+        PROFILE_DEBUG_PRINT("[Profile] %s failed: %s (%d)\n", stage, error_message, error_code);
+#else
+        (void)stage;
+        (void)path;
+        (void)detail;
+#endif
+    }
+
+    void log_profile_document_error(const char *stage, const json_document &document, const ft_string &path) noexcept
+    {
+#if DEBUG
+        int error_code = document.get_error();
+        const char *error_message = document.get_error_str();
+        if (error_message == ft_nullptr)
+            error_message = "Unknown error";
+        if (!path.empty())
+        {
+            PROFILE_DEBUG_PRINT("[Profile] %s for \"%s\" failed: %s (%d)\n", stage, path.c_str(), error_message, error_code);
+            return;
+        }
+        PROFILE_DEBUG_PRINT("[Profile] %s failed: %s (%d)\n", stage, error_message, error_code);
+#else
+        (void)stage;
+        (void)document;
+        (void)path;
+#endif
+    }
+
     bool ensure_profile_directory_exists() noexcept
     {
         ft_string root_directory(kProfileRootDirectory);
@@ -33,12 +92,20 @@ namespace
             return false;
 
         int exists_result = file_dir_exists(kProfileDirectory);
-        if (exists_result == 0)
+        if (exists_result > 0)
             return true;
         if (exists_result < 0)
+        {
+            ft_string profile_directory(kProfileDirectory);
+            log_profile_errno("Checking commander profile directory", &profile_directory, "file_dir_exists");
             return false;
+        }
         if (file_create_directory(kProfileDirectory, 0755) != 0)
+        {
+            ft_string profile_directory(kProfileDirectory);
+            log_profile_errno("Creating commander profile directory", &profile_directory, "mkdir");
             return false;
+        }
         return true;
     }
 
@@ -86,15 +153,25 @@ namespace
     bool ensure_directory_exists(const ft_string &path) noexcept
     {
         if (path.empty())
+        {
+            ft_errno = FT_EINVAL;
+            PROFILE_DEBUG_PRINT("[Profile] Cannot ensure directory for an empty path.\n");
             return false;
+        }
 
         int exists_result = file_dir_exists(path.c_str());
-        if (exists_result == 0)
+        if (exists_result > 0)
             return true;
         if (exists_result < 0)
+        {
+            log_profile_errno("Checking directory", &path, "file_dir_exists");
             return false;
+        }
         if (file_create_directory(path.c_str(), 0755) != 0)
+        {
+            log_profile_errno("Creating directory", &path, "mkdir");
             return false;
+        }
         return true;
     }
 
@@ -105,7 +182,11 @@ namespace
 
         ft_string commander_directory = resolve_commander_directory(commander_name);
         if (commander_directory.empty())
+        {
+            ft_errno = FT_EINVAL;
+            PROFILE_DEBUG_PRINT("[Profile] Could not resolve commander directory for \"%s\".\n", commander_name.c_str());
             return false;
+        }
         if (!ensure_directory_exists(commander_directory))
             return false;
 
@@ -124,13 +205,19 @@ namespace
 
         int exists_result = file_dir_exists(path.c_str());
         if (exists_result < 0)
+        {
+            log_profile_errno("Checking directory before removal", &path, "file_dir_exists");
             return false;
+        }
         if (exists_result == 0)
             return true;
 
         file_dir *directory_stream = file_opendir(path.c_str());
         if (directory_stream == ft_nullptr)
+        {
+            log_profile_errno("Opening directory for recursive removal", &path, "file_opendir");
             return false;
+        }
 
         file_dirent *entry = ft_nullptr;
         while ((entry = file_readdir(directory_stream)) != ft_nullptr)
@@ -155,6 +242,7 @@ namespace
                 if (!remove_directory_recursive(child_path))
                 {
                     file_closedir(directory_stream);
+                    log_profile_errno("Removing child directory", &child_path);
                     return false;
                 }
             }
@@ -163,6 +251,7 @@ namespace
                 if (file_delete(child_path.c_str()) != 0)
                 {
                     file_closedir(directory_stream);
+                    log_profile_errno("Deleting file", &child_path, "file_delete");
                     return false;
                 }
             }
@@ -170,7 +259,10 @@ namespace
 
         file_closedir(directory_stream);
         if (ft_rmdir(path.c_str()) != 0)
+        {
+            log_profile_errno("Removing directory", &path, "rmdir");
             return false;
+        }
         return true;
     }
 
@@ -178,19 +270,32 @@ namespace
     {
         out_name.clear();
         if (path.empty())
+        {
+            ft_errno = FT_EINVAL;
+            PROFILE_DEBUG_PRINT("[Profile] Cannot read profile name from an empty path.\n");
             return false;
+        }
 
         json_document document;
         if (document.read_from_file(path.c_str()) != 0)
+        {
+            log_profile_document_error("Reading profile file", document, path);
             return false;
+        }
 
         json_group *group = document.find_group(kProfileGroupName);
         if (group == ft_nullptr)
+        {
+            PROFILE_DEBUG_PRINT("[Profile] Profile group missing in \"%s\".\n", path.c_str());
             return false;
+        }
 
         json_item *name_item = document.find_item(group, "commander_name");
         if (name_item == ft_nullptr || name_item->value == ft_nullptr)
+        {
+            PROFILE_DEBUG_PRINT("[Profile] Commander name missing in \"%s\".\n", path.c_str());
             return false;
+        }
 
         out_name = ft_string(name_item->value);
         return !out_name.empty();
@@ -249,33 +354,62 @@ ft_string player_profile_resolve_path(const ft_string &commander_name) noexcept
 bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
 {
     if (preferences.commander_name.empty())
+    {
+        ft_errno = FT_EINVAL;
+        PROFILE_DEBUG_PRINT("[Profile] Cannot save preferences without a commander name.\n");
         return false;
+    }
     if (!ensure_profile_directory_exists())
+    {
+        PROFILE_DEBUG_PRINT("[Profile] Failed to prepare profile directories for \"%s\".\n", preferences.commander_name.c_str());
         return false;
+    }
     if (!ensure_profile_save_directory_exists(preferences.commander_name))
+    {
+        PROFILE_DEBUG_PRINT("[Profile] Failed to prepare save directory for \"%s\".\n", preferences.commander_name.c_str());
         return false;
+    }
 
     ft_string path = player_profile_resolve_path(preferences.commander_name);
     if (path.empty())
+    {
+        ft_errno = FT_EINVAL;
+        PROFILE_DEBUG_PRINT("[Profile] Could not resolve profile path for \"%s\".\n", preferences.commander_name.c_str());
         return false;
+    }
 
     json_document document;
     json_group *group = document.create_group(kProfileGroupName);
     if (group == ft_nullptr)
+    {
+        log_profile_document_error("Creating profile group", document, path);
         return false;
+    }
     document.append_group(group);
 
     if (!add_string(document, group, "commander_name", preferences.commander_name))
+    {
+        log_profile_document_error("Adding commander name", document, path);
         return false;
+    }
     const unsigned int stored_width = preferences.window_width == 0U ? 1280U : preferences.window_width;
     const unsigned int stored_height = preferences.window_height == 0U ? 720U : preferences.window_height;
     if (!add_int(document, group, "window_width", static_cast<int>(stored_width)))
+    {
+        log_profile_document_error("Adding window width", document, path);
         return false;
+    }
     if (!add_int(document, group, "window_height", static_cast<int>(stored_height)))
+    {
+        log_profile_document_error("Adding window height", document, path);
         return false;
+    }
 
     if (document.write_to_file(path.c_str()) != 0)
+    {
+        log_profile_document_error("Writing profile", document, path);
         return false;
+    }
     return true;
 }
 
@@ -285,21 +419,38 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     out_preferences.commander_name = commander_name;
 
     if (commander_name.empty())
+    {
+        ft_errno = FT_EINVAL;
+        PROFILE_DEBUG_PRINT("[Profile] Cannot load preferences for an empty commander name.\n");
         return false;
+    }
     if (!ensure_profile_directory_exists())
+    {
+        PROFILE_DEBUG_PRINT("[Profile] Failed to prepare base directory for \"%s\".\n", commander_name.c_str());
         return false;
+    }
 
     ft_string path = player_profile_resolve_path(commander_name);
     if (path.empty())
+    {
+        ft_errno = FT_EINVAL;
+        PROFILE_DEBUG_PRINT("[Profile] Could not resolve profile path for \"%s\".\n", commander_name.c_str());
         return false;
+    }
 
     json_document document;
     if (document.read_from_file(path.c_str()) != 0)
+    {
+        log_profile_document_error("Reading profile", document, path);
         return player_profile_save(out_preferences);
+    }
 
     json_group *group = document.find_group(kProfileGroupName);
     if (group == ft_nullptr)
+    {
+        PROFILE_DEBUG_PRINT("[Profile] Profile group missing in \"%s\". Recreating defaults.\n", path.c_str());
         return player_profile_save(out_preferences);
+    }
 
     json_item *name_item = document.find_item(group, "commander_name");
     if (name_item != ft_nullptr && name_item->value != ft_nullptr)
@@ -330,11 +481,18 @@ bool player_profile_list(ft_vector<ft_string> &out_profiles) noexcept
 {
     out_profiles.clear();
     if (!ensure_profile_directory_exists())
+    {
+        PROFILE_DEBUG_PRINT("[Profile] Unable to prepare profile directory for listing.\n");
         return false;
+    }
 
     file_dir *directory_stream = file_opendir(kProfileDirectory);
     if (directory_stream == ft_nullptr)
+    {
+        ft_string profile_directory(kProfileDirectory);
+        log_profile_errno("Opening profile directory", &profile_directory, "file_opendir");
         return false;
+    }
 
     const size_t extension_length = ft_strlen(kProfileExtension);
     file_dirent *entry = ft_nullptr;
@@ -374,7 +532,10 @@ bool player_profile_list(ft_vector<ft_string> &out_profiles) noexcept
 
         ft_string commander_name;
         if (!read_profile_name_from_file(profile_path, commander_name))
+        {
+            PROFILE_DEBUG_PRINT("[Profile] Skipping unreadable profile file \"%s\".\n", profile_path.c_str());
             continue;
+        }
 
         out_profiles.push_back(commander_name);
     }
@@ -388,10 +549,17 @@ bool player_profile_list(ft_vector<ft_string> &out_profiles) noexcept
 bool player_profile_delete(const ft_string &commander_name) noexcept
 {
     if (commander_name.empty())
+    {
+        ft_errno = FT_EINVAL;
+        PROFILE_DEBUG_PRINT("[Profile] Cannot delete profile without a commander name.\n");
         return false;
+    }
 
     if (!ensure_profile_directory_exists())
+    {
+        PROFILE_DEBUG_PRINT("[Profile] Failed to prepare profile directories while deleting \"%s\".\n", commander_name.c_str());
         return false;
+    }
 
     bool success = true;
 
@@ -402,7 +570,10 @@ bool player_profile_delete(const ft_string &commander_name) noexcept
         {
             struct stat path_info;
             if (stat(path.c_str(), &path_info) == 0)
+            {
+                log_profile_errno("Deleting profile file", &path, "file_delete");
                 success = false;
+            }
         }
     }
 
@@ -413,7 +584,10 @@ bool player_profile_delete(const ft_string &commander_name) noexcept
         {
             int exists_result = file_dir_exists(commander_directory.c_str());
             if (exists_result > 0)
+            {
+                log_profile_errno("Removing commander directory", &commander_directory);
                 success = false;
+            }
         }
     }
 
