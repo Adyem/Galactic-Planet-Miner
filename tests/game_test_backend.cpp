@@ -704,8 +704,6 @@ int verify_convoy_escort_assignment_persistence()
     FT_ASSERT(game.create_ship(fleet_id, SHIP_SHIELD) != 0);
     FT_ASSERT(game.assign_convoy_escort(PLANET_TERRA, PLANET_MARS, fleet_id));
 
-    game.set_fleet_location_travel(fleet_id, PLANET_TERRA, PLANET_MARS, 10.0);
-
     int mars_start = game.get_ore(PLANET_MARS, ITEM_IRON_BAR);
     int dispatched = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 50);
     FT_ASSERT_EQ(50, dispatched);
@@ -726,22 +724,41 @@ int verify_convoy_escort_assignment_persistence()
     }
     FT_ASSERT_EQ(0, game.get_active_convoy_count());
 
-    game.set_fleet_location_planet(fleet_id, PLANET_TERRA);
-    FT_ASSERT(game.assign_convoy_escort(PLANET_TERRA, PLANET_MARS, fleet_id));
     FT_ASSERT_EQ(fleet_id, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
     game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
     game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
 
+    size_t lore_start = game.get_lore_log().size();
     int mars_second_start = game.get_ore(PLANET_MARS, ITEM_IRON_BAR);
     int dispatched_second = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 50);
     FT_ASSERT_EQ(50, dispatched_second);
     FT_ASSERT_EQ(0, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
+    const ft_vector<ft_string> &log = game.get_lore_log();
+    FT_ASSERT(log.size() > lore_start);
+    ft_string escort_fragment("Escort fleet #");
+    escort_fragment.append(ft_to_string(fleet_id));
+    bool found_escort_entry = false;
+    for (size_t i = lore_start; i < log.size(); ++i)
+    {
+        if (ft_strstr(log[i].c_str(), escort_fragment.c_str()) != ft_nullptr)
+        {
+            found_escort_entry = true;
+            break;
+        }
+    }
+    FT_ASSERT(found_escort_entry);
 
     double elapsed_second = 0.0;
+    bool escort_moved = false;
     while (game.get_ore(PLANET_MARS, ITEM_IRON_BAR) == mars_second_start && elapsed_second < 600.0)
     {
         game.tick(0.5);
         elapsed_second += 0.5;
+        if (!escort_moved && elapsed_second >= 1.0)
+        {
+            game.set_fleet_location_travel(fleet_id, PLANET_MARS, PLANET_VULCAN, 10.0);
+            escort_moved = true;
+        }
     }
     FT_ASSERT(elapsed_second < 600.0);
     double cleanup_second = elapsed_second;
@@ -751,6 +768,7 @@ int verify_convoy_escort_assignment_persistence()
         cleanup_second += 0.5;
     }
     FT_ASSERT_EQ(0, game.get_active_convoy_count());
+    FT_ASSERT_EQ(0, game.get_assigned_convoy_escort(PLANET_TERRA, PLANET_MARS));
 
     return 1;
 }

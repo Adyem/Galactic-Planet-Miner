@@ -437,6 +437,7 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
     convoy.destination_escort = this->calculate_planet_escort_rating(destination_planet_id);
     int claimed_escort_id = 0;
     bool escort_was_claimed = false;
+    convoy.route_escort_claimed = false;
     if (escort_fleet_id <= 0)
     {
         claimed_escort_id = this->claim_route_escort(route.id);
@@ -467,6 +468,8 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
         {
             convoy.escort_fleet_id = escort_fleet_id;
             convoy.escort_rating = this->calculate_fleet_escort_rating(*escort);
+            if (escort_was_claimed)
+                convoy.route_escort_claimed = true;
         }
         else if (escort_was_claimed)
         {
@@ -945,6 +948,33 @@ void Game::finalize_convoy(ft_supply_convoy &convoy)
         entry.append(ft_to_string(convoy.destination_planet_id));
         entry.append(ft_string(" failed to arrive."));
         this->append_lore_entry(entry);
+    }
+    bool restore_route_escort = false;
+    if (convoy.route_escort_claimed && convoy.escort_fleet_id > 0 && !convoy.destroyed)
+    {
+        const ft_supply_route *route = this->get_route_by_id(convoy.route_id);
+        if (route != ft_nullptr)
+        {
+            ft_sharedptr<ft_fleet> escort = this->get_fleet(convoy.escort_fleet_id);
+            if (escort && escort->has_operational_ships())
+            {
+                ft_location escort_location = escort->get_location();
+                if (escort_location.type == LOCATION_PLANET &&
+                    (escort_location.from == convoy.origin_planet_id ||
+                     escort_location.from == convoy.destination_planet_id))
+                {
+                    restore_route_escort = true;
+                }
+            }
+        }
+    }
+    if (restore_route_escort)
+    {
+        Pair<int, int> *existing = this->_route_convoy_escorts.find(convoy.route_id);
+        if (existing != ft_nullptr)
+            existing->value = convoy.escort_fleet_id;
+        else
+            this->_route_convoy_escorts.insert(convoy.route_id, convoy.escort_fleet_id);
     }
     this->handle_contract_completion(convoy);
     convoy.escort_fleet_id = 0;
