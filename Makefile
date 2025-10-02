@@ -152,7 +152,7 @@ $(TARGET): $(LIBFT) $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
 
 test: $(LIBFT) $(TEST_OBJS)
-	$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
 
 $(LIBFT):
 	$(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"
