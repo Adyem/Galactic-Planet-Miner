@@ -7,40 +7,39 @@ endif
 NAME        = galactic_miner$(EXE_EXT)
 NAME_DEBUG  = galactic_miner_debug$(EXE_EXT)
 
-SRC_DIR     = src
 TEST_DIR    = tests
 
 SRC_COMMON  = \
-    $(SRC_DIR)/backend_client.cpp \
-    $(SRC_DIR)/achievements.cpp \
-    $(SRC_DIR)/planets.cpp \
-    $(SRC_DIR)/fleets.cpp \
-    $(SRC_DIR)/buildings.cpp \
-    $(SRC_DIR)/buildings_catalog.cpp \
-    $(SRC_DIR)/combat.cpp \
-    $(SRC_DIR)/combat_support.cpp \
-    $(SRC_DIR)/combat_tracks.cpp \
-    $(SRC_DIR)/combat_formations.cpp \
-    $(SRC_DIR)/combat_tick.cpp \
-    $(SRC_DIR)/game_bootstrap.cpp \
-    $(SRC_DIR)/player_profile.cpp \
-    $(SRC_DIR)/font_util.cpp \
-    $(SRC_DIR)/main_menu.cpp \
-    $(SRC_DIR)/quests.cpp \
-    $(SRC_DIR)/research.cpp \
-    $(SRC_DIR)/game_research.cpp \
-    $(SRC_DIR)/game_quests.cpp \
-    $(SRC_DIR)/game_convoys.cpp \
-    $(SRC_DIR)/game_fleets.cpp \
-    $(SRC_DIR)/game_combat_interface.cpp \
-    $(SRC_DIR)/game.cpp \
-    $(SRC_DIR)/save_system.cpp \
-    $(SRC_DIR)/ui_input.cpp \
-    $(SRC_DIR)/ui_menu.cpp \
-    $(SRC_DIR)/profile_entry_flow.cpp \
-    $(SRC_DIR)/profile_management_flow.cpp \
-    $(SRC_DIR)/profile_preferences.cpp
-SRC_MAIN    = $(SRC_DIR)/main.cpp
+    backend_client.cpp \
+    achievements.cpp \
+    planets.cpp \
+    fleets.cpp \
+    buildings.cpp \
+    buildings_catalog.cpp \
+    combat.cpp \
+    combat_support.cpp \
+    combat_tracks.cpp \
+    combat_formations.cpp \
+    combat_tick.cpp \
+    game_bootstrap.cpp \
+    player_profile.cpp \
+    font_util.cpp \
+    main_menu.cpp \
+    quests.cpp \
+    research.cpp \
+    game_research.cpp \
+    game_quests.cpp \
+    game_convoys.cpp \
+    game_fleets.cpp \
+    game_combat_interface.cpp \
+    game.cpp \
+    save_system.cpp \
+    ui_input.cpp \
+    ui_menu.cpp \
+    profile_entry_flow.cpp \
+    profile_management_flow.cpp \
+    profile_preferences.cpp
+SRC_MAIN    = main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_main.cpp \
@@ -74,7 +73,7 @@ endif
 COMPILE_FLAGS = -std=c++17 -Wall -Werror -Wextra -Wmissing-declarations -Wold-style-cast \
                 -Wshadow -Wconversion -Wformat=2 -Wundef -Wfloat-equal -Wodr -Wuseless-cast \
                 -Wzero-as-null-pointer-constant -Wmaybe-uninitialized $(OPT_FLAGS) \
-                -I$(SRC_DIR) -I$(LIBFT_DIR)
+                -I. -I$(LIBFT_DIR)
 
 LIBFT_COMPILE_FLAGS = -Wall -Werror -Wextra -std=c++17 -Wmissing-declarations \
                 -Wold-style-cast -Wshadow -Wconversion -Wformat=2 -Wundef \
