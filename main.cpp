@@ -7,8 +7,12 @@
 #include "libft/CPP_class/class_nullptr.hpp"
 #include "libft/Libft/libft.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#if GALACTIC_HAVE_SDL2
+#    include <SDL2/SDL.h>
+#    include <SDL2/SDL_ttf.h>
+#endif
+
+#if GALACTIC_HAVE_SDL2
 
 namespace
 {
@@ -248,4 +252,13 @@ int main()
 
     return 0;
 }
+
+#else
+
+int main()
+{
+    return 0;
+}
+
+#endif
 

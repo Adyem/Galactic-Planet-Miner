@@ -5,6 +5,8 @@
 
 #include "libft/CPP_class/class_nullptr.hpp"
 
+#if GALACTIC_HAVE_SDL2
+
 bool save_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept
 {
     if (window == ft_nullptr)
@@ -39,4 +41,21 @@ void apply_profile_preferences(SDL_Window *window, const ft_string &profile_name
     if (window_width > 0 && window_height > 0)
         SDL_SetWindowSize(window, window_width, window_height);
 }
+
+#else
+
+bool save_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept
+{
+    (void)window;
+    (void)profile_name;
+    return false;
+}
+
+void apply_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept
+{
+    (void)window;
+    (void)profile_name;
+}
+
+#endif
 

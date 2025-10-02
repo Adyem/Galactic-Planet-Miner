@@ -8,6 +8,7 @@
 
 namespace
 {
+#if GALACTIC_HAVE_SDL2
     size_t find_profile_index(const ft_vector<ft_string> &profiles, const ft_string &profile_name) noexcept
     {
         for (size_t index = 0; index < profiles.size(); ++index)
@@ -180,11 +181,13 @@ namespace
 
         SDL_RenderPresent(&renderer);
     }
+#endif
 }
 
 ft_string run_profile_management_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_string &current_profile, bool &out_quit_requested)
 {
+#if GALACTIC_HAVE_SDL2
     out_quit_requested = false;
     if (window == ft_nullptr || renderer == ft_nullptr)
         return ft_string();
@@ -396,5 +399,14 @@ ft_string run_profile_management_flow(SDL_Window *window, SDL_Renderer *renderer
     }
 
     return ft_string();
+#else
+    (void)window;
+    (void)renderer;
+    (void)title_font;
+    (void)menu_font;
+    (void)current_profile;
+    out_quit_requested = true;
+    return ft_string();
+#endif
 }
 

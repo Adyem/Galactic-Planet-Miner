@@ -27,6 +27,7 @@ ft_vector<ft_menu_item> build_main_menu_items()
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
     int window_width, int window_height, const ft_string &active_profile_name)
 {
+#if GALACTIC_HAVE_SDL2
     SDL_SetRenderDrawColor(&renderer, 12, 16, 28, 255);
     SDL_RenderClear(&renderer);
 
@@ -109,5 +110,14 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
     }
 
     SDL_RenderPresent(&renderer);
+#else
+    (void)renderer;
+    (void)menu;
+    (void)title_font;
+    (void)menu_font;
+    (void)window_width;
+    (void)window_height;
+    (void)active_profile_name;
+#endif
 }
 

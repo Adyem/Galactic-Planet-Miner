@@ -3,8 +3,44 @@
 #include "libft/Libft/libft.hpp"
 #include "ui_menu.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#if defined(__has_include)
+#  if __has_include(<SDL2/SDL.h>) && __has_include(<SDL2/SDL_ttf.h>)
+#    define GALACTIC_HAVE_SDL2 1
+#  else
+#    define GALACTIC_HAVE_SDL2 0
+#  endif
+#else
+#  define GALACTIC_HAVE_SDL2 0
+#endif
+
+#if GALACTIC_HAVE_SDL2
+#    include <SDL2/SDL.h>
+#    include <SDL2/SDL_ttf.h>
+#else
+struct SDL_Window;
+struct SDL_Renderer;
+struct SDL_Texture;
+struct SDL_Surface;
+
+struct SDL_Color
+{
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+};
+
+struct SDL_Rect
+{
+    int x;
+    int y;
+    int w;
+    int h;
+};
+
+struct _TTF_Font;
+typedef _TTF_Font TTF_Font;
+#endif
 
 // Font utilities
 TTF_Font *resolve_font(int point_size);
