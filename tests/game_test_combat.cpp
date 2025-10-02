@@ -1,7 +1,7 @@
 #include "../libft/Libft/libft.hpp"
 #include "../libft/System_utils/test_runner.hpp"
 #include "../libft/Template/vector.hpp"
-#include "../src/libft_math_bridge.hpp"
+#include "../libft_math_bridge.hpp"
 #include "fleets.hpp"
 
 #define private public

@@ -1,0 +1,1986 @@
+#include "save_system.hpp"
+#include "libft/CMA/CMA.hpp"
+#include "libft/CPP_class/class_nullptr.hpp"
+#include "libft/Libft/limits.hpp"
+#include "libft/Libft/libft.hpp"
+#include "libft/Math/math.hpp"
+#include "libft/Template/set.hpp"
+
+namespace
+{
+    const long SAVE_DOUBLE_SCALE = 1000000;
+    const long SAVE_DOUBLE_SENTINEL_NAN = FT_LONG_MIN;
+    const long SAVE_DOUBLE_SENTINEL_NEG_INF = FT_LONG_MIN + 1;
+    const long SAVE_DOUBLE_SENTINEL_POS_INF = FT_LONG_MAX;
+    const long SAVE_DOUBLE_MIN_FINITE = FT_LONG_MIN + 2;
+    const long SAVE_DOUBLE_MAX_FINITE = FT_LONG_MAX - 1;
+    const int  SAVE_SHIP_ID_MIN = 1;
+    const int  SAVE_SHIP_ID_MAX = FT_INT_MAX - 1;
+    const int  SAVE_MAX_SHIPS_PER_FLEET = 4096;
+    const long BUILDING_GRID_MAX_CELLS = 1048576;
+    const int  SAVE_PLANET_STACK_LIMIT = 1000000;
+
+    bool save_system_parse_int_exact(const char *value, int &out) noexcept
+    {
+        if (!value)
+            return false;
+        char *end = ft_nullptr;
+        long parsed = ft_strtol(value, &end, 10);
+        if (end == value)
+            return false;
+        while (end && *end != '\0')
+        {
+            if (!ft_isspace(*end))
+                return false;
+            ++end;
+        }
+        if (parsed < FT_INT_MIN)
+            parsed = FT_INT_MIN;
+        if (parsed > FT_INT_MAX)
+            parsed = FT_INT_MAX;
+        out = static_cast<int>(parsed);
+        return true;
+    }
+
+    bool save_system_parse_non_negative_int(const char *value, int &out) noexcept
+    {
+        if (!save_system_parse_int_exact(value, out))
+            return false;
+        if (out < 0)
+            out = 0;
+        return true;
+    }
+
+    bool save_system_parse_stack_amount(const char *value, int &out) noexcept
+    {
+        if (!save_system_parse_non_negative_int(value, out))
+            return false;
+        if (out > SAVE_PLANET_STACK_LIMIT)
+            out = SAVE_PLANET_STACK_LIMIT;
+        return true;
+    }
+
+    bool save_system_is_known_ship_type(int ship_type) noexcept
+    {
+        switch (ship_type)
+        {
+        case SHIP_SHIELD:
+        case SHIP_RADAR:
+        case SHIP_SALVAGE:
+        case SHIP_TRANSPORT:
+        case SHIP_CORVETTE:
+        case SHIP_INTERCEPTOR:
+        case SHIP_REPAIR_DRONE:
+        case SHIP_SUNFLARE_SLOOP:
+        case SHIP_FRIGATE_JUGGERNAUT:
+        case SHIP_FRIGATE_CARRIER:
+        case SHIP_FRIGATE_SOVEREIGN:
+        case SHIP_FRIGATE_PREEMPTOR:
+        case SHIP_FRIGATE_PROTECTOR:
+        case SHIP_FRIGATE_ECLIPSE:
+        case SHIP_CAPITAL_JUGGERNAUT:
+        case SHIP_CAPITAL_NOVA:
+        case SHIP_CAPITAL_OBSIDIAN:
+        case SHIP_CAPITAL_PREEMPTOR:
+        case SHIP_CAPITAL_PROTECTOR:
+        case SHIP_CAPITAL_ECLIPSE:
+        case SHIP_RAIDER_CORVETTE:
+        case SHIP_RAIDER_DESTROYER:
+        case SHIP_RAIDER_BATTLESHIP:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    union save_system_double_converter
+    {
+        double double_value;
+        unsigned long long bit_pattern;
+    };
+
+    bool save_system_is_nan(double value)
+    {
+        save_system_double_converter converter;
+        unsigned long long exponent_bits;
+        unsigned long long mantissa_bits;
+
+        converter.double_value = value;
+        exponent_bits = converter.bit_pattern & 0x7ff0000000000000ULL;
+        mantissa_bits = converter.bit_pattern & 0x000fffffffffffffULL;
+        if (exponent_bits == 0x7ff0000000000000ULL && mantissa_bits != 0ULL)
+            return true;
+        return false;
+    }
+
+    int save_system_infinity_direction(double value)
+    {
+        save_system_double_converter converter;
+        unsigned long long exponent_bits;
+        unsigned long long mantissa_bits;
+
+        converter.double_value = value;
+        exponent_bits = converter.bit_pattern & 0x7ff0000000000000ULL;
+        mantissa_bits = converter.bit_pattern & 0x000fffffffffffffULL;
+        if (exponent_bits == 0x7ff0000000000000ULL && mantissa_bits == 0ULL)
+        {
+            if ((converter.bit_pattern & 0x8000000000000000ULL) != 0ULL)
+                return -1;
+            return 1;
+        }
+        return 0;
+    }
+
+    bool save_system_is_infinite(double value)
+    {
+        if (save_system_infinity_direction(value) != 0)
+            return true;
+        return false;
+    }
+
+    bool save_system_is_finite(double value)
+    {
+        if (save_system_is_nan(value))
+            return false;
+        if (save_system_is_infinite(value))
+            return false;
+        return true;
+    }
+
+    double save_system_positive_infinity()
+    {
+        save_system_double_converter converter;
+
+        converter.bit_pattern = 0x7ff0000000000000ULL;
+        return converter.double_value;
+    }
+
+    double save_system_negative_infinity()
+    {
+        save_system_double_converter converter;
+
+        converter.bit_pattern = 0xfff0000000000000ULL;
+        return converter.double_value;
+    }
+
+    double save_system_quiet_nan()
+    {
+        save_system_double_converter converter;
+
+        converter.bit_pattern = 0x7ff8000000000000ULL;
+        return converter.double_value;
+    }
+
+    SaveSystem::json_allocation_hook_t g_json_allocation_hook = ft_nullptr;
+
+    bool save_system_allocation_blocked(const char *type, const char *identifier)
+    {
+        if (!g_json_allocation_hook)
+            return false;
+        if (!g_json_allocation_hook(type, identifier))
+            return true;
+        return false;
+    }
+
+    ft_string save_system_abort_serialization(json_document &document)
+    {
+        document.clear();
+        return ft_string();
+    }
+
+    json_group *save_system_create_group(json_document &document, const char *name)
+    {
+        if (save_system_allocation_blocked("group", name))
+            return ft_nullptr;
+        json_group *group = document.create_group(name);
+        if (!group)
+            return ft_nullptr;
+        document.append_group(group);
+        return group;
+    }
+
+    bool save_system_add_item(json_document &document, json_group *group, const char *key, int value)
+    {
+        if (save_system_allocation_blocked("item", key))
+            return false;
+        json_item *item = document.create_item(key, value);
+        if (!item)
+            return false;
+        document.add_item(group, item);
+        return true;
+    }
+
+    bool save_system_add_item(json_document &document, json_group *group, const char *key, const char *value)
+    {
+        if (save_system_allocation_blocked("item", key))
+            return false;
+        json_item *item = document.create_item(key, value);
+        if (!item)
+            return false;
+        document.add_item(group, item);
+        return true;
+    }
+
+    void save_system_append_grid_run(ft_string &target, int value, size_t count) noexcept
+    {
+        if (!target.empty())
+            target.append(" ");
+        target.append(ft_to_string(value));
+        if (count > 1)
+        {
+            target.append("x");
+            target.append(ft_to_string(static_cast<long>(count)));
+        }
+    }
+
+    bool save_system_parse_grid_run(const char *token_begin, const char *token_end,
+        long &value_out, size_t &count_out) noexcept
+    {
+        if (!token_begin || !token_end || token_begin == token_end)
+            return false;
+        const char *cursor = token_begin;
+        ft_string value_buffer;
+        bool has_digit = false;
+
+        if (*cursor == '-')
+        {
+            value_buffer.append('-');
+            ++cursor;
+        }
+        while (cursor < token_end && ft_isdigit(*cursor))
+        {
+            value_buffer.append(*cursor);
+            ++cursor;
+            has_digit = true;
+        }
+        if (!has_digit)
+            return false;
+        value_out = ft_atol(value_buffer.c_str());
+        count_out = 1;
+        if (cursor == token_end)
+            return true;
+        if (*cursor != 'x')
+            return false;
+        ++cursor;
+        ft_string count_buffer;
+        bool has_count_digit = false;
+        while (cursor < token_end && ft_isdigit(*cursor))
+        {
+            count_buffer.append(*cursor);
+            ++cursor;
+            has_count_digit = true;
+        }
+        if (!has_count_digit)
+            return false;
+        if (cursor != token_end)
+            return false;
+        long parsed_count = ft_atol(count_buffer.c_str());
+        if (parsed_count <= 0)
+            return false;
+        count_out = static_cast<size_t>(parsed_count);
+        return true;
+    }
+
+    bool save_system_parse_csv_long(const char *&cursor, const char *limit, long &out) noexcept
+    {
+        if (!cursor || !limit)
+            return false;
+        if (cursor >= limit)
+            return false;
+        ft_string buffer;
+        bool has_digit = false;
+        if (*cursor == '-')
+        {
+            buffer.append('-');
+            ++cursor;
+        }
+        while (cursor < limit && ft_isdigit(*cursor))
+        {
+            buffer.append(*cursor);
+            ++cursor;
+            has_digit = true;
+        }
+        if (!has_digit)
+            return false;
+        out = ft_atol(buffer.c_str());
+        if (cursor < limit)
+        {
+            if (*cursor != ',')
+                return false;
+            ++cursor;
+        }
+        return true;
+    }
+}
+
+SaveSystem::SaveSystem() noexcept
+{
+    return ;
+}
+
+SaveSystem::~SaveSystem() noexcept
+{
+    return ;
+}
+
+void SaveSystem::set_json_allocation_hook(json_allocation_hook_t hook) noexcept
+{
+    g_json_allocation_hook = hook;
+    return ;
+}
+
+long SaveSystem::scale_double_to_long(double value) const noexcept
+{
+    int infinity_direction;
+
+    if (save_system_is_nan(value))
+        return SAVE_DOUBLE_SENTINEL_NAN;
+    infinity_direction = save_system_infinity_direction(value);
+    if (infinity_direction > 0)
+        return SAVE_DOUBLE_SENTINEL_POS_INF;
+    if (infinity_direction < 0)
+        return SAVE_DOUBLE_SENTINEL_NEG_INF;
+    if (SAVE_DOUBLE_SCALE == 0)
+        return 0;
+    double scaled = value * static_cast<double>(SAVE_DOUBLE_SCALE);
+    if (!save_system_is_finite(scaled))
+        return value >= 0.0 ? SAVE_DOUBLE_MAX_FINITE : SAVE_DOUBLE_MIN_FINITE;
+    if (scaled >= 0.0)
+        scaled += 0.5;
+    else
+        scaled -= 0.5;
+    if (scaled > static_cast<double>(SAVE_DOUBLE_MAX_FINITE))
+        return SAVE_DOUBLE_MAX_FINITE;
+    if (scaled < static_cast<double>(SAVE_DOUBLE_MIN_FINITE))
+        return SAVE_DOUBLE_MIN_FINITE;
+    long result = static_cast<long>(scaled);
+    return result;
+}
+
+double SaveSystem::unscale_long_to_double(long value) const noexcept
+{
+    if (value == SAVE_DOUBLE_SENTINEL_NAN)
+        return save_system_quiet_nan();
+    if (value == SAVE_DOUBLE_SENTINEL_POS_INF)
+        return save_system_positive_infinity();
+    if (value == SAVE_DOUBLE_SENTINEL_NEG_INF)
+        return save_system_negative_infinity();
+    if (value > SAVE_DOUBLE_MAX_FINITE)
+        value = SAVE_DOUBLE_MAX_FINITE;
+    else if (value < SAVE_DOUBLE_MIN_FINITE)
+        value = SAVE_DOUBLE_MIN_FINITE;
+    if (SAVE_DOUBLE_SCALE == 0)
+        return 0.0;
+    double numerator = static_cast<double>(value);
+    double denominator = static_cast<double>(SAVE_DOUBLE_SCALE);
+    return numerator / denominator;
+}
+
+ft_sharedptr<ft_planet> SaveSystem::create_planet_instance(int planet_id) const noexcept
+{
+    switch (planet_id)
+    {
+    case PLANET_TERRA:
+        return ft_sharedptr<ft_planet>(new ft_planet_terra());
+    case PLANET_MARS:
+        return ft_sharedptr<ft_planet>(new ft_planet_mars());
+    case PLANET_ZALTHOR:
+        return ft_sharedptr<ft_planet>(new ft_planet_zalthor());
+    case PLANET_VULCAN:
+        return ft_sharedptr<ft_planet>(new ft_planet_vulcan());
+    case PLANET_NOCTARIS_PRIME:
+        return ft_sharedptr<ft_planet>(new ft_planet_noctaris_prime());
+    case PLANET_LUNA:
+        return ft_sharedptr<ft_planet>(new ft_planet_luna());
+    default:
+        return ft_sharedptr<ft_planet>(new ft_planet(planet_id));
+    }
+}
+
+ft_sharedptr<ft_fleet> SaveSystem::create_fleet_instance(int fleet_id) const noexcept
+{
+    ft_sharedptr<ft_fleet> fleet(new ft_fleet(fleet_id));
+    return fleet;
+}
+
+ft_string SaveSystem::serialize_planets(const ft_map<int, ft_sharedptr<ft_planet> > &planets) const noexcept
+{
+    json_document document;
+    size_t count = planets.size();
+    if (count > 0)
+    {
+        const Pair<int, ft_sharedptr<ft_planet> > *entries = planets.end();
+        entries -= count;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ft_sharedptr<ft_planet> planet = entries[i].value;
+            if (!planet)
+                continue;
+            ft_string group_name = "planet_";
+            ft_string id_string = ft_to_string(entries[i].key);
+            group_name.append(id_string);
+            json_group *group = save_system_create_group(document, group_name.c_str());
+            if (!group)
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            const ft_vector<Pair<int, double> > &resources = planet->get_resources();
+            for (size_t j = 0; j < resources.size(); ++j)
+            {
+                int ore_id = resources[j].key;
+                ft_string ore_string = ft_to_string(ore_id);
+                ft_string amount_key = "resource_";
+                amount_key.append(ore_string);
+                int amount = planet->get_resource(ore_id);
+                if (!save_system_add_item(document, group, amount_key.c_str(), amount))
+                    return save_system_abort_serialization(document);
+                ft_string rate_key = "rate_";
+                rate_key.append(ore_string);
+                long scaled_rate = this->scale_double_to_long(resources[j].value);
+                ft_string rate_value = ft_to_string(scaled_rate);
+                if (!save_system_add_item(document, group, rate_key.c_str(), rate_value.c_str()))
+                    return save_system_abort_serialization(document);
+            }
+            const ft_vector<Pair<int, double> > &carryover = planet->get_carryover();
+            for (size_t j = 0; j < carryover.size(); ++j)
+            {
+                int ore_id = carryover[j].key;
+                ft_string ore_string = ft_to_string(ore_id);
+                ft_string carry_key = "carryover_";
+                carry_key.append(ore_string);
+                long scaled_carry = this->scale_double_to_long(carryover[j].value);
+                ft_string carry_value = ft_to_string(scaled_carry);
+                if (!save_system_add_item(document, group, carry_key.c_str(), carry_value.c_str()))
+                    return save_system_abort_serialization(document);
+            }
+            ft_vector<Pair<int, int> > inventory_snapshot = planet->get_items_snapshot();
+            for (size_t j = 0; j < inventory_snapshot.size(); ++j)
+            {
+                ft_string item_key = "item_";
+                ft_string item_id_string = ft_to_string(inventory_snapshot[j].key);
+                item_key.append(item_id_string);
+                if (!save_system_add_item(document, group, item_key.c_str(), inventory_snapshot[j].value))
+                    return save_system_abort_serialization(document);
+            }
+        }
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_planets(const char *content,
+    ft_map<int, ft_sharedptr<ft_planet> > &planets) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    planets.clear();
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *id_item = json_find_item(current, "id");
+        if (!id_item)
+        {
+            current = current->next;
+            continue;
+        }
+        int planet_id = ft_atoi(id_item->value);
+        ft_sharedptr<ft_planet> planet = this->create_planet_instance(planet_id);
+        if (!planet)
+        {
+            current = current->next;
+            continue;
+        }
+        ft_vector<Pair<int, int> > resource_amounts;
+        ft_vector<Pair<int, long> > resource_rates;
+        ft_vector<Pair<int, long> > resource_carryover;
+        ft_vector<Pair<int, int> > inventory_items;
+        json_item *item = current->items;
+        while (item)
+        {
+            if (item->key && ft_strncmp(item->key, "resource_", 9) == 0)
+            {
+                int ore_id = ft_atoi(item->key + 9);
+                Pair<int, int> entry;
+                entry.key = ore_id;
+                int amount = 0;
+                if (ore_id > 0 && save_system_parse_stack_amount(item->value, amount))
+                {
+                    entry.value = amount;
+                    resource_amounts.push_back(entry);
+                }
+            }
+            else if (item->key && ft_strncmp(item->key, "rate_", 5) == 0)
+            {
+                int ore_id = ft_atoi(item->key + 5);
+                Pair<int, long> entry;
+                entry.key = ore_id;
+                entry.value = ft_atol(item->value);
+                resource_rates.push_back(entry);
+            }
+            else if (item->key && ft_strncmp(item->key, "carryover_", 10) == 0)
+            {
+                int ore_id = ft_atoi(item->key + 10);
+                Pair<int, long> entry;
+                entry.key = ore_id;
+                entry.value = ft_atol(item->value);
+                resource_carryover.push_back(entry);
+            }
+            else if (item->key && ft_strncmp(item->key, "item_", 5) == 0)
+            {
+                int item_id = ft_atoi(item->key + 5);
+                Pair<int, int> entry;
+                entry.key = item_id;
+                int amount = 0;
+                if (item_id > 0 && save_system_parse_stack_amount(item->value, amount))
+                {
+                    entry.value = amount;
+                    inventory_items.push_back(entry);
+                }
+            }
+            item = item->next;
+        }
+        for (size_t i = 0; i < resource_rates.size(); ++i)
+        {
+            int ore_id = resource_rates[i].key;
+            double rate = this->unscale_long_to_double(resource_rates[i].value);
+            if (!save_system_is_finite(rate))
+                rate = 0.0;
+            if (ore_id > 0)
+                planet->register_resource(ore_id, rate);
+        }
+        for (size_t i = 0; i < resource_amounts.size(); ++i)
+        {
+            int ore_id = resource_amounts[i].key;
+            if (ore_id <= 0)
+                continue;
+            planet->register_resource(ore_id, planet->get_rate(ore_id));
+            int sanitized = planet->clamp_resource_amount(ore_id, resource_amounts[i].value);
+            planet->set_resource(ore_id, sanitized);
+        }
+        for (size_t i = 0; i < resource_carryover.size(); ++i)
+        {
+            int ore_id = resource_carryover[i].key;
+            double carry_value = this->unscale_long_to_double(resource_carryover[i].value);
+            if (!save_system_is_finite(carry_value))
+                carry_value = 0.0;
+            if (ore_id > 0)
+                planet->set_carryover(ore_id, carry_value);
+        }
+        for (size_t i = 0; i < inventory_items.size(); ++i)
+        {
+            int item_id = inventory_items[i].key;
+            if (item_id <= 0)
+                continue;
+            planet->ensure_item_slot(item_id);
+            int sanitized = planet->clamp_resource_amount(item_id, inventory_items[i].value);
+            planet->set_resource(item_id, sanitized);
+        }
+        planets.insert(planet_id, planet);
+        current = current->next;
+    }
+    json_free_groups(groups);
+    return true;
+}
+
+ft_string SaveSystem::serialize_fleets(const ft_map<int, ft_sharedptr<ft_fleet> > &fleets) const noexcept
+{
+    json_document document;
+    size_t count = fleets.size();
+    if (count > 0)
+    {
+        const Pair<int, ft_sharedptr<ft_fleet> > *entries = fleets.end();
+        entries -= count;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ft_sharedptr<ft_fleet> fleet = entries[i].value;
+            if (!fleet)
+                continue;
+            ft_string group_name = "fleet_";
+            ft_string id_string = ft_to_string(entries[i].key);
+            group_name.append(id_string);
+            json_group *group = save_system_create_group(document, group_name.c_str());
+            if (!group)
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            ft_location location = fleet->get_location();
+            if (!save_system_add_item(document, group, "location_type", location.type))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "location_from", location.from))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "location_to", location.to))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "location_misc", location.misc))
+                return save_system_abort_serialization(document);
+            long travel_scaled = this->scale_double_to_long(fleet->get_travel_time());
+            ft_string travel_value = ft_to_string(travel_scaled);
+            if (!save_system_add_item(document, group, "travel_time", travel_value.c_str()))
+                return save_system_abort_serialization(document);
+            long veterancy_scaled = this->scale_double_to_long(fleet->get_escort_veterancy());
+            ft_string veterancy_value = ft_to_string(veterancy_scaled);
+            if (!save_system_add_item(document, group, "escort_veterancy", veterancy_value.c_str()))
+                return save_system_abort_serialization(document);
+            int ship_total = fleet->get_ship_count();
+            if (!save_system_add_item(document, group, "ship_count", ship_total))
+                return save_system_abort_serialization(document);
+            ft_vector<int> ship_ids;
+            fleet->get_ship_ids(ship_ids);
+            for (size_t j = 0; j < ship_ids.size(); ++j)
+            {
+                int ship_id = ship_ids[j];
+                const ft_ship *ship = fleet->get_ship(ship_id);
+                if (!ship)
+                    continue;
+                ft_string index_string = ft_to_string(static_cast<long>(j));
+                ft_string base_key = "ship_";
+                base_key.append(index_string);
+                ft_string key = base_key;
+                key.append("_id");
+                if (!save_system_add_item(document, group, key.c_str(), ship->id))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_type");
+                if (!save_system_add_item(document, group, key.c_str(), ship->type))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_armor");
+                if (!save_system_add_item(document, group, key.c_str(), ship->armor))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_hp");
+                if (!save_system_add_item(document, group, key.c_str(), ship->hp))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_shield");
+                if (!save_system_add_item(document, group, key.c_str(), ship->shield))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_max_hp");
+                if (!save_system_add_item(document, group, key.c_str(), ship->max_hp))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_max_shield");
+                if (!save_system_add_item(document, group, key.c_str(), ship->max_shield))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_max_speed");
+                long max_speed_scaled = this->scale_double_to_long(ship->max_speed);
+                ft_string max_speed_value = ft_to_string(max_speed_scaled);
+                if (!save_system_add_item(document, group, key.c_str(), max_speed_value.c_str()))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_acceleration");
+                long acceleration_scaled = this->scale_double_to_long(ship->acceleration);
+                ft_string acceleration_value = ft_to_string(acceleration_scaled);
+                if (!save_system_add_item(document, group, key.c_str(), acceleration_value.c_str()))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_deceleration");
+                long deceleration_scaled = this->scale_double_to_long(ship->deceleration);
+                ft_string deceleration_value = ft_to_string(deceleration_scaled);
+                if (!save_system_add_item(document, group, key.c_str(), deceleration_value.c_str()))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_turn_speed");
+                long turn_speed_scaled = this->scale_double_to_long(ship->turn_speed);
+                ft_string turn_speed_value = ft_to_string(turn_speed_scaled);
+                if (!save_system_add_item(document, group, key.c_str(), turn_speed_value.c_str()))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_behavior");
+                if (!save_system_add_item(document, group, key.c_str(), ship->combat_behavior))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_outnumbered");
+                if (!save_system_add_item(document, group, key.c_str(), ship->outnumbered_behavior))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_unescorted");
+                if (!save_system_add_item(document, group, key.c_str(), ship->unescorted_behavior))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_low_hp");
+                if (!save_system_add_item(document, group, key.c_str(), ship->low_hp_behavior))
+                    return save_system_abort_serialization(document);
+                key = base_key;
+                key.append("_role");
+                if (!save_system_add_item(document, group, key.c_str(), ship->role))
+                    return save_system_abort_serialization(document);
+            }
+        }
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_fleets(const char *content,
+    ft_map<int, ft_sharedptr<ft_fleet> > &fleets) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    fleets.clear();
+    ft_set<int> seen_ship_ids;
+    long highest_ship_id = static_cast<long>(SAVE_SHIP_ID_MIN) - 1;
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *id_item = json_find_item(current, "id");
+        if (!id_item)
+        {
+            current = current->next;
+            continue;
+        }
+        int fleet_id = ft_atoi(id_item->value);
+        ft_sharedptr<ft_fleet> fleet = this->create_fleet_instance(fleet_id);
+        if (!fleet)
+        {
+            current = current->next;
+            continue;
+        }
+        json_item *type_item = json_find_item(current, "location_type");
+        int location_type = type_item ? ft_atoi(type_item->value) : LOCATION_PLANET;
+        json_item *from_item = json_find_item(current, "location_from");
+        int location_from = from_item ? ft_atoi(from_item->value) : PLANET_TERRA;
+        json_item *to_item = json_find_item(current, "location_to");
+        int location_to = to_item ? ft_atoi(to_item->value) : PLANET_TERRA;
+        json_item *misc_item = json_find_item(current, "location_misc");
+        int location_misc = misc_item ? ft_atoi(misc_item->value) : 0;
+        json_item *travel_item = json_find_item(current, "travel_time");
+        long travel_scaled = travel_item ? ft_atol(travel_item->value) : 0;
+        json_item *veterancy_item = json_find_item(current, "escort_veterancy");
+        long veterancy_scaled = veterancy_item ? ft_atol(veterancy_item->value) : 0;
+        if (location_type == LOCATION_TRAVEL)
+            fleet->set_location_travel(location_from, location_to,
+                this->unscale_long_to_double(travel_scaled));
+        else if (location_type == LOCATION_MISC)
+            fleet->set_location_misc(location_misc);
+        else
+            fleet->set_location_planet(location_from);
+        fleet->set_escort_veterancy(this->unscale_long_to_double(veterancy_scaled));
+        json_item *ship_count_item = json_find_item(current, "ship_count");
+        int ship_count = ship_count_item ? ft_atoi(ship_count_item->value) : 0;
+        if (ship_count < 0)
+            ship_count = 0;
+        int highest_ship_slot = -1;
+        json_item *ship_entry = current->items;
+        while (ship_entry)
+        {
+            if (ship_entry->key && ft_strncmp(ship_entry->key, "ship_", 5) == 0)
+            {
+                const char *index_start = ship_entry->key + 5;
+                const char *cursor = index_start;
+                while (*cursor && *cursor >= '0' && *cursor <= '9')
+                    ++cursor;
+                if (cursor != index_start && ft_strncmp(cursor, "_id", 3) == 0)
+                {
+                    int slot = ft_atoi(index_start);
+                    if (slot < 0)
+                    {
+                        json_free_groups(groups);
+                        return false;
+                    }
+                    if (slot > highest_ship_slot)
+                        highest_ship_slot = slot;
+                    if (slot >= SAVE_MAX_SHIPS_PER_FLEET)
+                    {
+                        json_free_groups(groups);
+                        return false;
+                    }
+                }
+            }
+            ship_entry = ship_entry->next;
+        }
+        if (ship_count > SAVE_MAX_SHIPS_PER_FLEET)
+            ship_count = SAVE_MAX_SHIPS_PER_FLEET;
+        if (highest_ship_slot < 0)
+            ship_count = 0;
+        else
+        {
+            int minimum_ship_count = highest_ship_slot + 1;
+            if (minimum_ship_count > SAVE_MAX_SHIPS_PER_FLEET)
+                minimum_ship_count = SAVE_MAX_SHIPS_PER_FLEET;
+            if (ship_count < minimum_ship_count)
+                ship_count = minimum_ship_count;
+        }
+        int missing_streak = 0;
+        bool saw_ship = false;
+        for (int i = 0; i < ship_count; ++i)
+        {
+            ft_string index_string = ft_to_string(static_cast<long>(i));
+            ft_string base_key = "ship_";
+            base_key.append(index_string);
+            ft_string key = base_key;
+            key.append("_id");
+            json_item *ship_id_item = json_find_item(current, key.c_str());
+            if (!ship_id_item)
+            {
+                ++missing_streak;
+                if (saw_ship && missing_streak >= 2)
+                    break;
+                continue;
+            }
+            missing_streak = 0;
+            saw_ship = true;
+            ft_ship ship_snapshot;
+            ship_snapshot.id = ft_atoi(ship_id_item->value);
+            if (ship_snapshot.id < SAVE_SHIP_ID_MIN
+                || ship_snapshot.id > SAVE_SHIP_ID_MAX)
+            {
+                json_free_groups(groups);
+                return false;
+            }
+            key = base_key;
+            key.append("_type");
+            json_item *ship_type_item = json_find_item(current, key.c_str());
+            if (ship_type_item)
+                ship_snapshot.type = ft_atoi(ship_type_item->value);
+            if (!save_system_is_known_ship_type(ship_snapshot.type))
+                continue;
+            key = base_key;
+            key.append("_armor");
+            json_item *armor_item = json_find_item(current, key.c_str());
+            if (armor_item)
+            {
+                if (!save_system_parse_non_negative_int(armor_item->value, ship_snapshot.armor))
+                    ship_snapshot.armor = 0;
+            }
+            else
+                ship_snapshot.armor = 0;
+            key = base_key;
+            key.append("_hp");
+            json_item *hp_item = json_find_item(current, key.c_str());
+            key = base_key;
+            key.append("_shield");
+            json_item *shield_item = json_find_item(current, key.c_str());
+            key = base_key;
+            key.append("_max_hp");
+            json_item *max_hp_item = json_find_item(current, key.c_str());
+            if (!max_hp_item)
+                continue;
+            int max_hp_value = 0;
+            if (!save_system_parse_non_negative_int(max_hp_item->value, max_hp_value))
+                continue;
+            ship_snapshot.max_hp = max_hp_value;
+            int hp_value = ship_snapshot.max_hp;
+            if (hp_item)
+            {
+                if (!save_system_parse_non_negative_int(hp_item->value, hp_value))
+                    continue;
+            }
+            if (ship_snapshot.max_hp <= 0)
+                hp_value = 0;
+            else if (hp_value > ship_snapshot.max_hp)
+                hp_value = ship_snapshot.max_hp;
+            ship_snapshot.hp = hp_value;
+            key = base_key;
+            key.append("_max_shield");
+            json_item *max_shield_item = json_find_item(current, key.c_str());
+            if (!max_shield_item)
+                continue;
+            int max_shield_value = 0;
+            if (!save_system_parse_non_negative_int(max_shield_item->value, max_shield_value))
+                continue;
+            ship_snapshot.max_shield = max_shield_value;
+            int shield_value = ship_snapshot.max_shield;
+            if (shield_item)
+            {
+                if (!save_system_parse_non_negative_int(shield_item->value, shield_value))
+                    continue;
+            }
+            if (ship_snapshot.max_shield <= 0)
+                shield_value = 0;
+            else if (shield_value > ship_snapshot.max_shield)
+                shield_value = ship_snapshot.max_shield;
+            ship_snapshot.shield = shield_value;
+            key = base_key;
+            key.append("_max_speed");
+            json_item *max_speed_item = json_find_item(current, key.c_str());
+            if (max_speed_item)
+            {
+                ship_snapshot.max_speed = this->unscale_long_to_double(ft_atol(max_speed_item->value));
+                if (!save_system_is_finite(ship_snapshot.max_speed))
+                    ship_snapshot.max_speed = 0.0;
+                else if (ship_snapshot.max_speed < 0.0)
+                    ship_snapshot.max_speed = 0.0;
+            }
+            key = base_key;
+            key.append("_acceleration");
+            json_item *acceleration_item = json_find_item(current, key.c_str());
+            if (acceleration_item)
+            {
+                ship_snapshot.acceleration = this->unscale_long_to_double(ft_atol(acceleration_item->value));
+                if (!save_system_is_finite(ship_snapshot.acceleration))
+                    ship_snapshot.acceleration = 0.0;
+                else if (ship_snapshot.acceleration < 0.0)
+                    ship_snapshot.acceleration = 0.0;
+            }
+            key = base_key;
+            key.append("_deceleration");
+            json_item *deceleration_item = json_find_item(current, key.c_str());
+            if (deceleration_item)
+            {
+                ship_snapshot.deceleration = this->unscale_long_to_double(ft_atol(deceleration_item->value));
+                if (!save_system_is_finite(ship_snapshot.deceleration))
+                    ship_snapshot.deceleration = 0.0;
+                else if (ship_snapshot.deceleration < 0.0)
+                    ship_snapshot.deceleration = 0.0;
+            }
+            key = base_key;
+            key.append("_turn_speed");
+            json_item *turn_speed_item = json_find_item(current, key.c_str());
+            if (turn_speed_item)
+            {
+                ship_snapshot.turn_speed = this->unscale_long_to_double(ft_atol(turn_speed_item->value));
+                if (!save_system_is_finite(ship_snapshot.turn_speed))
+                    ship_snapshot.turn_speed = 0.0;
+                else if (ship_snapshot.turn_speed < 0.0)
+                    ship_snapshot.turn_speed = 0.0;
+            }
+            key = base_key;
+            key.append("_behavior");
+            json_item *behavior_item = json_find_item(current, key.c_str());
+            if (behavior_item)
+                ship_snapshot.combat_behavior = ft_atoi(behavior_item->value);
+            key = base_key;
+            key.append("_outnumbered");
+            json_item *outnumbered_item = json_find_item(current, key.c_str());
+            if (outnumbered_item)
+                ship_snapshot.outnumbered_behavior = ft_atoi(outnumbered_item->value);
+            key = base_key;
+            key.append("_unescorted");
+            json_item *unescorted_item = json_find_item(current, key.c_str());
+            if (unescorted_item)
+                ship_snapshot.unescorted_behavior = ft_atoi(unescorted_item->value);
+            key = base_key;
+            key.append("_low_hp");
+            json_item *low_hp_item = json_find_item(current, key.c_str());
+            if (low_hp_item)
+                ship_snapshot.low_hp_behavior = ft_atoi(low_hp_item->value);
+            key = base_key;
+            key.append("_role");
+            json_item *role_item = json_find_item(current, key.c_str());
+            if (role_item)
+                ship_snapshot.role = ft_atoi(role_item->value);
+            if (seen_ship_ids.find(ship_snapshot.id) != ft_nullptr)
+            {
+                long candidate = highest_ship_id + 1;
+                if (candidate < SAVE_SHIP_ID_MIN)
+                    candidate = SAVE_SHIP_ID_MIN;
+                while (candidate <= SAVE_SHIP_ID_MAX)
+                {
+                    if (seen_ship_ids.find(static_cast<int>(candidate)) == ft_nullptr)
+                        break;
+                    ++candidate;
+                }
+                if (candidate > SAVE_SHIP_ID_MAX)
+                {
+                    json_free_groups(groups);
+                    return false;
+                }
+                ship_snapshot.id = static_cast<int>(candidate);
+            }
+            seen_ship_ids.insert(ship_snapshot.id);
+            if (ship_snapshot.id > highest_ship_id)
+                highest_ship_id = ship_snapshot.id;
+            if (!save_system_is_finite(ship_snapshot.max_speed) || ship_snapshot.max_speed < 0.0)
+                ship_snapshot.max_speed = 0.0;
+            if (!save_system_is_finite(ship_snapshot.acceleration) || ship_snapshot.acceleration < 0.0)
+                ship_snapshot.acceleration = 0.0;
+            if (!save_system_is_finite(ship_snapshot.deceleration) || ship_snapshot.deceleration < 0.0)
+                ship_snapshot.deceleration = ship_snapshot.acceleration;
+            if (!save_system_is_finite(ship_snapshot.turn_speed) || ship_snapshot.turn_speed < 0.0)
+                ship_snapshot.turn_speed = 0.0;
+            fleet->add_ship_snapshot(ship_snapshot);
+        }
+        fleets.insert(fleet_id, fleet);
+        current = current->next;
+    }
+    json_free_groups(groups);
+    return true;
+}
+
+ft_string SaveSystem::serialize_research(const ResearchManager &research) const noexcept
+{
+    json_document document;
+    json_group *settings = save_system_create_group(document, "research_settings");
+    if (!settings)
+        return save_system_abort_serialization(document);
+    long scaled = this->scale_double_to_long(research.get_duration_scale());
+    ft_string value = ft_to_string(scaled);
+    if (!save_system_add_item(document, settings, "duration_scale", value.c_str()))
+        return save_system_abort_serialization(document);
+    ft_map<int, ft_research_progress> progress;
+    research.get_progress_state(progress);
+    size_t count = progress.size();
+    if (count > 0)
+    {
+        const Pair<int, ft_research_progress> *entries = progress.end();
+        entries -= count;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ft_string group_name = "research_";
+            group_name.append(ft_to_string(entries[i].key));
+            json_group *group = save_system_create_group(document, group_name.c_str());
+            if (!group)
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "status", entries[i].value.status))
+                return save_system_abort_serialization(document);
+            long remaining_scaled = this->scale_double_to_long(entries[i].value.remaining_time);
+            ft_string remaining_value = ft_to_string(remaining_scaled);
+            if (!save_system_add_item(document, group, "remaining_time", remaining_value.c_str()))
+                return save_system_abort_serialization(document);
+        }
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_research(const char *content, ResearchManager &research) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    ft_map<int, ft_research_progress> snapshot;
+    double duration_scale = research.get_duration_scale();
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *id_item = json_find_item(current, "id");
+        if (id_item)
+        {
+            int research_id = ft_atoi(id_item->value);
+            ft_research_progress progress;
+            progress.status = RESEARCH_STATUS_LOCKED;
+            progress.remaining_time = 0.0;
+            json_item *status_item = json_find_item(current, "status");
+            if (status_item)
+                progress.status = ft_atoi(status_item->value);
+            json_item *remaining_item = json_find_item(current, "remaining_time");
+            if (remaining_item)
+                progress.remaining_time = this->unscale_long_to_double(ft_atol(remaining_item->value));
+            snapshot.insert(research_id, progress);
+        }
+        else
+        {
+            json_item *scale_item = json_find_item(current, "duration_scale");
+            if (scale_item)
+                duration_scale = this->unscale_long_to_double(ft_atol(scale_item->value));
+        }
+        current = current->next;
+    }
+    research.set_duration_scale(duration_scale);
+    research.set_progress_state(snapshot);
+    json_free_groups(groups);
+    return true;
+}
+
+ft_string SaveSystem::serialize_achievements(const AchievementManager &achievements) const noexcept
+{
+    json_document document;
+    ft_map<int, ft_achievement_progress> progress;
+    achievements.get_progress_state(progress);
+    size_t count = progress.size();
+    if (count > 0)
+    {
+        const Pair<int, ft_achievement_progress> *entries = progress.end();
+        entries -= count;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ft_string group_name = "achievement_";
+            group_name.append(ft_to_string(entries[i].key));
+            json_group *group = save_system_create_group(document, group_name.c_str());
+            if (!group)
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "value", entries[i].value.value))
+                return save_system_abort_serialization(document);
+            int completed_flag = entries[i].value.completed ? 1 : 0;
+            if (!save_system_add_item(document, group, "completed", completed_flag))
+                return save_system_abort_serialization(document);
+        }
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_achievements(const char *content, AchievementManager &achievements) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    ft_map<int, ft_achievement_progress> snapshot;
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *id_item = json_find_item(current, "id");
+        if (!id_item)
+        {
+            current = current->next;
+            continue;
+        }
+        int achievement_id = ft_atoi(id_item->value);
+        ft_achievement_progress progress;
+        progress.value = 0;
+        progress.completed = false;
+        json_item *value_item = json_find_item(current, "value");
+        if (value_item)
+            progress.value = ft_atoi(value_item->value);
+        json_item *completed_item = json_find_item(current, "completed");
+        if (completed_item)
+            progress.completed = ft_atoi(completed_item->value) != 0;
+        snapshot.insert(achievement_id, progress);
+        current = current->next;
+    }
+    achievements.set_progress_state(snapshot);
+    json_free_groups(groups);
+    return true;
+}
+
+ft_string SaveSystem::encode_building_grid(const ft_vector<int> &grid) const noexcept
+{
+    ft_string encoded;
+    size_t size = grid.size();
+    if (size == 0)
+        return encoded;
+    int current = grid[0];
+    size_t run = 1;
+    for (size_t i = 1; i < size; ++i)
+    {
+        int value = grid[i];
+        if (value == current)
+        {
+            ++run;
+            continue;
+        }
+        save_system_append_grid_run(encoded, current, run);
+        current = value;
+        run = 1;
+    }
+    save_system_append_grid_run(encoded, current, run);
+    return encoded;
+}
+
+bool SaveSystem::decode_building_grid(const char *encoded, size_t expected_cells,
+    ft_vector<int> &grid) const noexcept
+{
+    grid.clear();
+    if (expected_cells == 0)
+        return true;
+    if (!encoded || *encoded == '\0')
+    {
+        grid.resize(expected_cells, 0);
+        return true;
+    }
+    grid.reserve(expected_cells);
+    const char *cursor = encoded;
+    size_t produced = 0;
+    while (*cursor != '\0')
+    {
+        while (*cursor == ' ')
+            ++cursor;
+        if (*cursor == '\0')
+            break;
+        const char *token_begin = cursor;
+        while (*cursor != '\0' && *cursor != ' ')
+            ++cursor;
+        const char *token_end = cursor;
+        long value_long = 0;
+        size_t run = 0;
+        if (!save_system_parse_grid_run(token_begin, token_end, value_long, run))
+            return false;
+        if (run > static_cast<size_t>(BUILDING_GRID_MAX_CELLS))
+            return false;
+        if (produced > expected_cells)
+            return false;
+        size_t remaining = expected_cells - produced;
+        if (run > remaining)
+            return false;
+        for (size_t i = 0; i < run; ++i)
+        {
+            grid.push_back(static_cast<int>(value_long));
+        }
+        produced += run;
+    }
+    if (produced > expected_cells)
+        return false;
+    if (produced < expected_cells)
+    {
+        size_t deficit = expected_cells - produced;
+        for (size_t i = 0; i < deficit; ++i)
+            grid.push_back(0);
+    }
+    return grid.size() == expected_cells;
+}
+
+ft_string SaveSystem::encode_building_instances(const ft_map<int, ft_building_instance> &instances)
+    const noexcept
+{
+    ft_string encoded;
+    size_t count = instances.size();
+    if (count == 0)
+        return encoded;
+    const Pair<int, ft_building_instance> *entries = instances.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const ft_building_instance &instance = entries[i].value;
+        if (!encoded.empty())
+            encoded.append(";");
+        encoded.append(ft_to_string(entries[i].key));
+        encoded.append(",");
+        encoded.append(ft_to_string(instance.definition_id));
+        encoded.append(",");
+        encoded.append(ft_to_string(instance.x));
+        encoded.append(",");
+        encoded.append(ft_to_string(instance.y));
+        encoded.append(",");
+        long progress_scaled = this->scale_double_to_long(instance.progress);
+        encoded.append(ft_to_string(progress_scaled));
+        encoded.append(",");
+        encoded.append(instance.active ? "1" : "0");
+    }
+    return encoded;
+}
+
+bool SaveSystem::decode_building_instances(const char *encoded,
+    ft_map<int, ft_building_instance> &instances) const noexcept
+{
+    instances.clear();
+    if (!encoded || *encoded == '\0')
+        return true;
+    const char *cursor = encoded;
+    while (*cursor != '\0')
+    {
+        while (*cursor == ';')
+            ++cursor;
+        if (*cursor == '\0')
+            break;
+        const char *segment_end = cursor;
+        while (*segment_end != '\0' && *segment_end != ';')
+            ++segment_end;
+        const char *field_cursor = cursor;
+        long key_value = 0;
+        long definition_value = 0;
+        long x_value = 0;
+        long y_value = 0;
+        long progress_value = 0;
+        long active_value = 0;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, key_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, definition_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, x_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, y_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, progress_value))
+            return false;
+        if (!save_system_parse_csv_long(field_cursor, segment_end, active_value))
+            return false;
+        if (field_cursor != segment_end)
+            return false;
+        ft_building_instance instance;
+        instance.uid = static_cast<int>(key_value);
+        instance.definition_id = static_cast<int>(definition_value);
+        instance.x = static_cast<int>(x_value);
+        instance.y = static_cast<int>(y_value);
+        instance.progress = this->unscale_long_to_double(progress_value);
+        instance.active = active_value != 0;
+        int insert_key = instance.uid;
+        instances.insert(insert_key, instance);
+        cursor = segment_end;
+        if (*cursor == ';')
+            ++cursor;
+    }
+    return true;
+}
+
+ft_string SaveSystem::serialize_buildings(const BuildingManager &buildings) const noexcept
+{
+    json_document document;
+    json_group *manager_group = save_system_create_group(document, "buildings_manager");
+    if (!manager_group)
+        return save_system_abort_serialization(document);
+    if (!save_system_add_item(document, manager_group, "type", "manager"))
+        return save_system_abort_serialization(document);
+
+    long crafting_energy_scaled = this->scale_double_to_long(buildings._crafting_energy_multiplier);
+    ft_string crafting_energy_value = ft_to_string(crafting_energy_scaled);
+    if (!save_system_add_item(document, manager_group, "crafting_energy_multiplier",
+        crafting_energy_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+    long crafting_speed_scaled = this->scale_double_to_long(buildings._crafting_speed_multiplier);
+    ft_string crafting_speed_value = ft_to_string(crafting_speed_scaled);
+    if (!save_system_add_item(document, manager_group, "crafting_speed_multiplier",
+        crafting_speed_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+    long global_energy_scaled = this->scale_double_to_long(buildings._global_energy_multiplier);
+    ft_string global_energy_value = ft_to_string(global_energy_scaled);
+    if (!save_system_add_item(document, manager_group, "global_energy_multiplier",
+        global_energy_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+
+    size_t unlock_count = buildings._building_unlocks.size();
+    if (unlock_count > 0)
+    {
+        const Pair<int, bool> *unlock_entries = buildings._building_unlocks.end();
+        unlock_entries -= unlock_count;
+        for (size_t i = 0; i < unlock_count; ++i)
+        {
+            ft_string key("unlock_");
+            key.append(ft_to_string(unlock_entries[i].key));
+            int unlocked = unlock_entries[i].value ? 1 : 0;
+            if (!save_system_add_item(document, manager_group, key.c_str(), unlocked))
+                return save_system_abort_serialization(document);
+        }
+    }
+
+    size_t planet_count = buildings._planets.size();
+    if (planet_count > 0)
+    {
+        const Pair<int, ft_planet_build_state> *entries = buildings._planets.end();
+        entries -= planet_count;
+        for (size_t i = 0; i < planet_count; ++i)
+        {
+            const ft_planet_build_state &state = entries[i].value;
+            ft_string group_name = "building_planet_";
+            group_name.append(ft_to_string(entries[i].key));
+            json_group *group = save_system_create_group(document, group_name.c_str());
+            if (!group)
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "type", "planet"))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "id", entries[i].key))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "width", state.width))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "height", state.height))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "base_logistic", state.base_logistic))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "research_logistic_bonus",
+                state.research_logistic_bonus))
+            {
+                return save_system_abort_serialization(document);
+            }
+            if (!save_system_add_item(document, group, "used_plots", state.used_plots))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "logistic_capacity", state.logistic_capacity))
+                return save_system_abort_serialization(document);
+            if (!save_system_add_item(document, group, "logistic_usage", state.logistic_usage))
+                return save_system_abort_serialization(document);
+            long base_energy_scaled = this->scale_double_to_long(state.base_energy_generation);
+            ft_string base_energy_value = ft_to_string(base_energy_scaled);
+            if (!save_system_add_item(document, group, "base_energy_generation",
+                base_energy_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long energy_generation_scaled = this->scale_double_to_long(state.energy_generation);
+            ft_string energy_generation_value = ft_to_string(energy_generation_scaled);
+            if (!save_system_add_item(document, group, "energy_generation",
+                energy_generation_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long energy_consumption_scaled = this->scale_double_to_long(state.energy_consumption);
+            ft_string energy_consumption_value = ft_to_string(energy_consumption_scaled);
+            if (!save_system_add_item(document, group, "energy_consumption",
+                energy_consumption_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long support_energy_scaled = this->scale_double_to_long(state.support_energy);
+            ft_string support_energy_value = ft_to_string(support_energy_scaled);
+            if (!save_system_add_item(document, group, "support_energy", support_energy_value.c_str()))
+                return save_system_abort_serialization(document);
+            long mine_multiplier_scaled = this->scale_double_to_long(state.mine_multiplier);
+            ft_string mine_multiplier_value = ft_to_string(mine_multiplier_scaled);
+            if (!save_system_add_item(document, group, "mine_multiplier",
+                mine_multiplier_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long convoy_speed_scaled = this->scale_double_to_long(state.convoy_speed_bonus);
+            ft_string convoy_speed_value = ft_to_string(convoy_speed_scaled);
+            if (!save_system_add_item(document, group, "convoy_speed_bonus",
+                convoy_speed_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long convoy_risk_scaled = this->scale_double_to_long(state.convoy_raid_risk_modifier);
+            ft_string convoy_risk_value = ft_to_string(convoy_risk_scaled);
+            if (!save_system_add_item(document, group, "convoy_raid_risk_modifier",
+                convoy_risk_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            long deficit_scaled = this->scale_double_to_long(state.energy_deficit_pressure);
+            ft_string deficit_value = ft_to_string(deficit_scaled);
+            if (!save_system_add_item(document, group, "energy_deficit_pressure",
+                deficit_value.c_str()))
+            {
+                return save_system_abort_serialization(document);
+            }
+            if (!save_system_add_item(document, group, "next_instance_id", state.next_instance_id))
+                return save_system_abort_serialization(document);
+
+            ft_string grid_payload = this->encode_building_grid(state.grid);
+            if (grid_payload.size() > 0)
+            {
+                if (!save_system_add_item(document, group, "grid", grid_payload.c_str()))
+                    return save_system_abort_serialization(document);
+            }
+
+            ft_string instance_payload = this->encode_building_instances(state.instances);
+            if (instance_payload.size() > 0)
+            {
+                if (!save_system_add_item(document, group, "instances", instance_payload.c_str()))
+                    return save_system_abort_serialization(document);
+            }
+        }
+    }
+
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_buildings(const char *content, BuildingManager &buildings) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+
+    ft_map<int, ft_planet_build_state> parsed_planets;
+    ft_map<int, bool> parsed_unlocks;
+    double parsed_crafting_energy = 1.0;
+    double parsed_crafting_speed = 1.0;
+    double parsed_global_energy = 1.0;
+
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *type_item = json_find_item(current, "type");
+        const char *type_value = ft_nullptr;
+        if (type_item)
+            type_value = type_item->value;
+        if (type_value && ft_strcmp(type_value, "manager") == 0)
+        {
+            json_item *item = current->items;
+            while (item)
+            {
+                if (!item->key)
+                {
+                    item = item->next;
+                    continue;
+                }
+                if (ft_strcmp(item->key, "crafting_energy_multiplier") == 0)
+                {
+                    parsed_crafting_energy = this->unscale_long_to_double(ft_atol(item->value));
+                    if (parsed_crafting_energy <= 0.0)
+                        parsed_crafting_energy = 1.0;
+                }
+                else if (ft_strcmp(item->key, "crafting_speed_multiplier") == 0)
+                {
+                    parsed_crafting_speed = this->unscale_long_to_double(ft_atol(item->value));
+                    if (parsed_crafting_speed <= 0.0)
+                        parsed_crafting_speed = 1.0;
+                }
+                else if (ft_strcmp(item->key, "global_energy_multiplier") == 0)
+                {
+                    parsed_global_energy = this->unscale_long_to_double(ft_atol(item->value));
+                    if (parsed_global_energy <= 0.0)
+                        parsed_global_energy = 1.0;
+                }
+                else if (ft_strncmp(item->key, "unlock_", 7) == 0)
+                {
+                    int building_id = ft_atoi(item->key + 7);
+                    bool unlocked = ft_atoi(item->value) != 0;
+                    Pair<int, bool> *entry = parsed_unlocks.find(building_id);
+                    if (entry == ft_nullptr)
+                        parsed_unlocks.insert(building_id, unlocked);
+                    else
+                        entry->value = unlocked;
+                }
+                item = item->next;
+            }
+        }
+        else
+        {
+            json_item *id_item = json_find_item(current, "id");
+            if (!id_item)
+            {
+                current = current->next;
+                continue;
+            }
+            int planet_id = ft_atoi(id_item->value);
+            ft_planet_build_state state;
+            state.planet_id = planet_id;
+            ft_vector<Pair<int, int> > grid_entries;
+            ft_map<int, ft_building_instance> instance_lookup;
+            const char *grid_payload_ptr = ft_nullptr;
+            const char *instance_payload_ptr = ft_nullptr;
+            json_item *item = current->items;
+            while (item)
+            {
+                if (!item->key)
+                {
+                    item = item->next;
+                    continue;
+                }
+                if (ft_strcmp(item->key, "type") == 0)
+                {
+                    item = item->next;
+                    continue;
+                }
+                if (ft_strcmp(item->key, "width") == 0)
+                    state.width = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "height") == 0)
+                    state.height = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "base_logistic") == 0)
+                    state.base_logistic = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "research_logistic_bonus") == 0)
+                    state.research_logistic_bonus = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "used_plots") == 0)
+                    state.used_plots = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "logistic_capacity") == 0)
+                    state.logistic_capacity = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "logistic_usage") == 0)
+                    state.logistic_usage = ft_atoi(item->value);
+                else if (ft_strcmp(item->key, "base_energy_generation") == 0)
+                    state.base_energy_generation = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "energy_generation") == 0)
+                    state.energy_generation = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "energy_consumption") == 0)
+                    state.energy_consumption = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "support_energy") == 0)
+                    state.support_energy = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "mine_multiplier") == 0)
+                    state.mine_multiplier = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "convoy_speed_bonus") == 0)
+                    state.convoy_speed_bonus = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "convoy_raid_risk_modifier") == 0)
+                    state.convoy_raid_risk_modifier = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "energy_deficit_pressure") == 0)
+                    state.energy_deficit_pressure = this->unscale_long_to_double(ft_atol(item->value));
+                else if (ft_strcmp(item->key, "next_instance_id") == 0)
+                {
+                    state.next_instance_id = ft_atoi(item->value);
+                    if (state.next_instance_id >= FT_BUILDING_INSTANCE_ID_MAX)
+                        state.next_instance_id = FT_BUILDING_INSTANCE_ID_MAX;
+                }
+                else if (ft_strcmp(item->key, "grid") == 0)
+                    grid_payload_ptr = item->value;
+                else if (ft_strcmp(item->key, "instances") == 0)
+                    instance_payload_ptr = item->value;
+                else if (ft_strncmp(item->key, "cell_", 5) == 0)
+                {
+                    Pair<int, int> entry;
+                    entry.key = ft_atoi(item->key + 5);
+                    entry.value = ft_atoi(item->value);
+                    grid_entries.push_back(entry);
+                }
+                else if (ft_strncmp(item->key, "instance_", 9) == 0)
+                {
+                    int uid = ft_atoi(item->key + 9);
+                    const char *suffix = ft_strchr(item->key + 9, '_');
+                    if (!suffix)
+                    {
+                        item = item->next;
+                        continue;
+                    }
+                    suffix += 1;
+                    Pair<int, ft_building_instance> *entry = instance_lookup.find(uid);
+                    if (entry == ft_nullptr)
+                    {
+                        ft_building_instance instance;
+                        instance.uid = uid;
+                        instance_lookup.insert(uid, instance);
+                        entry = instance_lookup.find(uid);
+                    }
+                    if (entry == ft_nullptr)
+                    {
+                        item = item->next;
+                        continue;
+                    }
+                    ft_building_instance &instance = entry->value;
+                    if (ft_strcmp(suffix, "uid") == 0)
+                        instance.uid = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "definition") == 0)
+                        instance.definition_id = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "x") == 0)
+                        instance.x = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "y") == 0)
+                        instance.y = ft_atoi(item->value);
+                    else if (ft_strcmp(suffix, "progress") == 0)
+                        instance.progress = this->unscale_long_to_double(ft_atol(item->value));
+                    else if (ft_strcmp(suffix, "active") == 0)
+                        instance.active = ft_atoi(item->value) != 0;
+                }
+                item = item->next;
+            }
+
+            if (state.width < 0)
+                state.width = 0;
+            if (state.height < 0)
+                state.height = 0;
+
+            size_t sanitized_width = static_cast<size_t>(state.width);
+            size_t sanitized_height = static_cast<size_t>(state.height);
+            size_t max_cells_limit = static_cast<size_t>(BUILDING_GRID_MAX_CELLS);
+            if (sanitized_width > max_cells_limit || sanitized_height > max_cells_limit)
+            {
+                json_free_groups(groups);
+                return false;
+            }
+            if (sanitized_width > 0 && sanitized_height > max_cells_limit / sanitized_width)
+            {
+                json_free_groups(groups);
+                return false;
+            }
+            if (state.base_logistic < 0)
+                state.base_logistic = 0;
+            if (state.research_logistic_bonus < 0)
+                state.research_logistic_bonus = 0;
+            if (state.logistic_capacity < 0)
+                state.logistic_capacity = 0;
+            if (state.logistic_usage < 0)
+                state.logistic_usage = 0;
+            if (state.logistic_usage > state.logistic_capacity)
+                state.logistic_usage = state.logistic_capacity;
+            if (state.next_instance_id <= 0)
+                state.next_instance_id = 1;
+            if (state.mine_multiplier < 1.0)
+                state.mine_multiplier = 1.0;
+            if (state.convoy_speed_bonus < 0.0)
+                state.convoy_speed_bonus = 0.0;
+            if (state.convoy_raid_risk_modifier < 0.0)
+                state.convoy_raid_risk_modifier = 0.0;
+            if (state.support_energy < 0.0)
+                state.support_energy = 0.0;
+            if (state.energy_deficit_pressure < 0.0)
+                state.energy_deficit_pressure = 0.0;
+
+            long total_cells_long = static_cast<long>(state.width) * static_cast<long>(state.height);
+            if (total_cells_long < 0)
+                total_cells_long = 0;
+            size_t total_cells = static_cast<size_t>(total_cells_long);
+            state.grid.clear();
+            if (total_cells > 0)
+            {
+                bool decoded_grid = false;
+                if (grid_payload_ptr && grid_payload_ptr[0] != '\0')
+                {
+                    if (!this->decode_building_grid(grid_payload_ptr, total_cells, state.grid))
+                    {
+                        json_free_groups(groups);
+                        return false;
+                    }
+                    decoded_grid = true;
+                }
+                if (!decoded_grid)
+                {
+                    state.grid.resize(total_cells, 0);
+                    for (size_t j = 0; j < grid_entries.size(); ++j)
+                    {
+                        int index = grid_entries[j].key;
+                        if (index < 0)
+                            continue;
+                        size_t cell_index = static_cast<size_t>(index);
+                        if (cell_index >= total_cells)
+                            continue;
+                        state.grid[cell_index] = grid_entries[j].value;
+                    }
+                }
+            }
+
+            int max_plots = state.width * state.height;
+            if (max_plots < 0)
+                max_plots = 0;
+            if (state.used_plots < 0)
+                state.used_plots = 0;
+            if (state.used_plots > max_plots)
+                state.used_plots = max_plots;
+
+            state.instances.clear();
+            bool decoded_instances = false;
+            if (instance_payload_ptr)
+            {
+                if (!this->decode_building_instances(instance_payload_ptr, state.instances))
+                {
+                    json_free_groups(groups);
+                    return false;
+                }
+                decoded_instances = true;
+            }
+            if (!decoded_instances)
+            {
+                size_t instance_count = instance_lookup.size();
+                if (instance_count > 0)
+                {
+                    const Pair<int, ft_building_instance> *inst_entries = instance_lookup.end();
+                    inst_entries -= instance_count;
+                    for (size_t j = 0; j < instance_count; ++j)
+                    {
+                        ft_building_instance instance = inst_entries[j].value;
+                        if (instance.uid == 0)
+                            instance.uid = inst_entries[j].key;
+                        state.instances.insert(inst_entries[j].key, instance);
+                    }
+                }
+            }
+
+            parsed_planets.remove(planet_id);
+            parsed_planets.insert(planet_id, ft_move(state));
+        }
+        current = current->next;
+    }
+
+    json_free_groups(groups);
+    buildings._planets.clear();
+    buildings._building_unlocks.clear();
+    buildings._crafting_energy_multiplier = parsed_crafting_energy;
+    buildings._crafting_speed_multiplier = parsed_crafting_speed;
+    buildings._global_energy_multiplier = parsed_global_energy;
+
+    size_t unlock_count = parsed_unlocks.size();
+    if (unlock_count > 0)
+    {
+        const Pair<int, bool> *unlock_entries = parsed_unlocks.end();
+        unlock_entries -= unlock_count;
+        for (size_t i = 0; i < unlock_count; ++i)
+            buildings._building_unlocks.insert(unlock_entries[i].key, unlock_entries[i].value);
+    }
+
+    size_t planet_count = parsed_planets.size();
+    if (planet_count > 0)
+    {
+        Pair<int, ft_planet_build_state> *entries = parsed_planets.end();
+        entries -= planet_count;
+        for (size_t i = 0; i < planet_count; ++i)
+            buildings._planets.insert(entries[i].key, ft_move(entries[i].value));
+    }
+    return true;
+}
+
+ft_string SaveSystem::serialize_campaign_progress(int convoys_delivered_total,
+    int convoy_raid_losses, int current_delivery_streak,
+    int longest_delivery_streak, size_t next_streak_milestone_index,
+    int order_branch_assault_victories,
+    int rebellion_branch_assault_victories,
+    int order_branch_pending_assault,
+    int rebellion_branch_pending_assault) const noexcept
+{
+    json_document document;
+    json_group *group = save_system_create_group(document, "campaign_progress");
+    if (!group)
+        return save_system_abort_serialization(document);
+    if (!save_system_add_item(document, group, "convoys_delivered_total",
+        convoys_delivered_total))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "convoy_raid_losses",
+        convoy_raid_losses))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "current_delivery_streak",
+        current_delivery_streak))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "longest_delivery_streak",
+        longest_delivery_streak))
+    {
+        return save_system_abort_serialization(document);
+    }
+    ft_string milestone_value = ft_to_string(static_cast<long>(next_streak_milestone_index));
+    if (!save_system_add_item(document, group, "next_streak_milestone_index",
+        milestone_value.c_str()))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "order_branch_assault_victories",
+        order_branch_assault_victories))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "rebellion_branch_assault_victories",
+        rebellion_branch_assault_victories))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "order_branch_pending_assault",
+        order_branch_pending_assault))
+    {
+        return save_system_abort_serialization(document);
+    }
+    if (!save_system_add_item(document, group, "rebellion_branch_pending_assault",
+        rebellion_branch_pending_assault))
+    {
+        return save_system_abort_serialization(document);
+    }
+    char *serialized = document.write_to_string();
+    if (!serialized)
+        return ft_string();
+    ft_string result(serialized);
+    cma_free(serialized);
+    return result;
+}
+
+bool SaveSystem::deserialize_campaign_progress(const char *content,
+    int &convoys_delivered_total, int &convoy_raid_losses,
+    int &current_delivery_streak, int &longest_delivery_streak,
+    size_t &next_streak_milestone_index,
+    int &order_branch_assault_victories,
+    int &rebellion_branch_assault_victories,
+    int &order_branch_pending_assault,
+    int &rebellion_branch_pending_assault) const noexcept
+{
+    if (!content)
+        return false;
+    json_group *groups = json_read_from_string(content);
+    if (!groups)
+        return false;
+    json_group *current = groups;
+    while (current)
+    {
+        json_item *item = current->items;
+        while (item)
+        {
+            if (!item->key)
+            {
+                item = item->next;
+                continue;
+            }
+            if (ft_strcmp(item->key, "convoys_delivered_total") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                convoys_delivered_total = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key, "convoy_raid_losses") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                convoy_raid_losses = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key, "current_delivery_streak") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                current_delivery_streak = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key, "longest_delivery_streak") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                longest_delivery_streak = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key, "next_streak_milestone_index") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                next_streak_milestone_index = static_cast<size_t>(parsed);
+            }
+            else if (ft_strcmp(item->key,
+                "order_branch_assault_victories") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                order_branch_assault_victories = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key,
+                "rebellion_branch_assault_victories") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                rebellion_branch_assault_victories = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key, "order_branch_pending_assault") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                order_branch_pending_assault = static_cast<int>(parsed);
+            }
+            else if (ft_strcmp(item->key,
+                "rebellion_branch_pending_assault") == 0)
+            {
+                long parsed = ft_atol(item->value);
+                if (parsed < 0)
+                    parsed = 0;
+                if (parsed > FT_INT_MAX)
+                    parsed = FT_INT_MAX;
+                rebellion_branch_pending_assault = static_cast<int>(parsed);
+            }
+            item = item->next;
+        }
+        current = current->next;
+    }
+    json_free_groups(groups);
+    return true;
+}
