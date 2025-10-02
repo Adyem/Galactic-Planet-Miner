@@ -162,7 +162,11 @@ void Game::decay_all_route_threat(double seconds)
     ft_vector<Pair<RouteKey, ft_supply_route> > entries;
     ft_map_snapshot(this->_supply_routes, entries);
     for (size_t i = 0; i < entries.size(); ++i)
-        this->decay_route_threat(entries[i].value, seconds);
+    {
+        Pair<RouteKey, ft_supply_route> *entry = this->_supply_routes.find(entries[i].key);
+        if (entry != ft_nullptr)
+            this->decay_route_threat(entry->value, seconds);
+    }
 }
 
 void Game::update_route_escalation(ft_supply_route &route, double seconds)

@@ -47,6 +47,9 @@ int main()
     if (!verify_supply_route_key_collisions())
         return 0;
 
+    if (!verify_supply_route_threat_decay())
+        return 0;
+
     if (!verify_trade_relay_convoy_modifiers())
         return 0;
 
