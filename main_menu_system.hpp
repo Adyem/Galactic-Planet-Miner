@@ -49,6 +49,7 @@ SDL_Texture *create_text_texture(SDL_Renderer &renderer, TTF_Font &font, const f
 
 // Main menu rendering
 ft_vector<ft_menu_item> build_main_menu_items();
+ft_rect                 build_main_menu_viewport();
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
     int window_width, int window_height, const ft_string &active_profile_name);
 

@@ -35,11 +35,19 @@ private:
     int                     _hovered_index;
     int                     _selected_index;
     ft_input_device_tracker _device_tracker;
+    ft_rect                 _viewport_bounds;
+    ft_rect                 _content_bounds;
+    int                     _scroll_offset;
+    int                     _max_scroll_offset;
 
     int  find_first_enabled_index() const;
     int  find_item_at(int x, int y) const;
     void move_selection(int direction);
     void synchronize_hover_with_selection();
+    void recalculate_content_bounds();
+    void update_scroll_limits();
+    void clamp_scroll_offset();
+    void scroll_to_index(int index);
 
 public:
     ft_ui_menu();
@@ -53,6 +61,10 @@ public:
     const ft_menu_item           *get_selected_item() const;
     e_ft_input_device             get_active_device() const noexcept;
     void                          set_selected_index(int index);
+    const ft_rect                &get_viewport_bounds() const noexcept;
+    int                           get_scroll_offset() const noexcept;
+    bool                          is_scrolling_enabled() const noexcept;
+    void                          set_viewport_bounds(const ft_rect &viewport);
 
     void handle_mouse_input(const ft_mouse_state &mouse);
     void handle_keyboard_input(const ft_keyboard_state &keyboard);

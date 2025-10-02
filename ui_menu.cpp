@@ -30,7 +30,14 @@ ft_menu_item::ft_menu_item(const ft_string &id, const ft_string &text, const ft_
 {}
 
 ft_ui_menu::ft_ui_menu()
-    : _items(), _hovered_index(-1), _selected_index(-1), _device_tracker()
+    : _items()
+    , _hovered_index(-1)
+    , _selected_index(-1)
+    , _device_tracker()
+    , _viewport_bounds()
+    , _content_bounds()
+    , _scroll_offset(0)
+    , _max_scroll_offset(0)
 {}
 
 void ft_ui_menu::clear()
@@ -39,6 +46,10 @@ void ft_ui_menu::clear()
     this->_hovered_index = -1;
     this->_selected_index = -1;
     this->_device_tracker.reset();
+    this->_viewport_bounds = ft_rect();
+    this->_content_bounds = ft_rect();
+    this->_scroll_offset = 0;
+    this->_max_scroll_offset = 0;
 }
 
 void ft_ui_menu::set_items(const ft_vector<ft_menu_item> &items)
@@ -54,6 +65,11 @@ void ft_ui_menu::set_items(const ft_vector<ft_menu_item> &items)
     this->_hovered_index = -1;
     this->_selected_index = this->find_first_enabled_index();
     this->_device_tracker.reset();
+    this->recalculate_content_bounds();
+    if (this->_viewport_bounds.width <= 0 || this->_viewport_bounds.height <= 0)
+        this->_viewport_bounds = this->_content_bounds;
+    this->update_scroll_limits();
+    this->scroll_to_index(this->_selected_index);
 }
 
 void ft_ui_menu::add_item(const ft_menu_item &item)
@@ -64,6 +80,11 @@ void ft_ui_menu::add_item(const ft_menu_item &item)
         this->_selected_index = static_cast<int>(this->_items.size()) - 1;
         this->_hovered_index = this->_selected_index;
     }
+    this->recalculate_content_bounds();
+    if (this->_viewport_bounds.width <= 0 || this->_viewport_bounds.height <= 0)
+        this->_viewport_bounds = this->_content_bounds;
+    this->update_scroll_limits();
+    this->scroll_to_index(this->_selected_index);
 }
 
 const ft_vector<ft_menu_item> &ft_ui_menu::get_items() const noexcept
@@ -116,6 +137,29 @@ void ft_ui_menu::set_selected_index(int index)
 
     this->_selected_index = static_cast<int>(candidate);
     this->_hovered_index = static_cast<int>(candidate);
+    this->scroll_to_index(this->_selected_index);
+}
+
+const ft_rect &ft_ui_menu::get_viewport_bounds() const noexcept
+{
+    return this->_viewport_bounds;
+}
+
+int ft_ui_menu::get_scroll_offset() const noexcept
+{
+    return this->_scroll_offset;
+}
+
+bool ft_ui_menu::is_scrolling_enabled() const noexcept
+{
+    return this->_max_scroll_offset > 0;
+}
+
+void ft_ui_menu::set_viewport_bounds(const ft_rect &viewport)
+{
+    this->_viewport_bounds = viewport;
+    this->update_scroll_limits();
+    this->scroll_to_index(this->_selected_index);
 }
 
 void ft_ui_menu::handle_mouse_input(const ft_mouse_state &mouse)
@@ -129,7 +173,10 @@ void ft_ui_menu::handle_mouse_input(const ft_mouse_state &mouse)
     this->_hovered_index = hovered;
 
     if (hovered >= 0 && mouse.left_pressed)
+    {
         this->_selected_index = hovered;
+        this->scroll_to_index(this->_selected_index);
+    }
 }
 
 void ft_ui_menu::handle_keyboard_input(const ft_keyboard_state &keyboard)
@@ -146,6 +193,7 @@ void ft_ui_menu::handle_keyboard_input(const ft_keyboard_state &keyboard)
         this->move_selection(1);
 
     this->synchronize_hover_with_selection();
+    this->scroll_to_index(this->_selected_index);
 }
 
 int ft_ui_menu::find_first_enabled_index() const
@@ -160,12 +208,25 @@ int ft_ui_menu::find_first_enabled_index() const
 
 int ft_ui_menu::find_item_at(int x, int y) const
 {
+    if (this->_viewport_bounds.width > 0 && this->_viewport_bounds.height > 0)
+    {
+        const int viewport_right = this->_viewport_bounds.left + this->_viewport_bounds.width;
+        const int viewport_bottom = this->_viewport_bounds.top + this->_viewport_bounds.height;
+
+        if (x < this->_viewport_bounds.left || x >= viewport_right)
+            return -1;
+        if (y < this->_viewport_bounds.top || y >= viewport_bottom)
+            return -1;
+    }
+
+    const int adjusted_y = y + this->_scroll_offset;
+
     for (size_t index = 0; index < this->_items.size(); ++index)
     {
         if (!this->_items[index].enabled)
             continue;
 
-        if (this->_items[index].bounds.contains(x, y))
+        if (this->_items[index].bounds.contains(x, adjusted_y))
             return static_cast<int>(index);
     }
     return -1;
@@ -203,6 +264,7 @@ void ft_ui_menu::move_selection(int direction)
         {
             this->_selected_index = candidate;
             this->_hovered_index = candidate;
+            this->scroll_to_index(candidate);
             return;
         }
     }
@@ -224,4 +286,117 @@ void ft_ui_menu::synchronize_hover_with_selection()
     }
 
     this->_hovered_index = static_cast<int>(index);
+}
+
+void ft_ui_menu::recalculate_content_bounds()
+{
+    if (this->_items.empty())
+    {
+        this->_content_bounds = ft_rect();
+        return;
+    }
+
+    int min_left = this->_items[0].bounds.left;
+    int min_top = this->_items[0].bounds.top;
+    int max_right = this->_items[0].bounds.left + this->_items[0].bounds.width;
+    int max_bottom = this->_items[0].bounds.top + this->_items[0].bounds.height;
+
+    for (size_t index = 1; index < this->_items.size(); ++index)
+    {
+        const ft_rect &bounds = this->_items[index].bounds;
+
+        if (bounds.left < min_left)
+            min_left = bounds.left;
+
+        const int right = bounds.left + bounds.width;
+        if (right > max_right)
+            max_right = right;
+
+        if (bounds.top < min_top)
+            min_top = bounds.top;
+
+        const int bottom = bounds.top + bounds.height;
+        if (bottom > max_bottom)
+            max_bottom = bottom;
+    }
+
+    this->_content_bounds.left = min_left;
+    this->_content_bounds.top = min_top;
+    this->_content_bounds.width = max_right - min_left;
+    this->_content_bounds.height = max_bottom - min_top;
+}
+
+void ft_ui_menu::update_scroll_limits()
+{
+    if (this->_viewport_bounds.width <= 0 || this->_viewport_bounds.height <= 0)
+    {
+        this->_max_scroll_offset = 0;
+        this->_scroll_offset = 0;
+        return;
+    }
+
+    const int viewport_bottom = this->_viewport_bounds.top + this->_viewport_bounds.height;
+    const int content_bottom = this->_content_bounds.top + this->_content_bounds.height;
+
+    int overflow = content_bottom - viewport_bottom;
+    if (overflow < 0)
+        overflow = 0;
+
+    this->_max_scroll_offset = overflow;
+    this->clamp_scroll_offset();
+}
+
+void ft_ui_menu::clamp_scroll_offset()
+{
+    if (this->_scroll_offset < 0)
+        this->_scroll_offset = 0;
+    if (this->_scroll_offset > this->_max_scroll_offset)
+        this->_scroll_offset = this->_max_scroll_offset;
+}
+
+void ft_ui_menu::scroll_to_index(int index)
+{
+    if (index < 0)
+    {
+        this->clamp_scroll_offset();
+        return;
+    }
+
+    const size_t converted = static_cast<size_t>(index);
+    if (converted >= this->_items.size())
+    {
+        this->clamp_scroll_offset();
+        return;
+    }
+
+    if (this->_viewport_bounds.height <= 0)
+    {
+        this->clamp_scroll_offset();
+        return;
+    }
+
+    if (this->_max_scroll_offset <= 0)
+    {
+        this->_scroll_offset = 0;
+        return;
+    }
+
+    const int viewport_top = this->_viewport_bounds.top;
+    const int viewport_bottom = viewport_top + this->_viewport_bounds.height;
+
+    const ft_rect &bounds = this->_items[converted].bounds;
+
+    int visible_top = bounds.top - this->_scroll_offset;
+    int visible_bottom = visible_top + bounds.height;
+
+    if (visible_top < viewport_top)
+    {
+        this->_scroll_offset -= (viewport_top - visible_top);
+    }
+    else if (visible_bottom > viewport_bottom)
+    {
+        this->_scroll_offset += (visible_bottom - viewport_bottom);
+    }
+
+    this->clamp_scroll_offset();
 }

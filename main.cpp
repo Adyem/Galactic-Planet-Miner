@@ -123,6 +123,7 @@ int main()
 
     ft_ui_menu menu;
     menu.set_items(build_main_menu_items());
+    menu.set_viewport_bounds(build_main_menu_viewport());
 
     bool running = true;
 
