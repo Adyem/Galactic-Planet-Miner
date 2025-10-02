@@ -90,9 +90,11 @@ BackendClient::BackendClient(const ft_string &host, const ft_string &path)
     {
         ft_string scheme_value;
         assign_substring(scheme_value, input, scheme_separator);
-        if (scheme_value.size() == 5 && ft_strncmp(scheme_value.c_str(), "https", 5) == 0)
+        ft_string normalized_scheme(scheme_value);
+        ft_to_lower(normalized_scheme.print());
+        if (normalized_scheme.size() == 5 && ft_strncmp(normalized_scheme.c_str(), "https", 5) == 0)
             this->_use_ssl = true;
-        else if (scheme_value.size() == 4 && ft_strncmp(scheme_value.c_str(), "http", 4) == 0)
+        else if (normalized_scheme.size() == 4 && ft_strncmp(normalized_scheme.c_str(), "http", 4) == 0)
             this->_use_ssl = false;
         authority_start = scheme_separator + 3;
     }
