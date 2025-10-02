@@ -134,12 +134,14 @@ private:
         bool    raided;
         bool    destroyed;
         bool    loss_recorded;
+        bool    route_escort_claimed;
         ft_supply_convoy()
             : id(0), route_id(0), contract_id(0), origin_planet_id(0),
               destination_planet_id(0), resource_id(0), amount(0),
               remaining_time(0.0), raid_meter(0.0), origin_escort(0),
               destination_escort(0), escort_fleet_id(0), escort_rating(0),
-              raided(false), destroyed(false), loss_recorded(false)
+              raided(false), destroyed(false), loss_recorded(false),
+              route_escort_claimed(false)
         {}
     };
     ft_map<RouteKey, ft_supply_route>            _supply_routes;
