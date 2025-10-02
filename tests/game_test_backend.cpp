@@ -508,6 +508,25 @@ int verify_supply_route_key_collisions()
     return 1;
 }
 
+int verify_supply_route_threat_decay()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    Game::ft_supply_route *route = game.ensure_supply_route(71000, 72000);
+    FT_ASSERT(route != ft_nullptr);
+
+    route->threat_level = 4.0;
+    route->quiet_timer = 45.0;
+
+    game.decay_all_route_threat(10.0);
+
+    FT_ASSERT(route->threat_level < 4.0);
+    FT_ASSERT(route->threat_level > 0.0);
+    FT_ASSERT(route->quiet_timer > 45.0);
+
+    return 1;
+}
+
 int verify_trade_relay_convoy_modifiers()
 {
     Game game(ft_string("127.0.0.1:8080"), ft_string("/"));

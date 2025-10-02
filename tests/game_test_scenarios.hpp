@@ -16,6 +16,7 @@ int verify_supply_contract_pending_stock_buffer();
 int verify_convoy_quest_objectives();
 int verify_multiple_convoy_raids();
 int verify_supply_route_escalation();
+int verify_supply_route_threat_decay();
 int verify_escort_veterancy_progression();
 int compare_energy_pressure_scenarios();
 int verify_crafting_resume_requires_full_cycle();

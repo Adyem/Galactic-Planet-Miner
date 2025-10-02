@@ -61,6 +61,7 @@ private:
     };
 
     friend int verify_supply_route_key_collisions();
+    friend int verify_supply_route_threat_decay();
     friend int verify_lore_log_retention();
 
     ft_game_state                                 _state;
