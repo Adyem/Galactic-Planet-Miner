@@ -466,11 +466,7 @@ int Game::dispatch_convoy(const ft_supply_route &route, int origin_planet_id,
         }
         else if (escort_was_claimed)
         {
-            Pair<int, int> *existing = this->_route_convoy_escorts.find(route.id);
-            if (existing != ft_nullptr)
-                existing->value = claimed_escort_id;
-            else
-                this->_route_convoy_escorts.insert(route.id, claimed_escort_id);
+            this->_route_convoy_escorts.remove(route.id);
         }
     }
     int effective_origin = convoy.origin_escort + convoy.escort_rating;
