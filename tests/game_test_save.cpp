@@ -8,6 +8,7 @@
 #include "../libft/JSon/json.hpp"
 #include "../libft/CMA/CMA.hpp"
 #include "save_system.hpp"
+#include "player_profile.hpp"
 
 #define private public
 #define protected public
@@ -2400,6 +2401,54 @@ int verify_buildings_unchanged_on_failed_load()
 
     FT_ASSERT_EQ(logistic_after_removal, game.get_planet_logistic_usage(PLANET_TERRA));
     FT_ASSERT_EQ(0, game.get_building_count(PLANET_TERRA, BUILDING_SMELTER));
+
+    return 1;
+}
+
+int verify_player_profile_save()
+{
+    const ft_string commander_name("Cmdr/Test:Save?");
+
+    PlayerProfilePreferences preferences;
+    preferences.commander_name = commander_name;
+    preferences.window_width = 1920U;
+    preferences.window_height = 1080U;
+
+    FT_ASSERT(player_profile_delete(commander_name));
+
+    FT_ASSERT(player_profile_save(preferences));
+
+    ft_string profile_path = player_profile_resolve_path(commander_name);
+    FT_ASSERT(!profile_path.empty());
+
+    json_document document;
+    FT_ASSERT_EQ(0, document.read_from_file(profile_path.c_str()));
+
+    json_group *group = document.find_group("profile");
+    FT_ASSERT(group != ft_nullptr);
+
+    json_item *name_item = document.find_item(group, "commander_name");
+    FT_ASSERT(name_item != ft_nullptr);
+    FT_ASSERT(name_item->value != ft_nullptr);
+    FT_ASSERT_EQ(0, ft_strcmp(name_item->value, commander_name.c_str()));
+
+    json_item *width_item = document.find_item(group, "window_width");
+    FT_ASSERT(width_item != ft_nullptr);
+    FT_ASSERT(width_item->value != ft_nullptr);
+    FT_ASSERT_EQ(1920, ft_atoi(width_item->value));
+
+    json_item *height_item = document.find_item(group, "window_height");
+    FT_ASSERT(height_item != ft_nullptr);
+    FT_ASSERT(height_item->value != ft_nullptr);
+    FT_ASSERT_EQ(1080, ft_atoi(height_item->value));
+
+    PlayerProfilePreferences loaded;
+    FT_ASSERT(player_profile_load_or_create(loaded, commander_name));
+    FT_ASSERT_EQ(preferences.commander_name, loaded.commander_name);
+    FT_ASSERT_EQ(preferences.window_width, loaded.window_width);
+    FT_ASSERT_EQ(preferences.window_height, loaded.window_height);
+
+    FT_ASSERT(player_profile_delete(commander_name));
 
     return 1;
 }
