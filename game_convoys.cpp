@@ -2,7 +2,161 @@
 #include "libft/Libft/libft.hpp"
 #include "libft/Math/math.hpp"
 #include "libft/Template/pair.hpp"
+#include "libft/RNG/rng.hpp"
 #include "ft_map_snapshot.hpp"
+
+namespace
+{
+    struct ResourceLoreDefinition
+    {
+        int                 resource_id;
+        const char *const   *lines;
+        size_t              count;
+        int                 journal_entry_id;
+        const char          *journal_text;
+    };
+
+    static bool route_passes_celestial_barrens(int origin_planet_id, int destination_planet_id)
+    {
+        return (origin_planet_id == PLANET_MARS && destination_planet_id == PLANET_ZALTHOR)
+            || (origin_planet_id == PLANET_ZALTHOR && destination_planet_id == PLANET_MARS);
+    }
+
+    static bool route_touches_nebula_outpost(int origin_planet_id, int destination_planet_id)
+    {
+        return origin_planet_id == PLANET_NOCTARIS_PRIME
+            || destination_planet_id == PLANET_NOCTARIS_PRIME;
+    }
+
+    static const char *resolve_resource_name(int resource_id)
+    {
+        switch (resource_id)
+        {
+        case ORE_GOLD:
+            return "gold";
+        case ORE_CRYSTAL:
+            return "crystal";
+        case ORE_TRITIUM:
+            return "tritium";
+        case ORE_OBSIDIAN:
+            return "obsidian";
+        default:
+            return ft_nullptr;
+        }
+    }
+
+    static const char *const kIronLore[] = {
+        "Old Miner Joe notes Terra's iron shipments forge the plating that keeps the core alive.",
+        "Quartermaster Nia diverts iron into emergency barricades around Terra's perimeter."
+    };
+
+    static const char *const kCopperLore[] = {
+        "Farmer Daisy barters copper coils for hydroponic stabilizers to keep the belt fed.",
+        "Technicians lace copper conduits through Trade Relays, widening the convoy grid."
+    };
+
+    static const char *const kMithrilLore[] = {
+        "Professor Lumen studies shimmering mithril shards for clues to the anomaly pulsing beyond Zalthor.",
+        "Rebel smiths temper mithril into stealth armor promised to Blackthorne's scouts."
+    };
+
+    static const char *const kCoalLore[] = {
+        "Terra's furnaces gulp coal shipments to feed the Order's defensive batteries.",
+        "Freighter crews stash coal reserves to warm frozen outposts waiting for relief."
+    };
+
+    static const char *const kTitaniumLore[] = {
+        "Engineer cadres hammer titanium plating into the bulwarks shielding the capital fleets.",
+        "Old Scout Finn catalogs titanium caches earmarked for a future juggernaut hull."
+    };
+
+    static const char *const kObsidianLore[] = {
+        "Obsidian shards refract resistance codes that pass quietly between rebel captains.",
+        "Navigator Zara once charted obsidian-rich asteroids now guarded by sympathetic miners."
+    };
+
+    static const char *const kCrystalLore[] = {
+        "Professor Lumen refracts crystal data-keys to trace corruption running through the bureaucracy.",
+        "Crystal arrays power clandestine transmitters guiding refugees to safe corridors."
+    };
+
+    static const char *const kNanomaterialLore[] = {
+        "Helios labs weave nanomaterial threads into repair drones that mend hull fractures mid-flight.",
+        "Experimental nanomaterial vats promise to double shield regeneration for the liberation push."
+    };
+
+    static const ResourceLoreDefinition kResourceLoreDefinitions[] = {
+        {ORE_IRON, kIronLore, sizeof(kIronLore) / sizeof(kIronLore[0]),
+            JOURNAL_ENTRY_RESOURCE_IRON_FOUNDATION,
+            "Journal – Iron Lifeblood: Terra forges hull plating, stabilizer beams, and refuge domes from every ingot we deliver. Old Miner Joe reminds the crews that without iron the core would fall silent."},
+        {ORE_COPPER, kCopperLore, sizeof(kCopperLore) / sizeof(kCopperLore[0]),
+            JOURNAL_ENTRY_RESOURCE_COPPER_NETWORK,
+            "Journal – Copper Signal Web: Copper coils braid together relay stations that let convoys whisper across the void. Farmer Daisy says each shipment keeps the hydroponics grid singing."},
+        {ORE_MITHRIL, kMithrilLore, sizeof(kMithrilLore) / sizeof(kMithrilLore[0]),
+            JOURNAL_ENTRY_RESOURCE_MITHRIL_MYSTERIES,
+            "Journal – Mithril Mysteries: The shimmering alloy refracts the Zalthor anomaly, and Professor Lumen believes it hides coordinates to the Dominion's darkest experiments."},
+        {ORE_COAL, kCoalLore, sizeof(kCoalLore) / sizeof(kCoalLore[0]),
+            JOURNAL_ENTRY_RESOURCE_COAL_BARRICADES,
+            "Journal – Coal-Fired Barricades: Loyalist batteries gulp coal to hold the defense grid, while miners stash extra to warm refugees fleeing the raids."},
+        {ORE_TITANIUM, kTitaniumLore, sizeof(kTitaniumLore) / sizeof(kTitaniumLore[0]),
+            JOURNAL_ENTRY_RESOURCE_TITANIUM_BULWARK,
+            "Journal – Titanium Bulwark: Each crate of titanium becomes reinforced prows for capital cruisers and armor plates for the militias guarding Mars."},
+        {ORE_OBSIDIAN, kObsidianLore, sizeof(kObsidianLore) / sizeof(kObsidianLore[0]),
+            JOURNAL_ENTRY_RESOURCE_OBSIDIAN_ALLIANCE,
+            "Journal – Obsidian Alliance: Rebel artisans etch promises into obsidian, sealing pacts between hidden enclaves and Blackthorne's captains."},
+        {ORE_CRYSTAL, kCrystalLore, sizeof(kCrystalLore) / sizeof(kCrystalLore[0]),
+            JOURNAL_ENTRY_RESOURCE_CRYSTAL_INTRIGUE,
+            "Journal – Crystal Intrigue: Encoded crystal shards carry data caches exposing Dominion betrayal, and the Convoy Corps smuggles them behind enemy blockades."},
+        {ORE_NANOMATERIAL, kNanomaterialLore, sizeof(kNanomaterialLore) / sizeof(kNanomaterialLore[0]),
+            JOURNAL_ENTRY_RESOURCE_NANOMATERIAL_RENEWAL,
+            "Journal – Nanomaterial Renewal: Repair drones weave nanothreads into cracked hulls mid-battle, giving battered fleets a second chance to fight."}
+    };
+
+    static const size_t kResourceLoreDefinitionCount = sizeof(kResourceLoreDefinitions) / sizeof(kResourceLoreDefinitions[0]);
+
+    static const char *const kRaiderLoreSnippets[] = {
+        "Old Scout Finn spots raider beacons flickering between dust-choked asteroids.",
+        "Captain Blackthorne's lieutenants broadcast promises of liberation to every oppressed miner.",
+        "Professor Lumen detects ion trails that match the raiders' latest ambush signatures.",
+        "Navigator Zara's archived flight paths warn of slingshot maneuvers raiders exploit around the moons."
+    };
+
+    static const size_t kRaiderLoreSnippetCount = sizeof(kRaiderLoreSnippets) / sizeof(kRaiderLoreSnippets[0]);
+
+    static const char *const kRaiderJournalEntryText =
+        "Journal – Raider Signal Web: Scout Finn maps the beacons that stitch Blackthorne's fleet together, revealing how the rebellion rides hidden currents between the colonies.";
+
+    static const char *resolve_planet_name(int planet_id)
+    {
+        switch (planet_id)
+        {
+        case PLANET_TERRA:
+            return "Terra";
+        case PLANET_MARS:
+            return "Mars";
+        case PLANET_ZALTHOR:
+            return "Zalthor";
+        case PLANET_VULCAN:
+            return "Vulcan";
+        case PLANET_NOCTARIS_PRIME:
+            return "Noctaris Prime";
+        case PLANET_LUNA:
+            return "Luna";
+        default:
+            return ft_nullptr;
+        }
+    }
+
+    static const ResourceLoreDefinition *find_resource_lore_definition(int resource_id)
+    {
+        for (size_t i = 0; i < kResourceLoreDefinitionCount; ++i)
+        {
+            if (kResourceLoreDefinitions[i].resource_id == resource_id)
+                return &kResourceLoreDefinitions[i];
+        }
+        return ft_nullptr;
+    }
+}
 
 static double preserve_contract_elapsed(double elapsed, double interval)
 {
@@ -167,6 +321,212 @@ void Game::decay_all_route_threat(double seconds)
         if (entry != ft_nullptr)
             this->decay_route_threat(entry->value, seconds);
     }
+}
+
+bool Game::append_resource_lore_snippet(int resource_id, int origin_planet_id, int destination_planet_id)
+{
+    const ResourceLoreDefinition *definition = find_resource_lore_definition(resource_id);
+    if (!definition || definition->count == 0)
+        return false;
+    int cursor = 0;
+    Pair<int, int> *tracker = this->_resource_lore_cursors.find(resource_id);
+    if (tracker != ft_nullptr)
+        cursor = tracker->value;
+    if (cursor < 0 || static_cast<size_t>(cursor) >= definition->count)
+        cursor = 0;
+    const char *line = definition->lines[cursor];
+    if (!line)
+        return false;
+    ft_string snippet(line);
+    const char *origin_name = resolve_planet_name(origin_planet_id);
+    const char *destination_name = resolve_planet_name(destination_planet_id);
+    if (origin_name && destination_name)
+    {
+        snippet.append(ft_string(" ("));
+        snippet.append(origin_name);
+        snippet.append(ft_string(" -> "));
+        snippet.append(destination_name);
+        snippet.append(ft_string(")"));
+    }
+    else if (origin_planet_id != 0 || destination_planet_id != 0)
+    {
+        snippet.append(ft_string(" (Route "));
+        snippet.append(ft_to_string(origin_planet_id));
+        snippet.append(ft_string(" -> "));
+        snippet.append(ft_to_string(destination_planet_id));
+        snippet.append(ft_string(")"));
+    }
+    this->append_lore_entry(snippet);
+    int next_cursor = cursor + 1;
+    if (next_cursor < 0 || static_cast<size_t>(next_cursor) >= definition->count)
+        next_cursor = 0;
+    if (tracker != ft_nullptr)
+        tracker->value = next_cursor;
+    else
+        this->_resource_lore_cursors.insert(resource_id, next_cursor);
+    if (definition->journal_entry_id != 0 && definition->journal_text != ft_nullptr)
+    {
+        if (!this->is_journal_entry_unlocked(definition->journal_entry_id))
+        {
+            ft_string journal_text(definition->journal_text);
+            this->unlock_journal_entry(definition->journal_entry_id, journal_text);
+        }
+    }
+    return true;
+}
+
+bool Game::append_raider_lore_snippet(int origin_planet_id, int destination_planet_id)
+{
+    if (kRaiderLoreSnippetCount == 0)
+        return false;
+    if (this->_raider_lore_cursor < 0 || static_cast<size_t>(this->_raider_lore_cursor) >= kRaiderLoreSnippetCount)
+        this->_raider_lore_cursor = 0;
+    const char *line = kRaiderLoreSnippets[this->_raider_lore_cursor];
+    if (!line)
+        return false;
+    ft_string snippet(line);
+    const char *origin_name = resolve_planet_name(origin_planet_id);
+    const char *destination_name = resolve_planet_name(destination_planet_id);
+    if (origin_name && destination_name)
+    {
+        snippet.append(ft_string(" (Ambush corridor: "));
+        snippet.append(origin_name);
+        snippet.append(ft_string(" -> "));
+        snippet.append(destination_name);
+        snippet.append(ft_string(")"));
+    }
+    else if (origin_planet_id != 0 || destination_planet_id != 0)
+    {
+        snippet.append(ft_string(" (Ambush corridor: "));
+        snippet.append(ft_to_string(origin_planet_id));
+        snippet.append(ft_string(" -> "));
+        snippet.append(ft_to_string(destination_planet_id));
+        snippet.append(ft_string(")"));
+    }
+    this->append_lore_entry(snippet);
+    if (kRaiderJournalEntryText != ft_nullptr &&
+        !this->is_journal_entry_unlocked(JOURNAL_ENTRY_RAIDER_SIGNAL_WEB))
+    {
+        ft_string journal_text(kRaiderJournalEntryText);
+        this->unlock_journal_entry(JOURNAL_ENTRY_RAIDER_SIGNAL_WEB, journal_text);
+    }
+    this->_raider_lore_cursor += 1;
+    if (this->_raider_lore_cursor < 0 || static_cast<size_t>(this->_raider_lore_cursor) >= kRaiderLoreSnippetCount)
+        this->_raider_lore_cursor = 0;
+    return true;
+}
+
+void Game::maybe_unlock_imperium_pressure(const ft_supply_route &route)
+{
+    if (this->is_journal_entry_unlocked(JOURNAL_ENTRY_LORE_IMPERIUM_PRESSURE))
+        return ;
+    if (route.threat_level < 3.0)
+        return ;
+    ft_string journal_text("Journal – Imperium Pressure: Outpost analysts intercept Imperium Solarex couriers urging corrupt governors to tighten blockades. Each spike in convoy threat reminds the Convoy Corps how the distant regime still squeezes the frontier.");
+    this->unlock_journal_entry(JOURNAL_ENTRY_LORE_IMPERIUM_PRESSURE, journal_text);
+}
+
+bool Game::handle_celestial_barrens_salvage(const ft_supply_convoy &convoy)
+{
+    if (!route_passes_celestial_barrens(convoy.origin_planet_id, convoy.destination_planet_id))
+        return false;
+    ft_supply_route *route = this->get_route_by_id(convoy.route_id);
+    if (!route)
+        return false;
+    double chance = 0.18;
+    if (route->threat_level > 0.0)
+    {
+        double bonus = route->threat_level * 0.035;
+        if (bonus > 0.18)
+            bonus = 0.18;
+        chance += bonus;
+    }
+    if (convoy.escort_rating > 0)
+        chance += 0.05;
+    if (chance > 0.65)
+        chance = 0.65;
+    double roll = static_cast<double>(ft_random_float());
+    if (roll >= chance)
+        return false;
+    double selection = static_cast<double>(ft_random_float());
+    int salvage_resource = ORE_GOLD;
+    if (selection < 0.45)
+        salvage_resource = ORE_GOLD;
+    else if (selection < 0.8)
+        salvage_resource = ORE_CRYSTAL;
+    else
+        salvage_resource = ORE_TRITIUM;
+    int salvage_amount = 1 + static_cast<int>(route->threat_level * 0.5);
+    if (convoy.escort_rating > 0)
+        salvage_amount += 1;
+    if (salvage_amount < 1)
+        salvage_amount = 1;
+    if (salvage_amount > 6)
+        salvage_amount = 6;
+    ft_sharedptr<ft_planet> destination = this->get_planet(convoy.destination_planet_id);
+    if (destination)
+    {
+        destination->add_resource(salvage_resource, salvage_amount);
+        this->send_state(convoy.destination_planet_id, salvage_resource);
+    }
+    ft_string resource_label;
+    const char *resource_name = resolve_resource_name(salvage_resource);
+    if (resource_name != ft_nullptr)
+        resource_label = ft_string(resource_name);
+    else
+        resource_label = ft_to_string(salvage_resource);
+    ft_string entry("Scout Finn threads the Celestial Barrens and flags drifting ore veins. Salvage crews haul ");
+    entry.append(ft_to_string(salvage_amount));
+    entry.append(ft_string(" units of "));
+    entry.append(resource_label);
+    entry.append(ft_string(" before fresh meteor storms close the corridor."));
+    this->append_lore_entry(entry);
+    this->append_resource_lore_snippet(salvage_resource, convoy.origin_planet_id, convoy.destination_planet_id);
+    this->modify_route_threat(*route, 0.35, true);
+    this->maybe_unlock_imperium_pressure(*route);
+    if (!this->is_journal_entry_unlocked(JOURNAL_ENTRY_LORE_CELESTIAL_BARRENS))
+    {
+        ft_string journal_text("Journal – Celestial Barrens: Between Mars and Zalthor, shattered meteors hide rare isotopes. Finn's charts keep convoys alive while raiders and Imperium agents chase the same treasure through lethal debris fields.");
+        this->unlock_journal_entry(JOURNAL_ENTRY_LORE_CELESTIAL_BARRENS, journal_text);
+    }
+    return true;
+}
+
+bool Game::handle_nebula_outpost_scan(const ft_supply_convoy &convoy)
+{
+    if (!route_touches_nebula_outpost(convoy.origin_planet_id, convoy.destination_planet_id))
+        return false;
+    ft_supply_route *route = this->get_route_by_id(convoy.route_id);
+    if (!route)
+        return false;
+    double chance = 0.16;
+    if (route->threat_level > 2.0)
+    {
+        double bonus = (route->threat_level - 2.0) * 0.04;
+        if (bonus > 0.12)
+            bonus = 0.12;
+        chance += bonus;
+    }
+    if (convoy.escort_rating > 0)
+        chance += 0.04;
+    if (chance > 0.5)
+        chance = 0.5;
+    double roll = static_cast<double>(ft_random_float());
+    if (roll >= chance)
+        return false;
+    double threat_reduction = 0.7 + route->threat_level * 0.15;
+    if (threat_reduction > 2.0)
+        threat_reduction = 2.0;
+    this->modify_route_threat(*route, -threat_reduction, true);
+    this->accelerate_contract(convoy.contract_id, 0.1);
+    ft_string entry("Outpost Nebula-X sweeps the convoy lane with aurora-lit sensors. Professor Lumen decodes the telemetry, peeling back raider ambushes while liberation cells whisper across the anomaly.");
+    this->append_lore_entry(entry);
+    if (!this->is_journal_entry_unlocked(JOURNAL_ENTRY_LORE_NEBULA_OUTPOST))
+    {
+        ft_string journal_text("Journal – Outpost Nebula-X: The frontier research bastion watches over Noctaris Prime, sharing anomaly scans that warn of raids and Imperium probes alike. Its signals are the lifeline for every convoy brave enough to cross the nebula.");
+        this->unlock_journal_entry(JOURNAL_ENTRY_LORE_NEBULA_OUTPOST, journal_text);
+    }
+    return true;
 }
 
 void Game::update_route_escalation(ft_supply_route &route, double seconds)
@@ -546,8 +906,11 @@ double Game::estimate_route_travel_time(int origin, int destination) const
     bool involves_zalthor = (origin == PLANET_ZALTHOR || destination == PLANET_ZALTHOR);
     bool involves_vulcan = (origin == PLANET_VULCAN || destination == PLANET_VULCAN);
     bool involves_noctaris = (origin == PLANET_NOCTARIS_PRIME || destination == PLANET_NOCTARIS_PRIME);
+    bool passes_barrens = route_passes_celestial_barrens(origin, destination);
     double base = 28.0;
-    if (involves_terra && involves_luna)
+    if (passes_barrens)
+        base = 36.0;
+    else if (involves_terra && involves_luna)
         base = 18.0;
     else if (involves_terra && involves_mars)
         base = 24.0;
@@ -579,8 +942,11 @@ int Game::estimate_route_escort_requirement(int origin, int destination) const
     bool involves_luna = (origin == PLANET_LUNA || destination == PLANET_LUNA);
     bool involves_vulcan = (origin == PLANET_VULCAN || destination == PLANET_VULCAN);
     bool involves_noctaris = (origin == PLANET_NOCTARIS_PRIME || destination == PLANET_NOCTARIS_PRIME);
+    bool passes_barrens = route_passes_celestial_barrens(origin, destination);
     if (involves_noctaris)
         return 6;
+    if (passes_barrens)
+        return 5;
     if (involves_vulcan)
         return 4;
     if (involves_luna)
@@ -596,10 +962,13 @@ double Game::estimate_route_raid_risk(int origin, int destination) const
     bool involves_vulcan = (origin == PLANET_VULCAN || destination == PLANET_VULCAN);
     bool involves_noctaris = (origin == PLANET_NOCTARIS_PRIME || destination == PLANET_NOCTARIS_PRIME);
     bool involves_luna = (origin == PLANET_LUNA || destination == PLANET_LUNA);
+    bool passes_barrens = route_passes_celestial_barrens(origin, destination);
     if (involves_vulcan)
         risk += 0.006;
     if (involves_noctaris)
         risk += 0.012;
+    if (passes_barrens)
+        risk += 0.018;
     if (involves_luna)
         risk -= 0.004;
     if (risk < 0.006)
@@ -899,6 +1268,7 @@ void Game::handle_convoy_raid(ft_supply_convoy &convoy, bool origin_under_attack
     else
         entry.append(ft_string(", and the defenseless freighters limped onward."));
     this->append_lore_entry(entry);
+    this->append_raider_lore_snippet(convoy.origin_planet_id, convoy.destination_planet_id);
     this->accelerate_contract(convoy.contract_id, 0.5);
 }
 
@@ -939,6 +1309,9 @@ void Game::finalize_convoy(ft_supply_convoy &convoy)
                 entry.append(ft_string("kept raiders at bay."));
         }
         this->append_lore_entry(entry);
+        this->append_resource_lore_snippet(convoy.resource_id, convoy.origin_planet_id, convoy.destination_planet_id);
+        this->handle_celestial_barrens_salvage(convoy);
+        this->handle_nebula_outpost_scan(convoy);
     }
     else
     {

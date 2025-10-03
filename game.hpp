@@ -19,6 +19,55 @@
 #define GAME_DIFFICULTY_STANDARD 2
 #define GAME_DIFFICULTY_HARD 3
 
+enum e_journal_entry_id
+{
+    JOURNAL_ENTRY_PROFILE_MINER_JOE = 1,
+    JOURNAL_ENTRY_PROFILE_PROFESSOR_LUMEN,
+    JOURNAL_ENTRY_PROFILE_FARMER_DAISY,
+    JOURNAL_ENTRY_PROFILE_BLACKTHORNE,
+    JOURNAL_ENTRY_PROFILE_NAVIGATOR_ZARA,
+    JOURNAL_ENTRY_PROFILE_SCOUT_FINN,
+    JOURNAL_ENTRY_INITIAL_RAIDER_SKIRMISHES,
+    JOURNAL_ENTRY_DEFENSE_OF_TERRA,
+    JOURNAL_ENTRY_INVESTIGATE_RAIDERS,
+    JOURNAL_ENTRY_SECURE_SUPPLY_LINES,
+    JOURNAL_ENTRY_STEADY_SUPPLY_STREAK,
+    JOURNAL_ENTRY_HIGH_VALUE_ESCORT,
+    JOURNAL_ENTRY_CLIMACTIC_BATTLE,
+    JOURNAL_ENTRY_DECISION_EXECUTE_BLACKTHORNE,
+    JOURNAL_ENTRY_DECISION_SPARE_BLACKTHORNE,
+    JOURNAL_ENTRY_ORDER_UPRISING,
+    JOURNAL_ENTRY_ORDER_SUPPRESS_RAIDS,
+    JOURNAL_ENTRY_ORDER_DOMINION,
+    JOURNAL_ENTRY_REBELLION_FLEET,
+    JOURNAL_ENTRY_REBELLION_NETWORK,
+    JOURNAL_ENTRY_REBELLION_LIBERATION,
+    JOURNAL_ENTRY_ORDER_FINAL_MANDATE,
+    JOURNAL_ENTRY_ORDER_VERDICT_EXECUTION,
+    JOURNAL_ENTRY_ORDER_VERDICT_REFORM,
+    JOURNAL_ENTRY_REBELLION_FINAL_PUSH,
+    JOURNAL_ENTRY_LORE_TERRA_REBUILD,
+    JOURNAL_ENTRY_LORE_MARS_OUTPOSTS,
+    JOURNAL_ENTRY_LORE_ZALTHOR_ANOMALY,
+    JOURNAL_ENTRY_LORE_CONVOY_CORPS,
+    JOURNAL_ENTRY_RESOURCE_IRON_FOUNDATION,
+    JOURNAL_ENTRY_RESOURCE_COPPER_NETWORK,
+    JOURNAL_ENTRY_RESOURCE_MITHRIL_MYSTERIES,
+    JOURNAL_ENTRY_RESOURCE_COAL_BARRICADES,
+    JOURNAL_ENTRY_RESOURCE_TITANIUM_BULWARK,
+    JOURNAL_ENTRY_RESOURCE_OBSIDIAN_ALLIANCE,
+    JOURNAL_ENTRY_RESOURCE_CRYSTAL_INTRIGUE,
+    JOURNAL_ENTRY_RESOURCE_NANOMATERIAL_RENEWAL,
+    JOURNAL_ENTRY_RAIDER_SIGNAL_WEB,
+    JOURNAL_ENTRY_SIDE_CONVOY_RESCUE,
+    JOURNAL_ENTRY_SIDE_OUTPOST_REPAIR,
+    JOURNAL_ENTRY_SIDE_ORDER_PROPAGANDA,
+    JOURNAL_ENTRY_SIDE_REBELLION_BROADCAST,
+    JOURNAL_ENTRY_LORE_CELESTIAL_BARRENS,
+    JOURNAL_ENTRY_LORE_NEBULA_OUTPOST,
+    JOURNAL_ENTRY_LORE_IMPERIUM_PRESSURE
+};
+
 class Game
 {
 public:
@@ -46,6 +95,10 @@ public:
     };
 
 private:
+    struct RouteKey;
+    struct ft_supply_route;
+    struct ft_supply_convoy;
+
     struct RouteKey
     {
         int origin;
@@ -64,6 +117,12 @@ private:
     friend int verify_supply_route_threat_decay();
     friend int verify_lore_log_retention();
     friend int verify_convoy_escort_rating_excludes_active_escort();
+    friend int verify_celestial_barrens_salvage_event();
+    friend int verify_nebula_outpost_scan_event();
+    friend int verify_resource_lore_rotation();
+    friend int verify_raider_lore_rotation();
+    friend int verify_imperium_pressure_threshold();
+    friend int verify_nanomaterial_resource_lore();
 
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
@@ -83,7 +142,19 @@ private:
     size_t                                       _lore_log_count;
     mutable ft_vector<ft_string>                 _lore_log_cache;
     mutable bool                                 _lore_log_cache_dirty;
+    ft_map<int, ft_string>                       _journal_entries;
+    ft_vector<int>                               _journal_unlock_order;
+    mutable ft_vector<ft_string>                 _journal_cache;
+    mutable bool                                 _journal_cache_dirty;
+    ft_map<int, int>                             _resource_lore_cursors;
+    int                                          _raider_lore_cursor;
     void                                        append_lore_entry(const ft_string &entry);
+    void                                         unlock_journal_entry(int entry_id, const ft_string &text);
+    bool                                         append_resource_lore_snippet(int resource_id, int origin_planet_id, int destination_planet_id);
+    bool                                         append_raider_lore_snippet(int origin_planet_id, int destination_planet_id);
+    bool                                         handle_celestial_barrens_salvage(const ft_supply_convoy &convoy);
+    bool                                         handle_nebula_outpost_scan(const ft_supply_convoy &convoy);
+    void                                         maybe_unlock_imperium_pressure(const ft_supply_route &route);
     int                                          _difficulty;
     double                                       _resource_multiplier;
     double                                       _quest_time_scale;
@@ -344,6 +415,9 @@ public:
     bool is_backend_online() const;
     long get_backend_retry_delay_ms_for_testing() const;
     long get_backend_next_retry_ms_for_testing() const;
+
+    const ft_vector<ft_string> &get_journal_entries() const;
+    bool is_journal_entry_unlocked(int entry_id) const;
 
     int add_ore(int planet_id, int ore_id, int amount);
     int sub_ore(int planet_id, int ore_id, int amount);

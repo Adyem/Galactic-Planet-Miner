@@ -25,7 +25,13 @@ enum e_quest_id
     QUEST_ORDER_SUPPRESS_RAIDS,
     QUEST_ORDER_DOMINION,
     QUEST_REBELLION_NETWORK,
-    QUEST_REBELLION_LIBERATION
+    QUEST_REBELLION_LIBERATION,
+    QUEST_ORDER_FINAL_VERDICT,
+    QUEST_REBELLION_FINAL_PUSH,
+    QUEST_SIDE_CONVOY_RESCUE,
+    QUEST_SIDE_OUTPOST_REPAIR,
+    QUEST_SIDE_ORDER_PROPAGANDA,
+    QUEST_SIDE_REBELLION_BROADCAST
 };
 
 enum e_quest_status
@@ -56,7 +62,9 @@ enum e_quest_choice_value
 {
     QUEST_CHOICE_NONE = 0,
     QUEST_CHOICE_EXECUTE_BLACKTHORNE = 1,
-    QUEST_CHOICE_SPARE_BLACKTHORNE = 2
+    QUEST_CHOICE_SPARE_BLACKTHORNE = 2,
+    QUEST_CHOICE_ORDER_EXECUTE_REBELS = 3,
+    QUEST_CHOICE_ORDER_TRIAL_REBELS = 4
 };
 
 struct ft_quest_objective
@@ -80,6 +88,7 @@ struct ft_quest_definition
     ft_string                           name;
     ft_string                           description;
     double                              time_limit;
+    bool                                is_side_quest;
     ft_vector<ft_quest_objective>       objectives;
     ft_vector<int>                      prerequisites;
     bool                                requires_choice;
@@ -87,7 +96,7 @@ struct ft_quest_definition
     int                                 required_choice_quest;
     int                                 required_choice_value;
     ft_quest_definition()
-        : id(0), name(), description(), time_limit(0.0), objectives(), prerequisites(),
+        : id(0), name(), description(), time_limit(0.0), is_side_quest(false), objectives(), prerequisites(),
           requires_choice(false), choices(), required_choice_quest(0), required_choice_value(0)
     {}
 };
@@ -128,10 +137,13 @@ private:
     ft_map<int, ft_quest_progress>                  _progress;
     ft_map<int, int>                                _quest_choices;
     double                                          _time_scale;
+    ft_vector<int>                                  _side_quest_cycle;
+    size_t                                          _side_cycle_index;
 
     void register_quest(const ft_sharedptr<ft_quest_definition> &definition);
     void update_availability();
     void activate_next();
+    void activate_side_quests();
     bool are_objectives_met(const ft_quest_definition &definition, const ft_quest_context &context) const;
 
 public:
