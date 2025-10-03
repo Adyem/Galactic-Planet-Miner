@@ -37,6 +37,247 @@ static int fast_forward_to_supply_quests(Game &game)
     return 1;
 }
 
+static void stock_resource(Game &game, int planet_id, int resource_id, int amount)
+{
+    game.ensure_planet_item_slot(planet_id, resource_id);
+    game.set_ore(planet_id, resource_id, amount);
+}
+
+static int dispatch_convoy_to_mars(Game &game, int resource_id, int amount)
+{
+    game.ensure_planet_item_slot(PLANET_TERRA, resource_id);
+    int moved = game.transfer_ore(PLANET_TERRA, PLANET_MARS, resource_id, amount);
+    FT_ASSERT(moved >= amount);
+    double waited = 0.0;
+    while (game.get_active_convoy_count() > 0 && waited < 720.0)
+    {
+        game.tick(2.0);
+        waited += 2.0;
+    }
+    FT_ASSERT(waited < 720.0);
+    return 1;
+}
+
+static bool lore_log_contains_fragment(const ft_vector<ft_string> &entries,
+                                       size_t start_index,
+                                       const ft_string &fragment)
+{
+    const char *needle = fragment.c_str();
+    size_t count = entries.size();
+    for (size_t i = start_index; i < count; ++i)
+    {
+        if (ft_strstr(entries[i].c_str(), needle) != ft_nullptr)
+            return true;
+    }
+    return false;
+}
+
+static int advance_to_order_final_verdict(Game &game)
+{
+    stock_resource(game, PLANET_TERRA, ORE_IRON, 360);
+    stock_resource(game, PLANET_TERRA, ORE_COPPER, 260);
+    stock_resource(game, PLANET_TERRA, ORE_COAL, 160);
+    stock_resource(game, PLANET_TERRA, ORE_MITHRIL, 160);
+    stock_resource(game, PLANET_TERRA, ORE_GOLD, 120);
+    stock_resource(game, PLANET_TERRA, ORE_TITANIUM, 40);
+    stock_resource(game, PLANET_TERRA, ITEM_ENGINE_PART, 12);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_DEFENSE_OF_TERRA, game.get_active_quest());
+
+    game.create_fleet(10);
+    int capital = game.create_ship(10, SHIP_CAPITAL);
+    FT_ASSERT(capital != 0);
+    game.set_ship_hp(10, capital, 160);
+    game.set_ship_shield(10, capital, 60);
+    game.set_ship_armor(10, capital, 40);
+
+    game.create_fleet(11);
+    int escort = game.create_ship(11, SHIP_SHIELD);
+    FT_ASSERT(escort != 0);
+    game.set_ship_hp(11, escort, 100);
+    game.set_ship_shield(11, escort, 50);
+    game.set_ship_armor(11, escort, 30);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_DEFENSE_OF_TERRA));
+
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    game.tick(40.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_MARS));
+
+    stock_resource(game, PLANET_TERRA, ORE_COAL, 160);
+    stock_resource(game, PLANET_TERRA, ORE_MITHRIL, 140);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_ZALTHOR));
+    game.tick(50.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_ZALTHOR));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, game.get_active_quest());
+
+    stock_resource(game, PLANET_TERRA, ORE_IRON, 400);
+    for (int shipment = 0; shipment < 6; ++shipment)
+    {
+        FT_ASSERT(dispatch_convoy_to_mars(game, ORE_IRON, 20));
+        stock_resource(game, PLANET_TERRA, ORE_IRON, 400);
+    }
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_CLIMACTIC_BATTLE, game.get_active_quest());
+
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_VULCAN));
+    game.tick(60.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_VULCAN));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_CRITICAL_DECISION, game.get_active_quest());
+    FT_ASSERT(game.resolve_quest_choice(QUEST_CRITICAL_DECISION, QUEST_CHOICE_EXECUTE_BLACKTHORNE));
+    game.tick(0.0);
+
+    stock_resource(game, PLANET_TERRA, ORE_COAL, 120);
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_ORDER_UPRISING));
+
+    int radar = game.place_building(PLANET_TERRA, BUILDING_PROXIMITY_RADAR, 0, 0);
+    if (radar == 0)
+        radar = game.place_building(PLANET_TERRA, BUILDING_PROXIMITY_RADAR, 1, 0);
+    FT_ASSERT(radar != 0);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_ORDER_SUPPRESS_RAIDS));
+    FT_ASSERT(game.is_assault_active(PLANET_MARS));
+
+    FT_ASSERT(game.assign_fleet_to_assault(PLANET_MARS, 10));
+    FT_ASSERT(game.assign_fleet_to_assault(PLANET_MARS, 11));
+    double assault_timer = 0.0;
+    while (game.is_assault_active(PLANET_MARS) && assault_timer < 240.0)
+    {
+        game.tick(2.0);
+        assault_timer += 2.0;
+    }
+    FT_ASSERT(!game.is_assault_active(PLANET_MARS));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_ORDER_DOMINION));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_AWAITING_CHOICE, game.get_quest_status(QUEST_ORDER_FINAL_VERDICT));
+    return 1;
+}
+
+static int advance_to_rebellion_final_push(Game &game)
+{
+    stock_resource(game, PLANET_TERRA, ORE_IRON, 360);
+    stock_resource(game, PLANET_TERRA, ORE_COPPER, 260);
+    stock_resource(game, PLANET_TERRA, ORE_COAL, 160);
+    stock_resource(game, PLANET_TERRA, ORE_MITHRIL, 160);
+    stock_resource(game, PLANET_TERRA, ORE_GOLD, 120);
+    stock_resource(game, PLANET_TERRA, ORE_TITANIUM, 60);
+    stock_resource(game, PLANET_TERRA, ITEM_ENGINE_PART, 12);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_DEFENSE_OF_TERRA, game.get_active_quest());
+
+    game.create_fleet(20);
+    int capital = game.create_ship(20, SHIP_CAPITAL);
+    FT_ASSERT(capital != 0);
+    game.set_ship_hp(20, capital, 180);
+    game.set_ship_shield(20, capital, 70);
+    game.set_ship_armor(20, capital, 45);
+
+    game.create_fleet(21);
+    int escort = game.create_ship(21, SHIP_SHIELD);
+    FT_ASSERT(escort != 0);
+    game.set_ship_hp(21, escort, 110);
+    game.set_ship_shield(21, escort, 55);
+    game.set_ship_armor(21, escort, 35);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_DEFENSE_OF_TERRA));
+
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    game.tick(40.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_MARS));
+
+    stock_resource(game, PLANET_TERRA, ORE_COAL, 140);
+    stock_resource(game, PLANET_TERRA, ORE_MITHRIL, 140);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_ZALTHOR));
+    game.tick(50.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_ZALTHOR));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, game.get_active_quest());
+
+    stock_resource(game, PLANET_TERRA, ITEM_IRON_BAR, 260);
+    stock_resource(game, PLANET_MARS, ITEM_IRON_BAR, 0);
+    for (int shipment = 0; shipment < 6; ++shipment)
+    {
+        FT_ASSERT(dispatch_convoy_to_mars(game, ITEM_IRON_BAR, 20));
+        stock_resource(game, PLANET_TERRA, ITEM_IRON_BAR, 260);
+    }
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_CLIMACTIC_BATTLE, game.get_active_quest());
+
+    stock_resource(game, PLANET_ZALTHOR, ORE_GOLD, 12);
+    stock_resource(game, PLANET_MARS, ORE_MITHRIL, 20);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_VULCAN));
+    game.tick(65.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_VULCAN));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_CRITICAL_DECISION, game.get_active_quest());
+    FT_ASSERT_EQ(QUEST_STATUS_AWAITING_CHOICE, game.get_quest_status(QUEST_CRITICAL_DECISION));
+    FT_ASSERT(game.resolve_quest_choice(QUEST_CRITICAL_DECISION, QUEST_CHOICE_SPARE_BLACKTHORNE));
+
+    stock_resource(game, PLANET_TERRA, ORE_TIN, 120);
+    stock_resource(game, PLANET_TERRA, ORE_SILVER, 120);
+    stock_resource(game, PLANET_TERRA, ORE_TITANIUM, 120);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_NOCTARIS));
+    game.tick(70.0);
+    FT_ASSERT_EQ(RESEARCH_STATUS_COMPLETED, game.get_research_status(RESEARCH_UNLOCK_NOCTARIS));
+
+    stock_resource(game, PLANET_TERRA, ORE_OBSIDIAN, 12);
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_REBELLION_FLEET));
+    FT_ASSERT_EQ(QUEST_REBELLION_NETWORK, game.get_active_quest());
+
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_COPPER_BAR);
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART);
+    game.ensure_planet_item_slot(PLANET_TERRA, ITEM_ACCUMULATOR);
+    game.set_ore(PLANET_TERRA, ITEM_COPPER_BAR, 80);
+    game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 40);
+    game.set_ore(PLANET_TERRA, ITEM_ACCUMULATOR, 30);
+    int relay = game.place_building(PLANET_TERRA, BUILDING_TRADE_RELAY, 2, 0);
+    if (relay == 0)
+        relay = game.place_building(PLANET_TERRA, BUILDING_TRADE_RELAY, 3, 0);
+    FT_ASSERT(relay != 0);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_REBELLION_NETWORK));
+    FT_ASSERT_EQ(QUEST_REBELLION_LIBERATION, game.get_active_quest());
+    FT_ASSERT(game.is_assault_active(PLANET_ZALTHOR));
+
+    FT_ASSERT(game.assign_fleet_to_assault(PLANET_ZALTHOR, 20));
+    FT_ASSERT(game.assign_fleet_to_assault(PLANET_ZALTHOR, 21));
+    double liberation_elapsed = 0.0;
+    while (game.is_assault_active(PLANET_ZALTHOR) && liberation_elapsed < 240.0)
+    {
+        game.tick(2.0);
+        liberation_elapsed += 2.0;
+    }
+    FT_ASSERT(!game.is_assault_active(PLANET_ZALTHOR));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_REBELLION_LIBERATION));
+    FT_ASSERT_EQ(QUEST_REBELLION_FINAL_PUSH, game.get_active_quest());
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_REBELLION_FINAL_PUSH));
+
+    game.ensure_planet_item_slot(PLANET_NOCTARIS_PRIME, ORE_NANOMATERIAL);
+    game.set_ore(PLANET_NOCTARIS_PRIME, ORE_NANOMATERIAL, 0);
+    return 1;
+}
+
 int validate_initial_campaign_flow(Game &game)
 {
     FT_ASSERT_EQ(GAME_DIFFICULTY_STANDARD, game.get_difficulty());
@@ -600,6 +841,129 @@ int validate_order_branch_storyline()
     FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, order_game.get_quest_status(QUEST_ORDER_DOMINION));
     FT_ASSERT_EQ(0, order_game.get_active_quest());
 
+    return 1;
+}
+
+int verify_order_final_verdict_outcomes()
+{
+    Game execution_path(ft_string("127.0.0.1:8080"), ft_string("/"));
+    if (!advance_to_order_final_verdict(execution_path))
+        return 0;
+
+    FT_ASSERT_EQ(QUEST_STATUS_AWAITING_CHOICE, execution_path.get_quest_status(QUEST_ORDER_FINAL_VERDICT));
+    double threat_before_mars = execution_path.get_supply_route_threat_level(PLANET_TERRA, PLANET_MARS);
+    size_t lore_before = execution_path.get_lore_log().size();
+    int titanium_before = execution_path.get_ore(PLANET_TERRA, ORE_TITANIUM);
+    FT_ASSERT(execution_path.resolve_quest_choice(QUEST_ORDER_FINAL_VERDICT, QUEST_CHOICE_ORDER_EXECUTE_REBELS));
+    FT_ASSERT(execution_path.is_journal_entry_unlocked(JOURNAL_ENTRY_ORDER_VERDICT_EXECUTION));
+    FT_ASSERT(execution_path.get_ore(PLANET_TERRA, ORE_TITANIUM) >= titanium_before + 2);
+    double threat_after_mars = execution_path.get_supply_route_threat_level(PLANET_TERRA, PLANET_MARS);
+    FT_ASSERT(threat_after_mars < 0.001);
+    FT_ASSERT(threat_after_mars <= threat_before_mars + 0.001);
+    const ft_vector<ft_string> &execution_lore = execution_path.get_lore_log();
+    FT_ASSERT(execution_lore.size() > lore_before);
+    FT_ASSERT(lore_log_contains_fragment(execution_lore, lore_before, ft_string("Executions broadcast")));
+
+    Game reform_path(ft_string("127.0.0.1:8080"), ft_string("/"));
+    if (!advance_to_order_final_verdict(reform_path))
+        return 0;
+
+    double noctaris_before = reform_path.get_supply_route_threat_level(PLANET_TERRA, PLANET_NOCTARIS_PRIME);
+    int crystal_before = reform_path.get_ore(PLANET_TERRA, ORE_CRYSTAL);
+    size_t reform_lore_start = reform_path.get_lore_log().size();
+    FT_ASSERT(reform_path.resolve_quest_choice(QUEST_ORDER_FINAL_VERDICT, QUEST_CHOICE_ORDER_TRIAL_REBELS));
+    FT_ASSERT(reform_path.is_journal_entry_unlocked(JOURNAL_ENTRY_ORDER_VERDICT_REFORM));
+    double noctaris_after = reform_path.get_supply_route_threat_level(PLANET_TERRA, PLANET_NOCTARIS_PRIME);
+    FT_ASSERT(noctaris_after > noctaris_before + 0.2);
+    FT_ASSERT(reform_path.get_ore(PLANET_TERRA, ORE_CRYSTAL) >= crystal_before + 2);
+    const ft_vector<ft_string> &reform_lore = reform_path.get_lore_log();
+    FT_ASSERT(lore_log_contains_fragment(reform_lore, reform_lore_start, ft_string("Tribunals promise reform")));
+    return 1;
+}
+
+int verify_rebellion_final_push_outcomes()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    if (!advance_to_rebellion_final_push(game))
+        return 0;
+
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_REBELLION_FINAL_PUSH));
+    FT_ASSERT_EQ(QUEST_REBELLION_FINAL_PUSH, game.get_active_quest());
+
+    game.create_fleet(88);
+    int flagship = game.create_ship(88, SHIP_CAPITAL);
+    FT_ASSERT(flagship != 0);
+    game.set_ship_hp(88, flagship, 200);
+    game.set_ship_shield(88, flagship, 80);
+    game.set_ship_armor(88, flagship, 50);
+
+    game.create_fleet(89);
+    int escort = game.create_ship(89, SHIP_SHIELD);
+    FT_ASSERT(escort != 0);
+    game.set_ship_hp(89, escort, 60);
+    game.set_ship_shield(89, escort, 40);
+    game.set_ship_armor(89, escort, 20);
+
+    int nanomaterial_before = game.get_ore(PLANET_NOCTARIS_PRIME, ORE_NANOMATERIAL);
+    FT_ASSERT(nanomaterial_before < 3);
+
+    stock_resource(game, PLANET_NOCTARIS_PRIME, ORE_NANOMATERIAL, 3);
+    size_t lore_before = game.get_lore_log().size();
+
+    game.tick(0.0);
+
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_REBELLION_FINAL_PUSH));
+    FT_ASSERT(game.is_journal_entry_unlocked(JOURNAL_ENTRY_REBELLION_FINAL_PUSH));
+    const ft_vector<ft_string> &lore = game.get_lore_log();
+    FT_ASSERT(lore.size() > lore_before);
+    FT_ASSERT(lore_log_contains_fragment(lore, lore_before, ft_string("nanomaterial forges")));
+    FT_ASSERT(game.get_ore(PLANET_NOCTARIS_PRIME, ORE_NANOMATERIAL) >= 5);
+    FT_ASSERT_EQ(0, game.get_active_quest());
+    return 1;
+}
+
+int verify_side_quest_rotation()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    FT_ASSERT(fast_forward_to_supply_quests(game));
+
+    game.tick(0.0);
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_SIDE_CONVOY_RESCUE));
+    FT_ASSERT(game.get_quest_status(QUEST_SIDE_OUTPOST_REPAIR) != QUEST_STATUS_ACTIVE);
+    FT_ASSERT(game.get_quest_status(QUEST_SIDE_ORDER_PROPAGANDA) != QUEST_STATUS_ACTIVE);
+    FT_ASSERT(game.get_quest_status(QUEST_SIDE_REBELLION_BROADCAST) != QUEST_STATUS_ACTIVE);
+
+    stock_resource(game, PLANET_TERRA, ORE_IRON, 320);
+    for (int shipment = 0; shipment < 4; ++shipment)
+    {
+        FT_ASSERT(dispatch_convoy_to_mars(game, ORE_IRON, 20));
+        stock_resource(game, PLANET_TERRA, ORE_IRON, 320);
+    }
+    size_t rescue_lore_start = game.get_lore_log().size();
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_SIDE_CONVOY_RESCUE));
+    FT_ASSERT(game.is_journal_entry_unlocked(JOURNAL_ENTRY_SIDE_CONVOY_RESCUE));
+    const ft_vector<ft_string> &rescue_lore = game.get_lore_log();
+    FT_ASSERT(lore_log_contains_fragment(rescue_lore, rescue_lore_start, ft_string("relief crews")));
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_ACTIVE, game.get_quest_status(QUEST_SIDE_OUTPOST_REPAIR));
+    FT_ASSERT(game.get_quest_status(QUEST_SIDE_ORDER_PROPAGANDA) != QUEST_STATUS_ACTIVE);
+    FT_ASSERT(game.get_quest_status(QUEST_SIDE_REBELLION_BROADCAST) != QUEST_STATUS_ACTIVE);
+
+    int terra_radar = game.place_building(PLANET_TERRA, BUILDING_PROXIMITY_RADAR, 2, 0);
+    if (terra_radar == 0)
+        terra_radar = game.place_building(PLANET_TERRA, BUILDING_PROXIMITY_RADAR, 3, 0);
+    int mars_radar = game.place_building(PLANET_MARS, BUILDING_PROXIMITY_RADAR, 0, 0);
+    if (mars_radar == 0)
+        mars_radar = game.place_building(PLANET_MARS, BUILDING_PROXIMITY_RADAR, 1, 0);
+    FT_ASSERT(terra_radar != 0);
+    FT_ASSERT(mars_radar != 0);
+
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_SIDE_OUTPOST_REPAIR));
+    FT_ASSERT(game.is_journal_entry_unlocked(JOURNAL_ENTRY_SIDE_OUTPOST_REPAIR));
     return 1;
 }
 

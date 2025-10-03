@@ -27,6 +27,43 @@ void Game::append_lore_entry(const ft_string &entry)
     this->_lore_log_cache_dirty = true;
 }
 
+void Game::unlock_journal_entry(int entry_id, const ft_string &text)
+{
+    if (entry_id == 0 || text.size() == 0)
+        return ;
+    if (this->_journal_entries.find(entry_id) != ft_nullptr)
+        return ;
+    this->_journal_entries.insert(entry_id, text);
+    this->_journal_unlock_order.push_back(entry_id);
+    this->_journal_cache_dirty = true;
+}
+
+const ft_vector<ft_string> &Game::get_journal_entries() const
+{
+    if (!this->_journal_cache_dirty)
+        return this->_journal_cache;
+
+    this->_journal_cache.clear();
+    for (size_t i = 0; i < this->_journal_unlock_order.size(); ++i)
+    {
+        int entry_id = this->_journal_unlock_order[i];
+        const Pair<int, ft_string> *entry = this->_journal_entries.find(entry_id);
+        if (entry != ft_nullptr)
+            this->_journal_cache.push_back(entry->value);
+    }
+    this->_journal_cache_dirty = false;
+    return this->_journal_cache;
+}
+
+bool Game::is_journal_entry_unlocked(int entry_id) const
+{
+    if (entry_id == 0)
+        return false;
+    if (this->_journal_entries.find(entry_id) != ft_nullptr)
+        return true;
+    return false;
+}
+
 Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     : _backend(host, path),
       _save_system(),
@@ -35,6 +72,12 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _lore_log_count(0),
       _lore_log_cache(),
       _lore_log_cache_dirty(false),
+      _journal_entries(),
+      _journal_unlock_order(),
+      _journal_cache(),
+      _journal_cache_dirty(false),
+      _resource_lore_cursors(),
+      _raider_lore_cursor(0),
       _difficulty(GAME_DIFFICULTY_STANDARD),
       _resource_multiplier(1.0),
       _quest_time_scale(1.0),
@@ -102,6 +145,26 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
     this->_streak_milestones.push_back(3);
     this->_streak_milestones.push_back(5);
     this->_streak_milestones.push_back(8);
+    this->unlock_journal_entry(JOURNAL_ENTRY_PROFILE_MINER_JOE,
+        ft_string("Character Profile – Old Miner Joe: A weathered Terra veteran who rebuilt the mines after tragedy and now mentors crews with relentless patience. He keeps ledgers of every sacrifice made during the core collapse and fights to ensure no crew is ever forgotten again."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_PROFILE_PROFESSOR_LUMEN,
+        ft_string("Character Profile – Professor Lumen: An astrophysicist tracking strange energy waves whose research ties raider strikes to corruption in the core. Lumen's private notes describe how the anomaly threads through bureaucracy, warping minds that once swore to protect the frontier."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_PROFILE_FARMER_DAISY,
+        ft_string("Character Profile – Farmer Daisy: The heart of the agricultural colonies, balancing hydroponic harvests with convoy negotiations to keep everyone fed. Daisy remembers when Zalthor's soil ran red with famine and refuses to let another generation go hungry on her watch."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_PROFILE_BLACKTHORNE,
+        ft_string("Character Profile – Captain Blackthorne: Charismatic raider leader shaped by betrayal, convinced the system must be shattered to heal the frontier. His manifesto mourns miners abandoned to die on Vulcan Station and promises a rebellion that answers to the forgotten."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_PROFILE_NAVIGATOR_ZARA,
+        ft_string("Character Profile – Navigator Zara: A prodigy pilot whose daring maneuvers keep resistance fleets alive even when sacrifice is the only option. Her map room is covered in flight lines marking every convoy saved, each string woven into a constellation of hope."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_PROFILE_SCOUT_FINN,
+        ft_string("Character Profile – Old Scout Finn: Quiet frontier scout documenting how neglect and desperation turn ordinary settlers into hardened raiders. Finn's journals chart abandoned settlements and list the names of colonists praying for supply ships that never came."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_LORE_TERRA_REBUILD,
+        ft_string("Journal – Rebuilding Terra: The capital's shattered docks now hum with modular refineries, rebuilt by surviving families and freshly minted cadets. Terra's leadership pledges every convoy assignment to weave new trust between the core and the outer belt."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_LORE_MARS_OUTPOSTS,
+        ft_string("Journal – Mars Garrison Outposts: Fortified redline settlements oversee the lifelines to the agricultural moons, watching for the first flare of raider engines. Veterans stationed there trade stories of frozen nights endured to keep the convoys running."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_LORE_ZALTHOR_ANOMALY,
+        ft_string("Journal – The Zalthor Anomaly: Professor Lumen's arrays pinpoint energy rifts above Zalthor's shipyards, echoes of experiments abandoned by the Dominion. The anomaly has begun to sing, and every scientist fears the chorus might wake something older than the rebellion."));
+    this->unlock_journal_entry(JOURNAL_ENTRY_LORE_CONVOY_CORPS,
+        ft_string("Journal – Convoy Corps Charter: Logistics commanders formalize the Convoy Corps, pairing engineers with pilots who swear to deliver supplies no matter the cost. Their oath binds Terra, Mars, Noctaris, and Luna into a single lattice of mutual survival."));
     this->save_campaign_checkpoint(ft_string("initial_setup"));
 }
 

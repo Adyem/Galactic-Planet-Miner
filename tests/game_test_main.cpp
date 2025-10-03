@@ -32,6 +32,9 @@ int main()
     if (!verify_lore_log_retention())
         return 0;
 
+    if (!verify_initial_journal_seed())
+        return 0;
+
     if (!verify_fractional_resource_accumulation())
         return 0;
 
@@ -48,6 +51,24 @@ int main()
         return 0;
 
     if (!verify_supply_route_threat_decay())
+        return 0;
+
+    if (!verify_celestial_barrens_salvage_event())
+        return 0;
+
+    if (!verify_imperium_pressure_threshold())
+        return 0;
+
+    if (!verify_nebula_outpost_scan_event())
+        return 0;
+
+    if (!verify_resource_lore_rotation())
+        return 0;
+
+    if (!verify_nanomaterial_resource_lore())
+        return 0;
+
+    if (!verify_raider_lore_rotation())
         return 0;
 
     if (!verify_trade_relay_convoy_modifiers())
@@ -76,9 +97,15 @@ int main()
         return 0;
     if (!validate_order_branch_storyline())
         return 0;
+    if (!verify_order_final_verdict_outcomes())
+        return 0;
+    if (!verify_rebellion_final_push_outcomes())
+        return 0;
     if (!evaluate_building_and_convoy_systems(game))
         return 0;
     if (!verify_convoy_quest_objectives())
+        return 0;
+    if (!verify_side_quest_rotation())
         return 0;
     if (!evaluate_ship_upgrade_research(game))
         return 0;
