@@ -190,6 +190,22 @@ int main()
         menu.handle_keyboard_input(keyboard_state);
 
         auto process_menu_activation = [&](const ft_menu_item &item) {
+            if (item.identifier == "new_game")
+            {
+                bool creation_quit = false;
+                bool created_save = run_new_game_creation_flow(window, renderer, title_font, menu_font, active_profile_name,
+                    creation_quit);
+                if (creation_quit)
+                {
+                    running = false;
+                    return;
+                }
+
+                if (created_save)
+                    player_profile_list(available_profiles);
+                return;
+            }
+
             if (item.identifier == "exit")
             {
                 running = false;

@@ -36,6 +36,7 @@ SRC_COMMON  = \
     save_system.cpp \
     ui_input.cpp \
     ui_menu.cpp \
+    new_game_flow.cpp \
     profile_entry_flow.cpp \
     profile_management_flow.cpp \
     profile_preferences.cpp
