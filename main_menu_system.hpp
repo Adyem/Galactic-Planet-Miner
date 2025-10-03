@@ -58,6 +58,8 @@ ft_string run_profile_entry_flow(SDL_Window *window, SDL_Renderer *renderer, TTF
     const ft_vector<ft_string> *existing_profiles, bool &out_quit_requested);
 ft_string run_profile_management_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_string &current_profile, bool &out_quit_requested);
+bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
+    const ft_string &commander_name, bool &out_quit_requested);
 
 // Profile window preference helpers
 bool save_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept;
