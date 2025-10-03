@@ -113,6 +113,7 @@ class BuildingManager
 {
 private:
     friend class SaveSystem;
+    friend class Game;
 
     ft_map<int, ft_sharedptr<ft_building_definition> > _definitions;
     ft_map<int, ft_planet_build_state>                  _planets;

@@ -1,5 +1,6 @@
 #include "quests.hpp"
 #include "buildings.hpp"
+#include "ft_map_snapshot.hpp"
 
 namespace
 {
@@ -632,4 +633,9 @@ int QuestManager::get_choice(int quest_id) const
     if (entry == ft_nullptr)
         return QUEST_CHOICE_NONE;
     return entry->value;
+}
+
+void QuestManager::snapshot_definitions(ft_vector<Pair<int, ft_sharedptr<ft_quest_definition> > > &out) const
+{
+    ft_map_snapshot(this->_definitions, out);
 }

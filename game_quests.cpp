@@ -3,6 +3,84 @@
 #include "libft/Template/pair.hpp"
 #include "ft_map_snapshot.hpp"
 
+namespace
+{
+static double get_objective_current_amount(const ft_quest_objective &objective,
+                                           const ft_quest_context &context)
+{
+    if (objective.type == QUEST_OBJECTIVE_RESOURCE_TOTAL)
+    {
+        const Pair<int, int> *entry = context.resource_totals.find(objective.target_id);
+        if (entry == ft_nullptr)
+            return 0.0;
+        return static_cast<double>(entry->value);
+    }
+    if (objective.type == QUEST_OBJECTIVE_RESEARCH_COMPLETED)
+    {
+        const Pair<int, int> *entry = context.research_status.find(objective.target_id);
+        if (entry == ft_nullptr)
+            return 0.0;
+        return static_cast<double>(entry->value);
+    }
+    if (objective.type == QUEST_OBJECTIVE_FLEET_COUNT)
+        return static_cast<double>(context.total_ship_count);
+    if (objective.type == QUEST_OBJECTIVE_TOTAL_SHIP_HP)
+        return static_cast<double>(context.total_ship_hp);
+    if (objective.type == QUEST_OBJECTIVE_CONVOYS_DELIVERED)
+        return static_cast<double>(context.successful_deliveries);
+    if (objective.type == QUEST_OBJECTIVE_CONVOY_STREAK)
+        return static_cast<double>(context.delivery_streak);
+    if (objective.type == QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST)
+        return static_cast<double>(context.convoy_raid_losses);
+    if (objective.type == QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST)
+        return context.maximum_convoy_threat * 100.0;
+    if (objective.type == QUEST_OBJECTIVE_BUILDING_COUNT)
+    {
+        const Pair<int, int> *entry = context.building_counts.find(objective.target_id);
+        if (entry == ft_nullptr)
+            return 0.0;
+        return static_cast<double>(entry->value);
+    }
+    if (objective.type == QUEST_OBJECTIVE_ASSAULT_VICTORIES)
+    {
+        const Pair<int, int> *entry = context.assault_victories.find(objective.target_id);
+        if (entry == ft_nullptr)
+            return 0.0;
+        return static_cast<double>(entry->value);
+    }
+    return 0.0;
+}
+
+static bool is_objective_met_for_snapshot(const ft_quest_objective &objective,
+                                          const ft_quest_context &context)
+{
+    if (objective.type == QUEST_OBJECTIVE_RESOURCE_TOTAL)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_RESEARCH_COMPLETED)
+        return get_objective_current_amount(objective, context) >= 1.0;
+    if (objective.type == QUEST_OBJECTIVE_FLEET_COUNT)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_TOTAL_SHIP_HP)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_CONVOYS_DELIVERED)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_CONVOY_STREAK)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST)
+        return get_objective_current_amount(objective, context) <= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST)
+    {
+        double threshold = static_cast<double>(objective.amount) / 100.0;
+        return context.maximum_convoy_threat <= threshold;
+    }
+    if (objective.type == QUEST_OBJECTIVE_BUILDING_COUNT)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    if (objective.type == QUEST_OBJECTIVE_ASSAULT_VICTORIES)
+        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+    return false;
+}
+} // namespace
+
 void Game::build_quest_context(ft_quest_context &context) const
 {
     ft_vector<Pair<int, ft_sharedptr<ft_planet> > > planet_entries;
@@ -498,6 +576,105 @@ const ft_vector<ft_string> &Game::get_lore_log() const
     }
     this->_lore_log_cache_dirty = false;
     return this->_lore_log_cache;
+}
+
+void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
+{
+    out.main_quests.clear();
+    out.side_quests.clear();
+    out.awaiting_choice_ids.clear();
+    out.recent_journal_entries.clear();
+    out.active_main_quest_id = this->get_active_quest();
+
+    ft_quest_context context;
+    this->build_quest_context(context);
+
+    ft_vector<Pair<int, ft_sharedptr<ft_quest_definition> > > definitions;
+    this->_quests.snapshot_definitions(definitions);
+    size_t definition_count = definitions.size();
+    for (size_t i = 0; i < definition_count; ++i)
+    {
+        const ft_sharedptr<ft_quest_definition> &definition_ptr = definitions[i].value;
+        if (!definition_ptr)
+            continue;
+        const ft_quest_definition &definition = *definition_ptr;
+
+        ft_quest_log_entry entry;
+        entry.quest_id = definition.id;
+        entry.name = definition.name;
+        entry.description = definition.description;
+        entry.status = this->_quests.get_status(definition.id);
+        entry.time_remaining = this->_quests.get_time_remaining(definition.id);
+        if (definition.time_limit > 0.0)
+            entry.time_limit = definition.time_limit * this->_quest_time_scale;
+        else
+            entry.time_limit = 0.0;
+        entry.is_side_quest = definition.is_side_quest;
+        entry.requires_choice = definition.requires_choice;
+        entry.awaiting_choice = (entry.status == QUEST_STATUS_AWAITING_CHOICE);
+        entry.selected_choice = this->_quests.get_choice(definition.id);
+
+        entry.prerequisites_met = true;
+        for (size_t j = 0; j < definition.prerequisites.size(); ++j)
+        {
+            int prerequisite_id = definition.prerequisites[j];
+            if (this->_quests.get_status(prerequisite_id) != QUEST_STATUS_COMPLETED)
+            {
+                entry.prerequisites_met = false;
+                break;
+            }
+        }
+
+        entry.branch_requirement_met = true;
+        if (definition.required_choice_quest != 0)
+        {
+            int required_choice = this->_quests.get_choice(definition.required_choice_quest);
+            entry.branch_requirement_met = (required_choice == definition.required_choice_value);
+        }
+
+        entry.objectives_completed = true;
+        for (size_t j = 0; j < definition.objectives.size(); ++j)
+        {
+            const ft_quest_objective &objective = definition.objectives[j];
+            ft_quest_objective_snapshot snapshot;
+            snapshot.type = objective.type;
+            snapshot.target_id = objective.target_id;
+            snapshot.required_amount = objective.amount;
+            snapshot.current_amount = get_objective_current_amount(objective, context);
+            snapshot.is_met = is_objective_met_for_snapshot(objective, context);
+            if (!snapshot.is_met)
+                entry.objectives_completed = false;
+            entry.objectives.push_back(snapshot);
+        }
+
+        for (size_t j = 0; j < definition.choices.size(); ++j)
+        {
+            const ft_quest_choice_definition &choice_definition = definition.choices[j];
+            ft_quest_choice_snapshot choice_entry;
+            choice_entry.choice_id = choice_definition.choice_id;
+            choice_entry.description = choice_definition.description;
+            choice_entry.is_selected = (entry.selected_choice == choice_definition.choice_id);
+            choice_entry.is_available = entry.awaiting_choice;
+            entry.choices.push_back(choice_entry);
+        }
+
+        if (entry.awaiting_choice)
+            out.awaiting_choice_ids.push_back(entry.quest_id);
+
+        if (definition.is_side_quest)
+            out.side_quests.push_back(entry);
+        else
+            out.main_quests.push_back(entry);
+    }
+
+    const ft_vector<ft_string> &journal_entries = this->get_journal_entries();
+    size_t journal_count = journal_entries.size();
+    size_t max_recent = 5;
+    size_t start_index = 0;
+    if (journal_count > max_recent)
+        start_index = journal_count - max_recent;
+    for (size_t i = start_index; i < journal_count; ++i)
+        out.recent_journal_entries.push_back(journal_entries[i]);
 }
 
 bool Game::is_backend_online() const

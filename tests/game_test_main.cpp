@@ -71,6 +71,18 @@ int main()
     if (!verify_raider_lore_rotation())
         return 0;
 
+    if (!verify_resource_dashboard_overview())
+        return 0;
+
+    if (!verify_fleet_management_snapshot())
+        return 0;
+
+    if (!verify_building_layout_snapshot())
+        return 0;
+
+    if (!verify_quest_log_snapshot())
+        return 0;
+
     if (!verify_trade_relay_convoy_modifiers())
         return 0;
 
