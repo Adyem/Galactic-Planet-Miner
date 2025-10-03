@@ -94,6 +94,282 @@ public:
         {}
     };
 
+    struct ft_resource_dashboard_entry
+    {
+        int     resource_id;
+        int     total_stock;
+        double  production_rate;
+
+        ft_resource_dashboard_entry()
+            : resource_id(0), total_stock(0), production_rate(0.0)
+        {}
+    };
+
+    struct ft_route_dashboard_entry
+    {
+        int     route_id;
+        int     origin_planet_id;
+        int     destination_planet_id;
+        double  threat_level;
+        double  quiet_timer;
+        int     active_convoys;
+        bool    escalation_pending;
+
+        ft_route_dashboard_entry()
+            : route_id(0), origin_planet_id(0), destination_planet_id(0),
+              threat_level(0.0), quiet_timer(0.0), active_convoys(0),
+              escalation_pending(false)
+        {}
+    };
+
+    struct ft_resource_dashboard
+    {
+        ft_vector<ft_resource_dashboard_entry> resources;
+        ft_vector<ft_route_dashboard_entry>    routes;
+        int                                    total_active_convoys;
+        double                                 average_route_threat;
+        double                                 maximum_route_threat;
+
+        ft_resource_dashboard()
+            : resources(), routes(), total_active_convoys(0),
+              average_route_threat(0.0), maximum_route_threat(0.0)
+        {}
+    };
+
+    struct ft_building_grid_cell_snapshot
+    {
+        int x;
+        int y;
+        int instance_id;
+        int building_id;
+
+        ft_building_grid_cell_snapshot()
+            : x(0), y(0), instance_id(0), building_id(0)
+        {}
+    };
+
+    struct ft_building_instance_snapshot
+    {
+        int                         instance_id;
+        int                         building_id;
+        ft_string                   name;
+        int                         x;
+        int                         y;
+        int                         width;
+        int                         height;
+        double                      progress;
+        bool                        active;
+        int                         logistic_cost;
+        int                         logistic_gain;
+        double                      energy_cost;
+        double                      energy_gain;
+        double                      cycle_time;
+        double                      mine_bonus;
+        double                      convoy_speed_bonus;
+        double                      convoy_raid_risk_modifier;
+        bool                        unique;
+        bool                        occupies_grid;
+        bool                        removable;
+        ft_vector<Pair<int, int> >  inputs;
+        ft_vector<Pair<int, int> >  outputs;
+        ft_vector<Pair<int, int> >  build_costs;
+
+        ft_building_instance_snapshot()
+            : instance_id(0), building_id(0), name(), x(0), y(0), width(0),
+              height(0), progress(0.0), active(false), logistic_cost(0),
+              logistic_gain(0), energy_cost(0.0), energy_gain(0.0),
+              cycle_time(0.0), mine_bonus(0.0), convoy_speed_bonus(0.0),
+              convoy_raid_risk_modifier(0.0), unique(false),
+              occupies_grid(false), removable(false), inputs(), outputs(),
+              build_costs()
+        {}
+    };
+
+    struct ft_planet_building_snapshot
+    {
+        int                                 planet_id;
+        ft_string                           planet_name;
+        int                                 width;
+        int                                 height;
+        int                                 base_logistic;
+        int                                 research_logistic_bonus;
+        int                                 used_plots;
+        int                                 logistic_capacity;
+        int                                 logistic_usage;
+        int                                 logistic_available;
+        double                              base_energy_generation;
+        double                              energy_generation;
+        double                              energy_consumption;
+        double                              support_energy;
+        double                              energy_deficit_pressure;
+        double                              mine_multiplier;
+        double                              convoy_speed_bonus;
+        double                              convoy_raid_risk_modifier;
+        ft_vector<ft_building_grid_cell_snapshot> grid;
+        ft_vector<ft_building_instance_snapshot>  instances;
+
+        ft_planet_building_snapshot()
+            : planet_id(0), planet_name(), width(0), height(0),
+              base_logistic(0), research_logistic_bonus(0), used_plots(0),
+              logistic_capacity(0), logistic_usage(0), logistic_available(0),
+              base_energy_generation(0.0), energy_generation(0.0),
+              energy_consumption(0.0), support_energy(0.0),
+              energy_deficit_pressure(0.0), mine_multiplier(1.0),
+              convoy_speed_bonus(0.0), convoy_raid_risk_modifier(0.0),
+              grid(), instances()
+        {}
+    };
+
+    struct ft_building_layout_snapshot
+    {
+        ft_vector<ft_planet_building_snapshot> planets;
+
+        ft_building_layout_snapshot() : planets() {}
+    };
+
+    struct ft_quest_objective_snapshot
+    {
+        int     type;
+        int     target_id;
+        int     required_amount;
+        double  current_amount;
+        bool    is_met;
+
+        ft_quest_objective_snapshot()
+            : type(0), target_id(0), required_amount(0),
+              current_amount(0.0), is_met(false)
+        {}
+    };
+
+    struct ft_quest_choice_snapshot
+    {
+        int         choice_id;
+        ft_string   description;
+        bool        is_selected;
+        bool        is_available;
+
+        ft_quest_choice_snapshot()
+            : choice_id(0), description(), is_selected(false),
+              is_available(false)
+        {}
+    };
+
+    struct ft_quest_log_entry
+    {
+        int                                      quest_id;
+        ft_string                                name;
+        ft_string                                description;
+        int                                      status;
+        double                                   time_remaining;
+        double                                   time_limit;
+        bool                                     is_side_quest;
+        bool                                     requires_choice;
+        bool                                     awaiting_choice;
+        bool                                     objectives_completed;
+        bool                                     prerequisites_met;
+        bool                                     branch_requirement_met;
+        int                                      selected_choice;
+        ft_vector<ft_quest_objective_snapshot>   objectives;
+        ft_vector<ft_quest_choice_snapshot>      choices;
+
+        ft_quest_log_entry()
+            : quest_id(0), name(), description(), status(QUEST_STATUS_LOCKED),
+              time_remaining(0.0), time_limit(0.0), is_side_quest(false),
+              requires_choice(false), awaiting_choice(false),
+              objectives_completed(false), prerequisites_met(false),
+              branch_requirement_met(true), selected_choice(QUEST_CHOICE_NONE),
+              objectives(), choices()
+        {}
+    };
+
+    struct ft_quest_log_snapshot
+    {
+        ft_vector<ft_quest_log_entry>    main_quests;
+        ft_vector<ft_quest_log_entry>    side_quests;
+        ft_vector<int>                   awaiting_choice_ids;
+        ft_vector<ft_string>             recent_journal_entries;
+        int                              active_main_quest_id;
+
+        ft_quest_log_snapshot()
+            : main_quests(), side_quests(), awaiting_choice_ids(),
+              recent_journal_entries(), active_main_quest_id(0)
+        {}
+    };
+
+    struct ft_ship_management_entry
+    {
+        int     ship_uid;
+        int     ship_type;
+        int     role;
+        int     combat_behavior;
+        int     outnumbered_behavior;
+        int     unescorted_behavior;
+        int     low_hp_behavior;
+        int     armor;
+        int     hp;
+        int     max_hp;
+        int     shield;
+        int     max_shield;
+        double  max_speed;
+        double  acceleration;
+        double  deceleration;
+        double  turn_speed;
+        double  optimal_range;
+        double  max_range;
+        double  attack_speed;
+        double  base_damage;
+
+        ft_ship_management_entry()
+            : ship_uid(0), ship_type(0), role(0), combat_behavior(0),
+              outnumbered_behavior(0), unescorted_behavior(0),
+              low_hp_behavior(0), armor(0), hp(0), max_hp(0),
+              shield(0), max_shield(0), max_speed(0.0),
+              acceleration(0.0), deceleration(0.0), turn_speed(0.0),
+              optimal_range(0.0), max_range(0.0), attack_speed(0.0),
+              base_damage(0.0)
+        {}
+    };
+
+    struct ft_fleet_management_entry
+    {
+        int                                 fleet_id;
+        bool                                is_garrison;
+        int                                 station_planet_id;
+        int                                 location_type;
+        int                                 origin_planet_id;
+        int                                 destination_planet_id;
+        int                                 misc_location_id;
+        double                              travel_time;
+        int                                 ship_count;
+        int                                 total_hp;
+        int                                 total_shield;
+        double                              escort_veterancy;
+        int                                 escort_veterancy_bonus;
+        double                              average_weapon_range;
+        double                              average_attack_speed;
+        ft_vector<ft_ship_management_entry> ships;
+
+        ft_fleet_management_entry()
+            : fleet_id(0), is_garrison(false), station_planet_id(0),
+              location_type(LOCATION_PLANET), origin_planet_id(PLANET_TERRA),
+              destination_planet_id(PLANET_TERRA), misc_location_id(0),
+              travel_time(0.0), ship_count(0), total_hp(0), total_shield(0),
+              escort_veterancy(0.0), escort_veterancy_bonus(0),
+              average_weapon_range(0.0), average_attack_speed(0.0), ships()
+        {}
+    };
+
+    struct ft_fleet_management_snapshot
+    {
+        ft_vector<ft_fleet_management_entry> player_fleets;
+        ft_vector<ft_fleet_management_entry> traveling_fleets;
+        ft_vector<ft_fleet_management_entry> planet_garrisons;
+
+        ft_fleet_management_snapshot()
+            : player_fleets(), traveling_fleets(), planet_garrisons()
+        {}
+    };
+
 private:
     struct RouteKey;
     struct ft_supply_route;
@@ -123,6 +399,8 @@ private:
     friend int verify_raider_lore_rotation();
     friend int verify_imperium_pressure_threshold();
     friend int verify_nanomaterial_resource_lore();
+    friend int verify_fleet_management_snapshot();
+    friend int verify_building_layout_snapshot();
 
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
@@ -353,6 +631,10 @@ private:
     void apply_fleet_snapshot(const ft_map<int, ft_sharedptr<ft_fleet> > &snapshot);
     bool checkpoint_campaign_state_internal(const ft_string &tag);
     void record_checkpoint_failure(const ft_string &tag) noexcept;
+    void build_fleet_management_entry(const ft_fleet &fleet,
+                                      ft_fleet_management_entry &out,
+                                      bool is_garrison,
+                                      int garrison_planet_id) const;
 
 public:
     Game(const ft_string &host, const ft_string &path, int difficulty = GAME_DIFFICULTY_STANDARD);
@@ -393,6 +675,10 @@ public:
     double get_quest_time_remaining(int quest_id) const;
     bool resolve_quest_choice(int quest_id, int choice_id);
     int get_quest_choice(int quest_id) const;
+    void get_resource_dashboard(ft_resource_dashboard &out) const;
+    void get_building_layout_snapshot(ft_building_layout_snapshot &out) const;
+    void get_quest_log_snapshot(ft_quest_log_snapshot &out) const;
+    void get_fleet_management_snapshot(ft_fleet_management_snapshot &out) const;
 
     bool assign_convoy_escort(int origin_planet_id, int destination_planet_id, int fleet_id);
     bool clear_convoy_escort(int origin_planet_id, int destination_planet_id);

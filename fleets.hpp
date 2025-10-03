@@ -97,6 +97,7 @@ struct ft_ship
     double turn_speed;
     double optimal_range;
     double max_range;
+    double attack_speed;
     double base_damage;
     int combat_behavior;
     int outnumbered_behavior;
@@ -107,7 +108,7 @@ struct ft_ship
         : id(0), type(0), armor(0), hp(0), shield(0), max_hp(0),
           max_shield(0), max_speed(18.0), acceleration(4.0),
           deceleration(3.5), turn_speed(60.0), optimal_range(180.0), max_range(240.0),
-          base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+          attack_speed(1.0), base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
           outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
           unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
           low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
@@ -116,7 +117,7 @@ struct ft_ship
         : id(i), type(t), armor(0), hp(0), shield(0), max_hp(0),
           max_shield(0), max_speed(18.0), acceleration(4.0),
           deceleration(3.5), turn_speed(60.0), optimal_range(180.0), max_range(240.0),
-          base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+          attack_speed(1.0), base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
           outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
           unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
           low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)

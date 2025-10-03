@@ -128,6 +128,60 @@ AchievementManager::AchievementManager()
     rebellion->target_value = 1;
     rebellion->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
     this->register_achievement(rebellion);
+
+    ft_sharedptr<ft_achievement_definition> suppress(new ft_achievement_definition());
+    suppress->id = ACHIEVEMENT_QUEST_ORDER_SUPPRESS_RAIDS;
+    suppress->name = ft_string("Sensor Web Architect");
+    suppress->description = ft_string("Complete the Suppress the Raider Cells quest.");
+    suppress->event_id = ACHIEVEMENT_EVENT_QUEST_ORDER_SUPPRESS_RAIDS;
+    suppress->target_value = 1;
+    suppress->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
+    this->register_achievement(suppress);
+
+    ft_sharedptr<ft_achievement_definition> dominion(new ft_achievement_definition());
+    dominion->id = ACHIEVEMENT_QUEST_ORDER_DOMINION;
+    dominion->name = ft_string("Dominion Enforcer");
+    dominion->description = ft_string("Complete the Order Dominion quest.");
+    dominion->event_id = ACHIEVEMENT_EVENT_QUEST_ORDER_DOMINION;
+    dominion->target_value = 1;
+    dominion->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
+    this->register_achievement(dominion);
+
+    ft_sharedptr<ft_achievement_definition> tribunal(new ft_achievement_definition());
+    tribunal->id = ACHIEVEMENT_QUEST_ORDER_FINAL_VERDICT;
+    tribunal->name = ft_string("Order Tribunal Arbiter");
+    tribunal->description = ft_string("Resolve the Final Order Mandate quest.");
+    tribunal->event_id = ACHIEVEMENT_EVENT_QUEST_ORDER_FINAL_VERDICT;
+    tribunal->target_value = 1;
+    tribunal->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
+    this->register_achievement(tribunal);
+
+    ft_sharedptr<ft_achievement_definition> network(new ft_achievement_definition());
+    network->id = ACHIEVEMENT_QUEST_REBELLION_NETWORK;
+    network->name = ft_string("Shadow Network Weaver");
+    network->description = ft_string("Complete the Shadow Network quest.");
+    network->event_id = ACHIEVEMENT_EVENT_QUEST_REBELLION_NETWORK;
+    network->target_value = 1;
+    network->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
+    this->register_achievement(network);
+
+    ft_sharedptr<ft_achievement_definition> liberation(new ft_achievement_definition());
+    liberation->id = ACHIEVEMENT_QUEST_REBELLION_LIBERATION;
+    liberation->name = ft_string("Liberation Vanguard");
+    liberation->description = ft_string("Complete the Liberation of the Frontier quest.");
+    liberation->event_id = ACHIEVEMENT_EVENT_QUEST_REBELLION_LIBERATION;
+    liberation->target_value = 1;
+    liberation->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
+    this->register_achievement(liberation);
+
+    ft_sharedptr<ft_achievement_definition> final_push(new ft_achievement_definition());
+    final_push->id = ACHIEVEMENT_QUEST_REBELLION_FINAL_PUSH;
+    final_push->name = ft_string("Freedom's Edge");
+    final_push->description = ft_string("Complete the Battle for Freedom quest.");
+    final_push->event_id = ACHIEVEMENT_EVENT_QUEST_REBELLION_FINAL_PUSH;
+    final_push->target_value = 1;
+    final_push->progress_mode = ACHIEVEMENT_PROGRESS_INCREMENTAL;
+    this->register_achievement(final_push);
 }
 
 void AchievementManager::register_achievement(const ft_sharedptr<ft_achievement_definition> &definition)

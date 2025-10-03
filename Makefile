@@ -29,6 +29,7 @@ SRC_COMMON  = \
     research.cpp \
     game_research.cpp \
     game_quests.cpp \
+    game_buildings.cpp \
     game_convoys.cpp \
     game_fleets.cpp \
     game_combat_interface.cpp \

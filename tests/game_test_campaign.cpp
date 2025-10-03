@@ -72,7 +72,7 @@ static bool lore_log_contains_fragment(const ft_vector<ft_string> &entries,
     return false;
 }
 
-static int advance_to_order_final_verdict(Game &game)
+int advance_to_order_final_verdict(Game &game)
 {
     stock_resource(game, PLANET_TERRA, ORE_IRON, 360);
     stock_resource(game, PLANET_TERRA, ORE_COPPER, 260);
@@ -165,7 +165,7 @@ static int advance_to_order_final_verdict(Game &game)
     return 1;
 }
 
-static int advance_to_rebellion_final_push(Game &game)
+int advance_to_rebellion_final_push(Game &game)
 {
     stock_resource(game, PLANET_TERRA, ORE_IRON, 360);
     stock_resource(game, PLANET_TERRA, ORE_COPPER, 260);

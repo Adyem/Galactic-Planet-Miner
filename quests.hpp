@@ -162,6 +162,8 @@ public:
     const ft_quest_definition *get_definition(int quest_id) const;
     bool make_choice(int quest_id, int choice_id);
     int get_choice(int quest_id) const;
+
+    void snapshot_definitions(ft_vector<Pair<int, ft_sharedptr<ft_quest_definition> > > &out) const;
 };
 
 #endif

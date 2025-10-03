@@ -15,6 +15,7 @@ namespace
         double  turn_speed;
         double  optimal_range;
         double  max_range;
+        double  attack_speed;
         double  base_damage;
         int     combat_behavior;
         int     outnumbered_behavior;
@@ -25,7 +26,7 @@ namespace
         ship_profile()
             : armor(18), hp(180), shield(60), max_speed(18.0), acceleration(4.0),
               deceleration(3.5), turn_speed(60.0), optimal_range(180.0), max_range(240.0),
-              base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
+              attack_speed(1.0), base_damage(4.0), combat_behavior(SHIP_BEHAVIOR_LINE_HOLD),
               outnumbered_behavior(SHIP_BEHAVIOR_RETREAT),
               unescorted_behavior(SHIP_BEHAVIOR_WITHDRAW_SUPPORT),
               low_hp_behavior(SHIP_BEHAVIOR_RETREAT), role(SHIP_ROLE_LINE)
@@ -51,6 +52,7 @@ namespace
             transport.turn_speed = 72.0;
             transport.optimal_range = 175.0;
             transport.max_range = 215.0;
+            transport.attack_speed = 0.75;
             transport.base_damage = 10.0;
             transport.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             transport.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
@@ -67,6 +69,7 @@ namespace
             corvette.turn_speed = 95.0;
             corvette.optimal_range = 190.0;
             corvette.max_range = 235.0;
+            corvette.attack_speed = 1.2;
             corvette.base_damage = 30.0;
             corvette.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
 
@@ -80,6 +83,7 @@ namespace
             shield.turn_speed = 95.0;
             shield.optimal_range = 205.0;
             shield.max_range = 265.0;
+            shield.attack_speed = 0.85;
             shield.base_damage = 20.0;
             shield.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             shield.unescorted_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -95,6 +99,7 @@ namespace
             radar.turn_speed = 110.0;
             radar.optimal_range = 235.0;
             radar.max_range = 320.0;
+            radar.attack_speed = 1.1;
             radar.base_damage = 25.0;
             radar.combat_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
             radar.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -111,6 +116,7 @@ namespace
             salvage.turn_speed = 70.0;
             salvage.optimal_range = 185.0;
             salvage.max_range = 225.0;
+            salvage.attack_speed = 0.65;
             salvage.base_damage = 5.0;
             salvage.combat_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
             salvage.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -127,6 +133,7 @@ namespace
             interceptor.turn_speed = 130.0;
             interceptor.optimal_range = 165.0;
             interceptor.max_range = 210.0;
+            interceptor.attack_speed = 1.35;
             interceptor.base_damage = 40.0;
             interceptor.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             interceptor.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
@@ -142,6 +149,7 @@ namespace
             repair_drone.turn_speed = 140.0;
             repair_drone.optimal_range = 155.0;
             repair_drone.max_range = 205.0;
+            repair_drone.attack_speed = 0.8;
             repair_drone.base_damage = 5.0;
             repair_drone.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             repair_drone.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -158,6 +166,7 @@ namespace
             sunflare.turn_speed = 110.0;
             sunflare.optimal_range = 215.0;
             sunflare.max_range = 275.0;
+            sunflare.attack_speed = 0.95;
             sunflare.base_damage = 10.0;
             sunflare.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             sunflare.outnumbered_behavior = SHIP_BEHAVIOR_RETREAT;
@@ -175,6 +184,7 @@ namespace
             capital_juggernaut.turn_speed = 45.0;
             capital_juggernaut.optimal_range = 200.0;
             capital_juggernaut.max_range = 260.0;
+            capital_juggernaut.attack_speed = 0.7;
             capital_juggernaut.base_damage = 80.0;
             capital_juggernaut.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             capital_juggernaut.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -192,6 +202,7 @@ namespace
             capital_nova.turn_speed = 46.0;
             capital_nova.optimal_range = 240.0;
             capital_nova.max_range = 320.0;
+            capital_nova.attack_speed = 0.8;
             capital_nova.base_damage = 35.0;
             capital_nova.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             capital_nova.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -209,6 +220,7 @@ namespace
             capital_obsidian.turn_speed = 42.0;
             capital_obsidian.optimal_range = 230.0;
             capital_obsidian.max_range = 310.0;
+            capital_obsidian.attack_speed = 0.78;
             capital_obsidian.base_damage = 85.0;
             capital_obsidian.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             capital_obsidian.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -225,6 +237,7 @@ namespace
             capital_preemptor.turn_speed = 40.0;
             capital_preemptor.optimal_range = 320.0;
             capital_preemptor.max_range = 420.0;
+            capital_preemptor.attack_speed = 0.6;
             capital_preemptor.base_damage = 250.0;
             capital_preemptor.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             capital_preemptor.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -241,6 +254,7 @@ namespace
             capital_protector.turn_speed = 44.0;
             capital_protector.optimal_range = 210.0;
             capital_protector.max_range = 280.0;
+            capital_protector.attack_speed = 0.82;
             capital_protector.base_damage = 82.0;
             capital_protector.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             capital_protector.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -258,6 +272,7 @@ namespace
             capital_eclipse.turn_speed = 36.0;
             capital_eclipse.optimal_range = 160.0;
             capital_eclipse.max_range = 220.0;
+            capital_eclipse.attack_speed = 0.76;
             capital_eclipse.base_damage = 70.0;
             capital_eclipse.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             capital_eclipse.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -275,6 +290,7 @@ namespace
             frigate_juggernaut.turn_speed = 85.0;
             frigate_juggernaut.optimal_range = 205.0;
             frigate_juggernaut.max_range = 265.0;
+            frigate_juggernaut.attack_speed = 0.88;
             frigate_juggernaut.base_damage = 50.0;
             frigate_juggernaut.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             frigate_juggernaut.role = SHIP_ROLE_TRANSPORT;
@@ -289,6 +305,7 @@ namespace
             frigate_carrier.turn_speed = 82.0;
             frigate_carrier.optimal_range = 220.0;
             frigate_carrier.max_range = 280.0;
+            frigate_carrier.attack_speed = 0.78;
             frigate_carrier.base_damage = 45.0;
             frigate_carrier.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             frigate_carrier.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -306,6 +323,7 @@ namespace
             frigate_sovereign.turn_speed = 88.0;
             frigate_sovereign.optimal_range = 210.0;
             frigate_sovereign.max_range = 270.0;
+            frigate_sovereign.attack_speed = 0.9;
             frigate_sovereign.base_damage = 55.0;
             frigate_sovereign.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
 
@@ -319,6 +337,7 @@ namespace
             frigate_preemptor.turn_speed = 90.0;
             frigate_preemptor.optimal_range = 260.0;
             frigate_preemptor.max_range = 330.0;
+            frigate_preemptor.attack_speed = 0.92;
             frigate_preemptor.base_damage = 100.0;
             frigate_preemptor.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
 
@@ -332,6 +351,7 @@ namespace
             frigate_protector.turn_speed = 80.0;
             frigate_protector.optimal_range = 225.0;
             frigate_protector.max_range = 285.0;
+            frigate_protector.attack_speed = 0.86;
             frigate_protector.base_damage = 48.0;
             frigate_protector.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             frigate_protector.unescorted_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -348,6 +368,7 @@ namespace
             frigate_eclipse.turn_speed = 78.0;
             frigate_eclipse.optimal_range = 200.0;
             frigate_eclipse.max_range = 260.0;
+            frigate_eclipse.attack_speed = 0.84;
             frigate_eclipse.base_damage = 40.0;
             frigate_eclipse.combat_behavior = SHIP_BEHAVIOR_SCREEN_SUPPORT;
             frigate_eclipse.outnumbered_behavior = SHIP_BEHAVIOR_WITHDRAW_SUPPORT;
@@ -365,6 +386,7 @@ namespace
             raider_corvette.turn_speed = 118.0;
             raider_corvette.optimal_range = 185.0;
             raider_corvette.max_range = 245.0;
+            raider_corvette.attack_speed = 1.05;
             raider_corvette.base_damage = 9.5;
             raider_corvette.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             raider_corvette.outnumbered_behavior = SHIP_BEHAVIOR_FLANK_SWEEP;
@@ -381,6 +403,7 @@ namespace
             raider_destroyer.turn_speed = 92.0;
             raider_destroyer.optimal_range = 210.0;
             raider_destroyer.max_range = 280.0;
+            raider_destroyer.attack_speed = 0.95;
             raider_destroyer.base_damage = 12.5;
             raider_destroyer.combat_behavior = SHIP_BEHAVIOR_LINE_HOLD;
             raider_destroyer.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -397,6 +420,7 @@ namespace
             raider_battleship.turn_speed = 50.0;
             raider_battleship.optimal_range = 240.0;
             raider_battleship.max_range = 320.0;
+            raider_battleship.attack_speed = 0.85;
             raider_battleship.base_damage = 16.0;
             raider_battleship.combat_behavior = SHIP_BEHAVIOR_CHARGE;
             raider_battleship.outnumbered_behavior = SHIP_BEHAVIOR_LINE_HOLD;
@@ -428,6 +452,7 @@ namespace
         ship.turn_speed = profile.turn_speed;
         ship.optimal_range = profile.optimal_range;
         ship.max_range = profile.max_range;
+        ship.attack_speed = profile.attack_speed;
         ship.base_damage = profile.base_damage;
         ship.combat_behavior = profile.combat_behavior;
         ship.outnumbered_behavior = profile.outnumbered_behavior;
@@ -579,15 +604,69 @@ void ft_fleet::clear_ships() noexcept
 
 void ft_fleet::add_ship_snapshot(const ft_ship &ship) noexcept
 {
-    this->_ships.insert(ship.id, ship);
-    if (ship.id >= _next_ship_id)
+    ft_ship snapshot = ship;
+    ship_profile profile = get_ship_profile(snapshot.type);
+    if (snapshot.max_hp <= 0)
+        snapshot.max_hp = profile.hp;
+    if (snapshot.max_hp <= 0)
+        snapshot.max_hp = 0;
+    if (snapshot.max_hp <= 0)
+        snapshot.hp = 0;
+    else
     {
-        if (ship.id >= FT_INT_MAX - 1)
+        if (snapshot.hp > snapshot.max_hp)
+            snapshot.hp = snapshot.max_hp;
+        else if (snapshot.hp < 0)
+            snapshot.hp = 0;
+    }
+    if (snapshot.max_shield <= 0)
+        snapshot.max_shield = profile.shield;
+    if (snapshot.max_shield <= 0)
+        snapshot.max_shield = 0;
+    if (snapshot.max_shield <= 0)
+        snapshot.shield = 0;
+    else
+    {
+        if (snapshot.shield > snapshot.max_shield)
+            snapshot.shield = snapshot.max_shield;
+        else if (snapshot.shield < 0)
+            snapshot.shield = 0;
+    }
+    if (snapshot.max_speed <= 0.0)
+        snapshot.max_speed = profile.max_speed;
+    if (snapshot.acceleration <= 0.0)
+        snapshot.acceleration = profile.acceleration;
+    if (snapshot.deceleration <= 0.0)
+        snapshot.deceleration = profile.deceleration;
+    if (snapshot.turn_speed <= 0.0)
+        snapshot.turn_speed = profile.turn_speed;
+    if (snapshot.optimal_range <= 0.0)
+        snapshot.optimal_range = profile.optimal_range;
+    if (snapshot.max_range <= 0.0)
+        snapshot.max_range = profile.max_range;
+    if (snapshot.attack_speed <= 0.0)
+        snapshot.attack_speed = profile.attack_speed;
+    if (snapshot.base_damage <= 0.0)
+        snapshot.base_damage = profile.base_damage;
+    if (snapshot.combat_behavior == 0)
+        snapshot.combat_behavior = profile.combat_behavior;
+    if (snapshot.outnumbered_behavior == 0)
+        snapshot.outnumbered_behavior = profile.outnumbered_behavior;
+    if (snapshot.unescorted_behavior == 0)
+        snapshot.unescorted_behavior = profile.unescorted_behavior;
+    if (snapshot.low_hp_behavior == 0)
+        snapshot.low_hp_behavior = profile.low_hp_behavior;
+    if (snapshot.role == 0)
+        snapshot.role = profile.role;
+    this->_ships.insert(snapshot.id, snapshot);
+    if (snapshot.id >= _next_ship_id)
+    {
+        if (snapshot.id >= FT_INT_MAX - 1)
             _next_ship_id = FT_INT_MAX;
         else
         {
-            int next_id = ship.id + 1;
-            if (next_id <= ship.id || next_id >= FT_INT_MAX)
+            int next_id = snapshot.id + 1;
+            if (next_id <= snapshot.id || next_id >= FT_INT_MAX)
                 _next_ship_id = FT_INT_MAX;
             else
                 _next_ship_id = next_id;
