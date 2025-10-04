@@ -65,6 +65,31 @@ bool Game::set_assault_support(int planet_id, bool sunflare_docked,
     return this->_combat.set_support(planet_id, sunflare_docked, repair_drones_active, shield_generator_online);
 }
 
+bool Game::set_assault_sunflare_target(int planet_id, int fleet_id, int ship_uid)
+{
+    if (!this->_shield_support_unlocked)
+        return false;
+    if (!this->_combat.is_assault_active(planet_id))
+        return false;
+    if (fleet_id == 0 || ship_uid == 0)
+        return this->_combat.set_sunflare_dock_target(planet_id, 0, 0);
+    ft_sharedptr<ft_fleet> fleet;
+    Pair<int, ft_sharedptr<ft_fleet> > *entry = this->_fleets.find(fleet_id);
+    if (entry != ft_nullptr)
+        fleet = entry->value;
+    if (!fleet)
+    {
+        ft_sharedptr<ft_fleet> garrison = this->get_planet_fleet(planet_id);
+        if (garrison && garrison->get_id() == fleet_id)
+            fleet = garrison;
+    }
+    if (!fleet)
+        return false;
+    if (fleet->get_ship(ship_uid) == ft_nullptr)
+        return false;
+    return this->_combat.set_sunflare_dock_target(planet_id, fleet_id, ship_uid);
+}
+
 bool Game::set_assault_control_mode(int planet_id, int control_mode)
 {
     return this->_combat.set_control_mode(planet_id, control_mode);

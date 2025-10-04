@@ -140,9 +140,13 @@ int main()
 
     if (!compare_energy_pressure_scenarios())
         return 0;
+    if (!verify_helios_beacon_energy_network())
+        return 0;
     if (!verify_crafting_resume_requires_full_cycle())
         return 0;
     if (!compare_storyline_assaults())
+        return 0;
+    if (!verify_narrative_assault_spikes())
         return 0;
     if (!analyze_manual_vs_auto_assault_controls())
         return 0;
@@ -166,7 +170,15 @@ int main()
         return 0;
     if (!compare_generator_support())
         return 0;
+    if (!verify_auto_shield_generator_projection())
+        return 0;
     if (!inspect_support_ship_positioning())
+        return 0;
+    if (!verify_sunflare_docking_focus())
+        return 0;
+    if (!verify_sunflare_targeting_rules())
+        return 0;
+    if (!verify_radar_static_defense_support())
         return 0;
     if (!verify_difficulty_scaling())
         return 0;
@@ -223,6 +235,10 @@ int main()
     if (!verify_campaign_rejects_invalid_save())
         return 0;
     if (!verify_buildings_unchanged_on_failed_load())
+        return 0;
+    if (!verify_new_game_save_name_rules())
+        return 0;
+    if (!verify_new_game_save_creation())
         return 0;
     if (!verify_player_profile_save())
         return 0;

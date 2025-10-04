@@ -73,8 +73,28 @@ bool CombatManager::start_raider_assault(int planet_id, double difficulty,
     this->sync_raider_tracks(encounter);
     encounter.spike_timer = 0.0;
     encounter.spike_time_remaining = 0.0;
+    if (narrative_pressure > 0.0)
+    {
+        double initial_duration;
+        if (narrative_pressure >= 0.3)
+            initial_duration = 3.5 + narrative_pressure * 3.5;
+        else
+            initial_duration = 2.5 + narrative_pressure * 2.5;
+        if (encounter.energy_pressure > 0.0)
+            initial_duration += encounter.energy_pressure * (narrative_pressure >= 0.3 ? 0.75 : 0.5);
+        encounter.spike_time_remaining = initial_duration;
+        double warmup_window = (narrative_pressure >= 0.3) ? 18.0 : 22.0;
+        warmup_window -= narrative_pressure * 6.0;
+        warmup_window -= encounter.energy_pressure * (narrative_pressure >= 0.3 ? 3.0 : 2.0);
+        if (warmup_window < 6.0)
+            warmup_window = 6.0;
+        encounter.spike_timer = warmup_window * 0.5;
+    }
     encounter.pending_shield_support = 0.0;
     encounter.pending_hull_support = 0.0;
+    encounter.sunflare_target_fleet_id = 0;
+    encounter.sunflare_target_ship_uid = 0;
+    encounter.sunflare_focus_pool = 0.0;
     encounter.manual_focus_remaining = 0.0;
     encounter.manual_focus_cooldown = 0.0;
     encounter.tactical_pause_remaining = 0.0;
@@ -120,6 +140,61 @@ bool CombatManager::set_support(int planet_id, bool sunflare_docked,
     entry->value.modifiers.sunflare_docked = sunflare_docked;
     entry->value.modifiers.repair_drones_active = repair_drones_active;
     entry->value.modifiers.shield_generator_online = shield_generator_online;
+    if (!sunflare_docked)
+    {
+        entry->value.sunflare_target_fleet_id = 0;
+        entry->value.sunflare_target_ship_uid = 0;
+        entry->value.sunflare_focus_pool = 0.0;
+    }
+    return true;
+}
+
+bool CombatManager::set_sunflare_dock_target(int planet_id, int fleet_id, int ship_uid)
+{
+    Pair<int, ft_combat_encounter> *entry = this->_encounters.find(planet_id);
+    if (entry == ft_nullptr || !entry->value.active)
+        return false;
+    ft_combat_encounter &encounter = entry->value;
+    if (encounter.control_mode != ASSAULT_CONTROL_ACTIVE)
+        return false;
+    if (!encounter.modifiers.sunflare_docked)
+    {
+        encounter.sunflare_target_fleet_id = 0;
+        encounter.sunflare_target_ship_uid = 0;
+        encounter.sunflare_focus_pool = 0.0;
+        return false;
+    }
+    if (fleet_id == 0 || ship_uid == 0)
+    {
+        encounter.sunflare_target_fleet_id = 0;
+        encounter.sunflare_target_ship_uid = 0;
+        encounter.sunflare_focus_pool = 0.0;
+        return true;
+    }
+    bool found = false;
+    if (encounter.fleet_ids)
+    {
+        const ft_vector<int> &ids = *encounter.fleet_ids;
+        size_t count = ids.size();
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (ids[i] == fleet_id)
+            {
+                found = true;
+                break;
+            }
+        }
+    }
+    if (!found)
+    {
+        if (fleet_id == -encounter.planet_id)
+            found = true;
+    }
+    if (!found)
+        return false;
+    encounter.sunflare_target_fleet_id = fleet_id;
+    encounter.sunflare_target_ship_uid = ship_uid;
+    encounter.sunflare_focus_pool = 0.0;
     return true;
 }
 
@@ -142,6 +217,10 @@ bool CombatManager::set_control_mode(int planet_id, int control_mode)
         entry->value.manual_focus_cooldown = 0.0;
         entry->value.tactical_pause_remaining = 0.0;
         entry->value.tactical_pause_cooldown = 0.0;
+    }
+    else
+    {
+        entry->value.auto_generator_stability = 0.0;
     }
     return true;
 }
@@ -212,6 +291,38 @@ bool CombatManager::is_assault_active(int planet_id) const
 {
     const Pair<int, ft_combat_encounter> *entry = this->_encounters.find(planet_id);
     return entry != ft_nullptr && entry->value.active;
+}
+
+void CombatManager::get_active_planets(ft_vector<int> &out) const
+{
+    out.clear();
+    size_t count = this->_encounters.size();
+    if (count == 0)
+        return ;
+    const Pair<int, ft_combat_encounter> *entries = this->_encounters.end();
+    entries -= count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (entries[i].value.active)
+            out.push_back(entries[i].key);
+    }
+}
+
+void CombatManager::set_auto_shield_generator(int planet_id, double stability)
+{
+    Pair<int, ft_combat_encounter> *entry = this->_encounters.find(planet_id);
+    if (entry == ft_nullptr || !entry->value.active)
+        return ;
+    if (entry->value.control_mode != ASSAULT_CONTROL_AUTO)
+    {
+        entry->value.auto_generator_stability = 0.0;
+        return ;
+    }
+    if (stability < 0.0)
+        stability = 0.0;
+    if (stability > 1.0)
+        stability = 1.0;
+    entry->value.auto_generator_stability = stability;
 }
 
 double CombatManager::get_raider_shield(int planet_id) const

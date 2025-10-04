@@ -10,7 +10,6 @@
 
 namespace
 {
-#if GALACTIC_HAVE_SDL2
     constexpr unsigned int kMaxSaveNameLength = 24U;
 
     bool is_save_character_allowed(char character) noexcept
@@ -95,6 +94,7 @@ namespace
         return true;
     }
 
+#if GALACTIC_HAVE_SDL2
     void render_new_game_screen(SDL_Renderer &renderer, TTF_Font *title_font, TTF_Font *menu_font,
         const ft_string &save_name, const ft_string &status_message, bool status_is_error)
     {
@@ -226,6 +226,44 @@ namespace
         SDL_RenderPresent(&renderer);
     }
 #endif
+}
+
+namespace new_game_flow_testing
+{
+    unsigned int max_save_name_length() noexcept
+    {
+        return kMaxSaveNameLength;
+    }
+
+    bool is_character_allowed(char character) noexcept
+    {
+        return is_save_character_allowed(character);
+    }
+
+    bool append_character(ft_string &save_name, char character) noexcept
+    {
+        return append_save_character(save_name, character);
+    }
+
+    void remove_last_character(ft_string &save_name) noexcept
+    {
+        remove_last_save_character(save_name);
+    }
+
+    bool validate_save_name(const ft_string &save_name) noexcept
+    {
+        return save_name_is_valid(save_name);
+    }
+
+    ft_string compute_save_file_path(const ft_string &commander_name, const ft_string &save_name)
+    {
+        return build_save_file_path(commander_name, save_name);
+    }
+
+    bool create_save_file(const ft_string &commander_name, const ft_string &save_name, ft_string &out_error) noexcept
+    {
+        return create_new_game_save(commander_name, save_name, out_error);
+    }
 }
 
 bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,

@@ -379,6 +379,13 @@ void Game::update_combat(double milliseconds)
     double seconds = milliseconds * 0.001;
     if (seconds < 0.0)
         seconds = 0.0;
+    ft_vector<int> active_planets;
+    this->_combat.get_active_planets(active_planets);
+    for (size_t i = 0; i < active_planets.size(); ++i)
+    {
+        double stability = this->compute_auto_shield_generator_stability(active_planets[i]);
+        this->_combat.set_auto_shield_generator(active_planets[i], stability);
+    }
     ft_vector<int> assault_completed;
     ft_vector<int> assault_failed;
     this->_combat.tick(seconds, this->_fleets, this->_planet_fleets, assault_completed, assault_failed);
@@ -887,6 +894,35 @@ void Game::update_combat_modifiers()
     this->_combat.set_player_hull_multiplier(this->_ship_hull_multiplier);
 }
 
+double Game::compute_auto_shield_generator_stability(int planet_id) const
+{
+    if (!this->_shield_support_unlocked)
+        return 0.0;
+    const ft_building_definition *definition = this->_buildings.get_definition(BUILDING_SHIELD_GENERATOR);
+    if (definition == ft_nullptr)
+        return 0.0;
+    int generator_count = this->_buildings.get_building_count(planet_id, BUILDING_SHIELD_GENERATOR);
+    if (generator_count <= 0)
+        return 0.0;
+    double generator_cost = definition->energy_cost * static_cast<double>(generator_count);
+    if (generator_cost <= 0.0)
+        return 1.0;
+    double generation = this->_buildings.get_planet_energy_generation(planet_id);
+    double consumption = this->_buildings.get_planet_energy_consumption(planet_id);
+    double non_generator_consumption = consumption - generator_cost;
+    if (non_generator_consumption < 0.0)
+        non_generator_consumption = 0.0;
+    double available = generation - non_generator_consumption;
+    if (available <= 0.0)
+        return 0.0;
+    double stability = available / generator_cost;
+    if (stability < 0.0)
+        stability = 0.0;
+    if (stability > 1.0)
+        stability = 1.0;
+    return stability;
+}
+
 void Game::record_achievement_event(int event_id, int value)
 {
     ft_vector<int> completed;
@@ -1038,6 +1074,13 @@ double Game::get_planet_energy_consumption(int planet_id) const
     return this->_buildings.get_planet_energy_consumption(planet_id);
 }
 
+double Game::get_planet_support_energy(int planet_id) const
+{
+    if (!this->is_planet_unlocked(planet_id))
+        return 0.0;
+    return this->_buildings.get_planet_support_energy(planet_id);
+}
+
 double Game::get_planet_mine_multiplier(int planet_id) const
 {
     if (!this->is_planet_unlocked(planet_id))
@@ -1050,6 +1093,16 @@ double Game::get_planet_energy_pressure(int planet_id) const
     if (!this->is_planet_unlocked(planet_id))
         return 0.0;
     return this->_buildings.get_planet_energy_pressure(planet_id);
+}
+
+int Game::get_planet_escort_rating(int planet_id) const
+{
+    return this->calculate_planet_escort_rating(planet_id);
+}
+
+double Game::get_planet_convoy_raid_risk_modifier(int planet_id) const
+{
+    return this->_buildings.get_planet_convoy_raid_risk_modifier(planet_id);
 }
 
 void Game::ensure_planet_item_slot(int planet_id, int resource_id)

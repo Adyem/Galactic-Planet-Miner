@@ -98,6 +98,8 @@ struct ft_planet_build_state
     double                      convoy_speed_bonus;
     double                      convoy_raid_risk_modifier;
     double                      energy_deficit_pressure;
+    double                      helios_projection;
+    double                      helios_incoming;
     int                         next_instance_id;
     ft_vector<int>              grid;
     ft_map<int, ft_building_instance> instances;
@@ -130,6 +132,7 @@ private:
     void occupy_area(ft_planet_build_state &state, int instance_id, int x, int y, int width, int height);
     void clear_area(ft_planet_build_state &state, int instance_id);
     void recalculate_planet_statistics(ft_planet_build_state &state);
+    void refresh_helios_network();
     bool check_build_costs(const Game &game, int planet_id, const ft_vector<Pair<int, int> > &costs) const;
     void pay_build_costs(Game &game, int planet_id, const ft_vector<Pair<int, int> > &costs);
     bool consume_inputs(Game &game, int planet_id, const ft_vector<Pair<int, int> > &inputs);
@@ -164,6 +167,7 @@ public:
     int get_planet_logistic_usage(int planet_id) const;
     double get_planet_energy_generation(int planet_id) const;
     double get_planet_energy_consumption(int planet_id) const;
+    double get_planet_support_energy(int planet_id) const;
     double get_mine_multiplier(int planet_id) const;
     double get_planet_energy_pressure(int planet_id) const;
     double get_planet_convoy_speed_bonus(int planet_id) const;

@@ -9,7 +9,8 @@ ft_planet_build_state::ft_planet_build_state()
       logistic_capacity(0), logistic_usage(0), base_energy_generation(0.0),
       energy_generation(0.0), energy_consumption(0.0), support_energy(0.0),
       mine_multiplier(1.0), convoy_speed_bonus(0.0), convoy_raid_risk_modifier(0.0),
-      energy_deficit_pressure(0.0), next_instance_id(1), grid(), instances()
+      energy_deficit_pressure(0.0), helios_projection(0.0), helios_incoming(0.0),
+      next_instance_id(1), grid(), instances()
 {
 }
 
@@ -18,7 +19,8 @@ ft_planet_build_state::ft_planet_build_state(const ft_planet_build_state &other)
       logistic_capacity(0), logistic_usage(0), base_energy_generation(0.0),
       energy_generation(0.0), energy_consumption(0.0), support_energy(0.0),
       mine_multiplier(1.0), convoy_speed_bonus(0.0), convoy_raid_risk_modifier(0.0),
-      energy_deficit_pressure(0.0), next_instance_id(1), grid(), instances()
+      energy_deficit_pressure(0.0), helios_projection(0.0), helios_incoming(0.0),
+      next_instance_id(1), grid(), instances()
 {
     *this = other;
 }
@@ -43,6 +45,8 @@ ft_planet_build_state &ft_planet_build_state::operator=(const ft_planet_build_st
     this->convoy_speed_bonus = other.convoy_speed_bonus;
     this->convoy_raid_risk_modifier = other.convoy_raid_risk_modifier;
     this->energy_deficit_pressure = other.energy_deficit_pressure;
+    this->helios_projection = other.helios_projection;
+    this->helios_incoming = other.helios_incoming;
     this->next_instance_id = other.next_instance_id;
 
     this->grid.clear();
@@ -72,7 +76,9 @@ ft_planet_build_state::ft_planet_build_state(ft_planet_build_state &&other) noex
       support_energy(other.support_energy), mine_multiplier(other.mine_multiplier),
       convoy_speed_bonus(other.convoy_speed_bonus),
       convoy_raid_risk_modifier(other.convoy_raid_risk_modifier),
-      energy_deficit_pressure(other.energy_deficit_pressure), next_instance_id(other.next_instance_id),
+      energy_deficit_pressure(other.energy_deficit_pressure),
+      helios_projection(other.helios_projection), helios_incoming(other.helios_incoming),
+      next_instance_id(other.next_instance_id),
       grid(ft_move(other.grid)), instances(ft_move(other.instances))
 {
     other.planet_id = 0;
@@ -91,6 +97,8 @@ ft_planet_build_state::ft_planet_build_state(ft_planet_build_state &&other) noex
     other.convoy_speed_bonus = 0.0;
     other.convoy_raid_risk_modifier = 0.0;
     other.energy_deficit_pressure = 0.0;
+    other.helios_projection = 0.0;
+    other.helios_incoming = 0.0;
     other.next_instance_id = 1;
 }
 
@@ -115,6 +123,8 @@ ft_planet_build_state &ft_planet_build_state::operator=(ft_planet_build_state &&
     this->convoy_speed_bonus = other.convoy_speed_bonus;
     this->convoy_raid_risk_modifier = other.convoy_raid_risk_modifier;
     this->energy_deficit_pressure = other.energy_deficit_pressure;
+    this->helios_projection = other.helios_projection;
+    this->helios_incoming = other.helios_incoming;
     this->next_instance_id = other.next_instance_id;
 
     this->grid = ft_move(other.grid);
@@ -520,6 +530,7 @@ BuildingManager::BuildingManager()
     recipe.value = 6;
     proximity_radar->build_costs.push_back(recipe);
     proximity_radar->mine_bonus = 0.0;
+    proximity_radar->convoy_raid_risk_modifier = 0.08;
     proximity_radar->unique = false;
     proximity_radar->occupies_grid = true;
     proximity_radar->removable = true;
@@ -548,6 +559,7 @@ BuildingManager::BuildingManager()
     recipe.value = 2;
     mobile_radar->build_costs.push_back(recipe);
     mobile_radar->mine_bonus = 0.0;
+    mobile_radar->convoy_raid_risk_modifier = 0.12;
     mobile_radar->unique = false;
     mobile_radar->occupies_grid = true;
     mobile_radar->removable = true;

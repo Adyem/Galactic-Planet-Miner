@@ -179,6 +179,7 @@ public:
 
     double absorb_damage(double damage, double shield_multiplier, double hull_multiplier) noexcept;
     void apply_support(int shield_amount, int repair_amount) noexcept;
+    int apply_targeted_shield(int ship_uid, int amount) noexcept;
     bool has_operational_ships() const noexcept;
 
     void set_location_planet(int planet_id) noexcept;

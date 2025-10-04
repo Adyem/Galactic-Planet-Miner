@@ -983,6 +983,16 @@ int Game::calculate_planet_escort_rating(int planet_id) const
     ft_sharedptr<const ft_fleet> garrison = this->get_planet_fleet(planet_id);
     if (garrison)
         rating += this->calculate_fleet_escort_rating(*garrison);
+    int radar_bonus = 0;
+    int proximity_count = this->_buildings.get_building_count(planet_id, BUILDING_PROXIMITY_RADAR);
+    if (proximity_count > 0)
+        radar_bonus += proximity_count * 2;
+    int mobile_count = this->_buildings.get_building_count(planet_id, BUILDING_MOBILE_RADAR);
+    if (mobile_count > 0)
+        radar_bonus += mobile_count * 3;
+    if (radar_bonus > 12)
+        radar_bonus = 12;
+    rating += radar_bonus;
     size_t fleet_count = this->_fleets.size();
     if (fleet_count > 0)
     {

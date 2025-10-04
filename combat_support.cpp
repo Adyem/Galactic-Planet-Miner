@@ -192,7 +192,7 @@ void CombatManager::build_raider_fleet(ft_combat_encounter &encounter,
     encounter.defense_multiplier = defense_multiplier;
 }
 
-void CombatManager::apply_support(const ft_combat_encounter &encounter,
+void CombatManager::apply_support(ft_combat_encounter &encounter,
     ft_vector<ft_sharedptr<ft_fleet> > &defenders,
     double seconds)
 {
@@ -246,21 +246,81 @@ void CombatManager::apply_support(const ft_combat_encounter &encounter,
         }
     }
     double shield_rate = 0.0;
+    double targeted_rate = 0.0;
     double repair_rate = 0.0;
     if (encounter.modifiers.sunflare_docked && sunflare_count > 0)
-        shield_rate = 8.0 * static_cast<double>(sunflare_count);
+    {
+        double sunflare_rate = 8.0 * static_cast<double>(sunflare_count);
+        shield_rate += sunflare_rate;
+        if (encounter.sunflare_target_ship_uid != 0)
+            targeted_rate = 12.0 * static_cast<double>(sunflare_count);
+    }
+    double generator_stability = 0.0;
+    if (encounter.modifiers.shield_generator_online)
+        generator_stability = 1.0;
+    if (encounter.auto_generator_stability > generator_stability)
+        generator_stability = encounter.auto_generator_stability;
+    if (generator_stability > 0.0)
+    {
+        double stability = generator_stability;
+        if (encounter.energy_pressure > 0.0)
+        {
+            double normalized = encounter.energy_pressure / 1.5;
+            if (normalized > 1.0)
+                normalized = 1.0;
+            double energy_factor = 1.0 - normalized;
+            if (energy_factor < 0.0)
+                energy_factor = 0.0;
+            stability *= energy_factor;
+        }
+        if (stability > 0.0)
+        {
+            double throughput = 12.0 * stability;
+            double amplification = stability * stability * 6.0;
+            shield_rate += throughput + amplification;
+        }
+    }
     if (encounter.modifiers.repair_drones_active && drone_count > 0)
         repair_rate = 10.0 * static_cast<double>(drone_count);
-    if (shield_rate <= 0.0 && repair_rate <= 0.0)
+    if (targeted_rate > 0.0)
+        encounter.sunflare_focus_pool += targeted_rate * seconds;
+    if (shield_rate <= 0.0 && repair_rate <= 0.0 && encounter.sunflare_focus_pool <= 0.0)
         return ;
     int shield_bonus = static_cast<int>(shield_rate * seconds + 0.5);
     int repair_bonus = static_cast<int>(repair_rate * seconds + 0.5);
+    int targeted_bonus = 0;
+    if (encounter.sunflare_focus_pool > 0.0)
+    {
+        targeted_bonus = static_cast<int>(encounter.sunflare_focus_pool);
+        if (targeted_bonus > 0)
+            encounter.sunflare_focus_pool -= static_cast<double>(targeted_bonus);
+        if (encounter.sunflare_focus_pool < 0.0)
+            encounter.sunflare_focus_pool = 0.0;
+    }
     size_t count = defenders.size();
     for (size_t i = 0; i < count; ++i)
     {
         if (!defenders[i])
             continue;
         defenders[i]->apply_support(shield_bonus, repair_bonus);
+    }
+    if (targeted_bonus > 0 && encounter.sunflare_target_fleet_id != 0)
+    {
+        int applied = 0;
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (!defenders[i])
+                continue;
+            if (defenders[i]->get_id() != encounter.sunflare_target_fleet_id)
+                continue;
+            applied = defenders[i]->apply_targeted_shield(encounter.sunflare_target_ship_uid, targeted_bonus);
+            break;
+        }
+        if (applied < targeted_bonus)
+        {
+            int remainder = targeted_bonus - applied;
+            encounter.sunflare_focus_pool += static_cast<double>(remainder);
+        }
     }
 }
 
