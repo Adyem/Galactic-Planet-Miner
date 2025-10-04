@@ -65,7 +65,10 @@ enum e_journal_entry_id
     JOURNAL_ENTRY_SIDE_REBELLION_BROADCAST,
     JOURNAL_ENTRY_LORE_CELESTIAL_BARRENS,
     JOURNAL_ENTRY_LORE_NEBULA_OUTPOST,
-    JOURNAL_ENTRY_LORE_IMPERIUM_PRESSURE
+    JOURNAL_ENTRY_LORE_IMPERIUM_PRESSURE,
+    JOURNAL_ENTRY_COMBAT_VICTORY_RAIDER_BROADCAST,
+    JOURNAL_ENTRY_COMBAT_VICTORY_DEFENSE_DEBRIEF,
+    JOURNAL_ENTRY_COMBAT_VICTORY_LIBERATION_SIGNAL
 };
 
 class Game
@@ -430,6 +433,7 @@ private:
     void                                         unlock_journal_entry(int entry_id, const ft_string &text);
     bool                                         append_resource_lore_snippet(int resource_id, int origin_planet_id, int destination_planet_id);
     bool                                         append_raider_lore_snippet(int origin_planet_id, int destination_planet_id);
+    void                                         record_combat_victory_narrative(int planet_id);
     bool                                         handle_celestial_barrens_salvage(const ft_supply_convoy &convoy);
     bool                                         handle_nebula_outpost_scan(const ft_supply_convoy &convoy);
     void                                         maybe_unlock_imperium_pressure(const ft_supply_route &route);

@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "libft/Libft/libft.hpp"
+#include "libft/Template/move.hpp"
 #include "libft/Template/pair.hpp"
 
 int Game::count_capital_ships_in_collection(const ft_map<int, ft_sharedptr<ft_fleet> > &collection) const
@@ -444,9 +445,9 @@ void Game::get_fleet_management_snapshot(ft_fleet_management_snapshot &out) cons
             ft_fleet_management_entry entry;
             this->build_fleet_management_entry(*fleet, entry, false, 0);
             if (entry.location_type == LOCATION_TRAVEL)
-                out.traveling_fleets.push_back(entry);
+                out.traveling_fleets.push_back(ft_move(entry));
             else
-                out.player_fleets.push_back(entry);
+                out.player_fleets.push_back(ft_move(entry));
         }
     }
 
@@ -462,7 +463,7 @@ void Game::get_fleet_management_snapshot(ft_fleet_management_snapshot &out) cons
                 continue;
             ft_fleet_management_entry entry;
             this->build_fleet_management_entry(*fleet, entry, true, entries[i].key);
-            out.planet_garrisons.push_back(entry);
+            out.planet_garrisons.push_back(ft_move(entry));
         }
     }
 }

@@ -1499,6 +1499,130 @@ int verify_multiple_convoy_raids()
     return 1;
 }
 
+int verify_combat_victory_journal_rewards()
+{
+    Game victory_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    victory_game.set_ore(PLANET_TERRA, ORE_IRON, 30);
+    victory_game.set_ore(PLANET_TERRA, ORE_COPPER, 20);
+    victory_game.tick(0.0);
+
+    victory_game.create_fleet(90);
+    int capital = victory_game.create_ship(90, SHIP_CAPITAL);
+    FT_ASSERT(capital != 0);
+    victory_game.set_ship_hp(90, capital, 160);
+    victory_game.set_ship_shield(90, capital, 70);
+    victory_game.set_ship_armor(90, capital, 40);
+
+    victory_game.create_fleet(91);
+    int escort = victory_game.create_ship(91, SHIP_SHIELD);
+    FT_ASSERT(escort != 0);
+    victory_game.set_ship_hp(91, escort, 90);
+    victory_game.set_ship_shield(91, escort, 40);
+    victory_game.tick(0.0);
+
+    size_t journal_before = victory_game.get_journal_entries().size();
+    size_t lore_before = victory_game.get_lore_log().size();
+
+    ft_string expected_journal_fragments[] = {
+        ft_string("Raider Broadcast Intercept"),
+        ft_string("Defense Debrief"),
+        ft_string("Liberation Signal")
+    };
+    ft_string expected_lore_fragments[] = {
+        ft_string("Sunflare charges"),
+        ft_string("Repair drones sealed"),
+        ft_string("Zara's sacrifice")
+    };
+
+    for (int assault = 0; assault < 3; ++assault)
+    {
+        FT_ASSERT(victory_game.start_raider_assault(PLANET_TERRA, 1.0));
+        FT_ASSERT(victory_game.assign_fleet_to_assault(PLANET_TERRA, 90));
+        FT_ASSERT(victory_game.assign_fleet_to_assault(PLANET_TERRA, 91));
+        double elapsed = 0.0;
+        while (victory_game.is_assault_active(PLANET_TERRA) && elapsed < 240.0)
+        {
+            victory_game.tick(2.0);
+            elapsed += 2.0;
+        }
+        FT_ASSERT(!victory_game.is_assault_active(PLANET_TERRA));
+
+        const ft_vector<ft_string> &journal_entries = victory_game.get_journal_entries();
+        FT_ASSERT_EQ(journal_entries.size(), journal_before + static_cast<size_t>(assault + 1));
+        const ft_string &new_entry = journal_entries[journal_before + assault];
+        FT_ASSERT(ft_strstr(new_entry.c_str(), expected_journal_fragments[assault].c_str()) != ft_nullptr);
+
+        bool lore_found = false;
+        const ft_vector<ft_string> &lore_entries = victory_game.get_lore_log();
+        for (size_t i = lore_before; i < lore_entries.size(); ++i)
+        {
+            const char *line = lore_entries[i].c_str();
+            if (ft_strstr(line, expected_lore_fragments[assault].c_str()) != ft_nullptr &&
+                ft_strstr(line, "Defense logged at Terra.") != ft_nullptr)
+            {
+                lore_found = true;
+                break;
+            }
+        }
+        FT_ASSERT(lore_found);
+    }
+
+    size_t journal_after_three = victory_game.get_journal_entries().size();
+    size_t lore_after_three = victory_game.get_lore_log().size();
+
+    FT_ASSERT(victory_game.start_raider_assault(PLANET_TERRA, 1.0));
+    FT_ASSERT(victory_game.assign_fleet_to_assault(PLANET_TERRA, 90));
+    FT_ASSERT(victory_game.assign_fleet_to_assault(PLANET_TERRA, 91));
+    double elapsed = 0.0;
+    while (victory_game.is_assault_active(PLANET_TERRA) && elapsed < 240.0)
+    {
+        victory_game.tick(2.0);
+        elapsed += 2.0;
+    }
+    FT_ASSERT(!victory_game.is_assault_active(PLANET_TERRA));
+
+    const ft_vector<ft_string> &journal_entries = victory_game.get_journal_entries();
+    FT_ASSERT_EQ(journal_entries.size(), journal_after_three);
+
+    int broadcast_count = 0;
+    int debrief_count = 0;
+    int liberation_count = 0;
+    for (size_t i = journal_before; i < journal_entries.size(); ++i)
+    {
+        const ft_string &entry = journal_entries[i];
+        if (ft_strstr(entry.c_str(), expected_journal_fragments[0].c_str()) != ft_nullptr)
+            broadcast_count += 1;
+        if (ft_strstr(entry.c_str(), expected_journal_fragments[1].c_str()) != ft_nullptr)
+            debrief_count += 1;
+        if (ft_strstr(entry.c_str(), expected_journal_fragments[2].c_str()) != ft_nullptr)
+            liberation_count += 1;
+    }
+    FT_ASSERT_EQ(broadcast_count, 1);
+    FT_ASSERT_EQ(debrief_count, 1);
+    FT_ASSERT_EQ(liberation_count, 1);
+
+    const ft_vector<ft_string> &lore_entries = victory_game.get_lore_log();
+    int sunflare_count = 0;
+    int repair_count = 0;
+    int zara_count = 0;
+    for (size_t i = lore_before; i < lore_entries.size(); ++i)
+    {
+        const char *line = lore_entries[i].c_str();
+        if (ft_strstr(line, expected_lore_fragments[0].c_str()) != ft_nullptr)
+            sunflare_count += 1;
+        if (ft_strstr(line, expected_lore_fragments[1].c_str()) != ft_nullptr)
+            repair_count += 1;
+        if (ft_strstr(line, expected_lore_fragments[2].c_str()) != ft_nullptr)
+            zara_count += 1;
+    }
+    FT_ASSERT_EQ(sunflare_count, 1);
+    FT_ASSERT_EQ(repair_count, 1);
+    FT_ASSERT_EQ(zara_count, 1);
+    FT_ASSERT(lore_entries.size() >= lore_after_three);
+    return 1;
+}
+
 int verify_supply_route_escalation()
 {
     Game escalation_game(ft_string("127.0.0.1:8080"), ft_string("/"));

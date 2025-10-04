@@ -1,5 +1,7 @@
 #include "game.hpp"
 #include "libft/Libft/libft.hpp"
+#include "libft/Template/move.hpp"
+#include "ft_map_snapshot.hpp"
 
 namespace
 {
@@ -158,10 +160,10 @@ void Game::get_building_layout_snapshot(ft_building_layout_snapshot &out) const
                     summary.outputs.clear();
                     summary.build_costs.clear();
                 }
-                planet_snapshot.instances.push_back(summary);
+                planet_snapshot.instances.push_back(ft_move(summary));
             }
         }
 
-        out.planets.push_back(planet_snapshot);
+        out.planets.push_back(ft_move(planet_snapshot));
     }
 }
