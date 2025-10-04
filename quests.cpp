@@ -477,6 +477,7 @@ void QuestManager::update(double seconds, const ft_quest_context &context,
                 progress.time_remaining = 0.0;
                 progress.status = QUEST_STATUS_FAILED;
                 failed.push_back(entries[i].key);
+                this->_recent_completion_info.remove(entries[i].key);
                 if (definition->time_limit > 0.0)
                 {
                     progress.status = QUEST_STATUS_AVAILABLE;
@@ -491,9 +492,24 @@ void QuestManager::update(double seconds, const ft_quest_context &context,
             {
                 progress.status = QUEST_STATUS_AWAITING_CHOICE;
                 awaiting_choice.push_back(entries[i].key);
+                this->_recent_completion_info.remove(entries[i].key);
             }
             else
             {
+                if (definition->time_limit > 0.0)
+                {
+                    ft_quest_completion_info info;
+                    info.timed = true;
+                    info.time_limit = definition->time_limit * this->_time_scale;
+                    info.time_remaining = progress.time_remaining;
+                    Pair<int, ft_quest_completion_info> *info_entry = this->_recent_completion_info.find(entries[i].key);
+                    if (info_entry == ft_nullptr)
+                        this->_recent_completion_info.insert(entries[i].key, info);
+                    else
+                        info_entry->value = info;
+                }
+                else
+                    this->_recent_completion_info.remove(entries[i].key);
                 progress.status = QUEST_STATUS_COMPLETED;
                 progress.time_remaining = 0.0;
                 completed.push_back(entries[i].key);
@@ -633,6 +649,16 @@ int QuestManager::get_choice(int quest_id) const
     if (entry == ft_nullptr)
         return QUEST_CHOICE_NONE;
     return entry->value;
+}
+
+bool QuestManager::consume_completion_info(int quest_id, ft_quest_completion_info &out)
+{
+    Pair<int, ft_quest_completion_info> *entry = this->_recent_completion_info.find(quest_id);
+    if (entry == ft_nullptr)
+        return false;
+    out = entry->value;
+    this->_recent_completion_info.remove(quest_id);
+    return true;
 }
 
 void QuestManager::snapshot_definitions(ft_vector<Pair<int, ft_sharedptr<ft_quest_definition> > > &out) const

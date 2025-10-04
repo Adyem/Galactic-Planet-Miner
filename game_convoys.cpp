@@ -176,6 +176,32 @@ static const double ROUTE_ESCALATION_THRESHOLD = 5.0;
 static const double ROUTE_ESCALATION_TRIGGER_TIME = 60.0;
 static const double ROUTE_ESCALATION_DECAY_RATE = 1.0;
 
+static double compute_campaign_raider_focus(int convoys_delivered_total,
+    int order_branch_victories, int rebellion_branch_victories)
+{
+    double focus = 0.0;
+    if (convoys_delivered_total > 12)
+    {
+        double deliveries = static_cast<double>(convoys_delivered_total - 12);
+        if (deliveries > 70.0)
+            deliveries = 70.0;
+        focus += deliveries / 70.0;
+    }
+    int combined_victories = order_branch_victories + rebellion_branch_victories;
+    if (combined_victories > 0)
+    {
+        double victory_progress = static_cast<double>(combined_victories) * 0.15;
+        if (victory_progress > 0.6)
+            victory_progress = 0.6;
+        focus += victory_progress;
+    }
+    if (focus > 1.0)
+        focus = 1.0;
+    if (focus < 0.0)
+        focus = 0.0;
+    return focus;
+}
+
 Game::RouteKey Game::compose_route_key(int origin, int destination) const
 {
     return RouteKey(origin, destination);
@@ -1144,6 +1170,10 @@ double Game::calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool ori
     if (!route)
         return 0.0;
     double risk = route->base_raid_risk;
+    double campaign_focus = compute_campaign_raider_focus(
+        this->_convoys_delivered_total,
+        this->_order_branch_assault_victories,
+        this->_rebellion_branch_assault_victories);
     if (route->threat_level > 0.0)
     {
         double threat_factor = route->threat_level;
@@ -1179,6 +1209,27 @@ double Game::calculate_convoy_raid_risk(const ft_supply_convoy &convoy, bool ori
         {
             double dest_surplus = static_cast<double>(effective_destination - route->escort_requirement);
             risk -= dest_surplus * 0.006;
+        }
+        int weakest_escort = effective_origin;
+        if (effective_destination < weakest_escort)
+            weakest_escort = effective_destination;
+        if (campaign_focus > 0.0)
+        {
+            int escort_gap = route->escort_requirement - weakest_escort;
+            if (escort_gap < 0)
+                escort_gap = 0;
+            if (escort_gap > 0)
+            {
+                double focus_multiplier = 1.0 + campaign_focus * (0.9 + static_cast<double>(escort_gap) * 0.18);
+                if (focus_multiplier > 4.0)
+                    focus_multiplier = 4.0;
+                risk *= focus_multiplier;
+            }
+            else if (campaign_focus > 0.75 && weakest_escort == route->escort_requirement)
+            {
+                double edge_bias = 1.0 + (campaign_focus - 0.75) * 0.4;
+                risk *= edge_bias;
+            }
         }
     }
     if (origin_under_attack)

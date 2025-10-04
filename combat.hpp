@@ -125,6 +125,7 @@ private:
         int                     sunflare_target_ship_uid;
         double                  sunflare_focus_pool;
         double                  auto_generator_stability;
+        bool                    auto_repair_drones_active;
         ft_combat_encounter()
             : planet_id(0), fleet_ids(new ft_vector<int>()), raider_fleet(), modifiers(),
               attack_multiplier(1.0), defense_multiplier(1.0), energy_pressure(0.0),
@@ -139,7 +140,8 @@ private:
               raider_line_ships(0), defender_line_ships(0),
               raider_support_ships(0), defender_support_ships(0),
               sunflare_target_fleet_id(0), sunflare_target_ship_uid(0),
-              sunflare_focus_pool(0.0), auto_generator_stability(0.0)
+              sunflare_focus_pool(0.0), auto_generator_stability(0.0),
+              auto_repair_drones_active(false)
         {}
     };
 

@@ -303,3 +303,64 @@ int verify_raider_ships_unavailable_to_players()
 
     return 1;
 }
+
+int verify_auto_repair_drone_coordination()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_ZALTHOR));
+    FT_ASSERT(game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_I));
+    FT_ASSERT(game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_II));
+    FT_ASSERT(game.start_research(RESEARCH_SHIELD_TECHNOLOGY));
+    FT_ASSERT(game.start_research(RESEARCH_REPAIR_DRONE_TECHNOLOGY));
+
+    ft_sharedptr<ft_fleet> garrison = game.get_planet_fleet(PLANET_TERRA);
+    FT_ASSERT(garrison);
+
+    int drone_id = garrison->create_ship(SHIP_REPAIR_DRONE);
+    int escort_id = garrison->create_ship(SHIP_INTERCEPTOR);
+    int shield_id = garrison->create_ship(SHIP_SHIELD);
+    int corvette_id = garrison->create_ship(SHIP_CORVETTE);
+    FT_ASSERT(drone_id != 0);
+    FT_ASSERT(escort_id != 0);
+    FT_ASSERT(shield_id != 0);
+    FT_ASSERT(corvette_id != 0);
+
+    const ft_ship *escort = garrison->get_ship(escort_id);
+    FT_ASSERT(escort != ft_nullptr);
+    int wounded_hp = escort->max_hp - 60;
+    if (wounded_hp < 5)
+        wounded_hp = 5;
+    garrison->set_ship_hp(escort_id, wounded_hp);
+    const ft_ship *wounded = garrison->get_ship(escort_id);
+    FT_ASSERT(wounded != ft_nullptr);
+    FT_ASSERT(wounded->hp == wounded_hp);
+
+    FT_ASSERT(game.start_raider_assault(PLANET_TERRA, 1.0, ASSAULT_CONTROL_AUTO));
+
+    Pair<int, CombatManager::ft_combat_encounter> *encounter_entry = game._combat._encounters.find(PLANET_TERRA);
+    FT_ASSERT(encounter_entry != ft_nullptr);
+    FT_ASSERT(!encounter_entry->value.modifiers.repair_drones_active);
+    FT_ASSERT(!encounter_entry->value.auto_repair_drones_active);
+
+    game.update_combat(500.0);
+
+    const ft_ship *after_tick = garrison->get_ship(escort_id);
+    FT_ASSERT(after_tick != ft_nullptr);
+    FT_ASSERT(after_tick->hp > wounded_hp);
+    FT_ASSERT(after_tick->hp <= after_tick->max_hp);
+
+    encounter_entry = game._combat._encounters.find(PLANET_TERRA);
+    FT_ASSERT(encounter_entry != ft_nullptr);
+    FT_ASSERT(encounter_entry->value.auto_repair_drones_active);
+
+    garrison->set_ship_hp(escort_id, after_tick->max_hp);
+    game.update_combat(0.0);
+
+    encounter_entry = game._combat._encounters.find(PLANET_TERRA);
+    FT_ASSERT(encounter_entry != ft_nullptr);
+    FT_ASSERT(!encounter_entry->value.auto_repair_drones_active);
+
+    return 1;
+}

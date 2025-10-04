@@ -83,6 +83,9 @@ int main()
     if (!verify_quest_log_snapshot())
         return 0;
 
+    if (!verify_quick_quest_completion_bonus())
+        return 0;
+
     if (!verify_trade_relay_convoy_modifiers())
         return 0;
 
@@ -129,6 +132,8 @@ int main()
         return 0;
     if (!verify_supply_route_escalation())
         return 0;
+    if (!verify_late_campaign_raider_focus())
+        return 0;
     if (!verify_escort_veterancy_progression())
         return 0;
     if (!verify_combat_victory_journal_rewards())
@@ -145,6 +150,8 @@ int main()
     if (!verify_crafting_resume_requires_full_cycle())
         return 0;
     if (!compare_storyline_assaults())
+        return 0;
+    if (!verify_emergency_energy_conservation())
         return 0;
     if (!verify_narrative_assault_spikes())
         return 0;
@@ -179,6 +186,8 @@ int main()
     if (!verify_sunflare_targeting_rules())
         return 0;
     if (!verify_radar_static_defense_support())
+        return 0;
+    if (!verify_auto_repair_drone_coordination())
         return 0;
     if (!verify_difficulty_scaling())
         return 0;

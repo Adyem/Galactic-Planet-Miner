@@ -98,6 +98,7 @@ struct ft_planet_build_state
     double                      convoy_speed_bonus;
     double                      convoy_raid_risk_modifier;
     double                      energy_deficit_pressure;
+    bool                        emergency_conservation_active;
     double                      helios_projection;
     double                      helios_incoming;
     int                         next_instance_id;

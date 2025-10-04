@@ -172,6 +172,28 @@ void Game::build_quest_context(ft_quest_context &context) const
 void Game::handle_quest_completion(int quest_id)
 {
     ft_string entry;
+    const ft_quest_definition *definition = this->_quests.get_definition(quest_id);
+    bool quick_completion = false;
+    double quick_ratio = 0.0;
+    if (definition != ft_nullptr)
+    {
+        ft_quest_completion_info completion_info;
+        if (this->_quests.consume_completion_info(quest_id, completion_info)
+            && completion_info.timed && completion_info.time_limit > 0.0)
+        {
+            if (completion_info.time_remaining > completion_info.time_limit)
+                completion_info.time_remaining = completion_info.time_limit;
+            if (completion_info.time_remaining < 0.0)
+                completion_info.time_remaining = 0.0;
+            quick_ratio = completion_info.time_remaining / completion_info.time_limit;
+            if (quick_ratio > 1.0)
+                quick_ratio = 1.0;
+            if (quick_ratio < 0.0)
+                quick_ratio = 0.0;
+            if (quick_ratio >= 0.55)
+                quick_completion = true;
+        }
+    }
     if (quest_id == QUEST_INITIAL_SKIRMISHES)
     {
         this->ensure_planet_item_slot(PLANET_TERRA, ITEM_ENGINE_PART);
@@ -352,7 +374,10 @@ void Game::handle_quest_completion(int quest_id)
     }
     if (entry.size() > 0)
         this->append_lore_entry(entry);
+    if (quick_completion && definition != ft_nullptr)
+        this->handle_quick_quest_completion(*definition, quick_ratio);
     this->record_quest_achievement(quest_id);
+    this->update_dynamic_quest_pressure();
     ft_string tag("quest_completed_");
     tag.append(ft_to_string(quest_id));
     if (!this->save_campaign_checkpoint(tag))
@@ -585,6 +610,7 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
     out.side_quests.clear();
     out.awaiting_choice_ids.clear();
     out.recent_journal_entries.clear();
+    out.recent_lore_entries.clear();
     out.active_main_quest_id = this->get_active_quest();
 
     ft_quest_context context;
@@ -607,9 +633,20 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
         entry.status = this->_quests.get_status(definition.id);
         entry.time_remaining = this->_quests.get_time_remaining(definition.id);
         if (definition.time_limit > 0.0)
-            entry.time_limit = definition.time_limit * this->_quest_time_scale;
+            entry.time_limit = definition.time_limit * this->get_effective_quest_time_scale();
         else
             entry.time_limit = 0.0;
+        if (entry.time_limit > 0.0)
+        {
+            double ratio = entry.time_remaining / entry.time_limit;
+            if (ratio < 0.0)
+                ratio = 0.0;
+            if (ratio > 1.0)
+                ratio = 1.0;
+            entry.time_remaining_ratio = ratio;
+        }
+        else
+            entry.time_remaining_ratio = 0.0;
         entry.is_side_quest = definition.is_side_quest;
         entry.requires_choice = definition.requires_choice;
         entry.awaiting_choice = (entry.status == QUEST_STATUS_AWAITING_CHOICE);
@@ -676,6 +713,14 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
         start_index = journal_count - max_recent;
     for (size_t i = start_index; i < journal_count; ++i)
         out.recent_journal_entries.push_back(journal_entries[i]);
+
+    const ft_vector<ft_string> &lore_entries = this->get_lore_log();
+    size_t lore_count = lore_entries.size();
+    size_t lore_start = 0;
+    if (lore_count > max_recent)
+        lore_start = lore_count - max_recent;
+    for (size_t i = lore_start; i < lore_count; ++i)
+        out.recent_lore_entries.push_back(lore_entries[i]);
 }
 
 bool Game::is_backend_online() const
