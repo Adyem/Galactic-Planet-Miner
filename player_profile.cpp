@@ -34,6 +34,22 @@ namespace
     const char *kProfileExtension = ".prof";
     const char *kProfileSaveDirectory = "saves";
 
+    unsigned int clamp_unsigned(unsigned int value, unsigned int min_value, unsigned int max_value) noexcept
+    {
+        if (value < min_value)
+            return min_value;
+        if (value > max_value)
+            return max_value;
+        return value;
+    }
+
+    unsigned int normalize_lore_panel_anchor(unsigned int anchor) noexcept
+    {
+        if (anchor == PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT)
+            return PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
+        return PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT;
+    }
+
     void log_profile_errno(const char *stage, const ft_string *path = ft_nullptr, const char *detail = ft_nullptr) noexcept
     {
 #if DEBUG
@@ -405,6 +421,29 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
         return false;
     }
 
+    unsigned int stored_ui_scale = preferences.ui_scale_percent == 0U ? 100U : preferences.ui_scale_percent;
+    stored_ui_scale = clamp_unsigned(stored_ui_scale, PLAYER_PROFILE_UI_SCALE_MIN_PERCENT, PLAYER_PROFILE_UI_SCALE_MAX_PERCENT);
+    if (!add_int(document, group, "ui_scale_percent", static_cast<int>(stored_ui_scale)))
+    {
+        log_profile_document_error("Adding UI scale", document, path);
+        return false;
+    }
+
+    unsigned int stored_combat_speed = preferences.combat_speed_percent == 0U ? 100U : preferences.combat_speed_percent;
+    stored_combat_speed = clamp_unsigned(stored_combat_speed, PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT, PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT);
+    if (!add_int(document, group, "combat_speed_percent", static_cast<int>(stored_combat_speed)))
+    {
+        log_profile_document_error("Adding combat speed", document, path);
+        return false;
+    }
+
+    unsigned int stored_anchor = normalize_lore_panel_anchor(preferences.lore_panel_anchor);
+    if (!add_int(document, group, "lore_panel_anchor", static_cast<int>(stored_anchor)))
+    {
+        log_profile_document_error("Adding lore panel anchor", document, path);
+        return false;
+    }
+
     if (document.write_to_file(path.c_str()) != 0)
     {
         log_profile_document_error("Writing profile", document, path);
@@ -463,6 +502,22 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
 
     out_preferences.window_width = parsed_width;
     out_preferences.window_height = parsed_height;
+    unsigned int parsed_ui_scale = out_preferences.ui_scale_percent;
+    unsigned int parsed_combat_speed = out_preferences.combat_speed_percent;
+    unsigned int parsed_anchor = out_preferences.lore_panel_anchor;
+
+    read_int(document, group, "ui_scale_percent", parsed_ui_scale);
+    read_int(document, group, "combat_speed_percent", parsed_combat_speed);
+    read_int(document, group, "lore_panel_anchor", parsed_anchor);
+
+    if (parsed_ui_scale == 0U)
+        parsed_ui_scale = 100U;
+    if (parsed_combat_speed == 0U)
+        parsed_combat_speed = 100U;
+
+    out_preferences.ui_scale_percent = clamp_unsigned(parsed_ui_scale, PLAYER_PROFILE_UI_SCALE_MIN_PERCENT, PLAYER_PROFILE_UI_SCALE_MAX_PERCENT);
+    out_preferences.combat_speed_percent = clamp_unsigned(parsed_combat_speed, PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT, PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT);
+    out_preferences.lore_panel_anchor = normalize_lore_panel_anchor(parsed_anchor);
     return true;
 }
 

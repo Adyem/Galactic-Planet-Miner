@@ -10,6 +10,7 @@
 #include "buildings.hpp"
 #include "achievements.hpp"
 #include "save_system.hpp"
+#include "player_profile.hpp"
 #include "libft/Game/game_state.hpp"
 #include "libft/Template/map.hpp"
 #include "libft/Template/vector.hpp"
@@ -247,6 +248,20 @@ public:
         {}
     };
 
+    enum e_story_act_id
+    {
+        STORY_ACT_RISING_THREAT = 1,
+        STORY_ACT_UNRAVELING_TRUTH = 2,
+        STORY_ACT_CROSSROADS = 3
+    };
+
+    enum e_story_branch_id
+    {
+        STORY_BRANCH_NONE = 0,
+        STORY_BRANCH_ORDER_DOMINION = 1,
+        STORY_BRANCH_REBELLION_LIBERATION = 2
+    };
+
     struct ft_quest_choice_snapshot
     {
         int         choice_id;
@@ -289,6 +304,80 @@ public:
         {}
     };
 
+    struct ft_story_branch_snapshot
+    {
+        int         branch_id;
+        ft_string   name;
+        ft_string   summary;
+        bool        is_active;
+        bool        is_available;
+        int         completed_quests;
+        int         total_quests;
+
+        ft_story_branch_snapshot()
+            : branch_id(STORY_BRANCH_NONE), name(), summary(), is_active(false),
+              is_available(false), completed_quests(0), total_quests(0)
+        {}
+    };
+
+    struct ft_story_choice_option_snapshot
+    {
+        int       choice_id;
+        ft_string title;
+        ft_string summary;
+        bool      is_available;
+        bool      is_selected;
+
+        ft_story_choice_option_snapshot()
+            : choice_id(QUEST_CHOICE_NONE), title(), summary(), is_available(false),
+              is_selected(false)
+        {}
+    };
+
+    struct ft_story_choice_snapshot
+    {
+        int                                      quest_id;
+        ft_string                                title;
+        bool                                     awaiting_selection;
+        bool                                     has_been_made;
+        ft_vector<ft_story_choice_option_snapshot> options;
+
+        ft_story_choice_snapshot()
+            : quest_id(0), title(), awaiting_selection(false), has_been_made(false),
+              options()
+        {}
+    };
+
+    struct ft_story_act_snapshot
+    {
+        int                                 act_id;
+        ft_string                           name;
+        ft_string                           theme;
+        bool                                is_active;
+        bool                                is_completed;
+        bool                                awaiting_branch_choice;
+        int                                 completed_main_quests;
+        int                                 total_main_quests;
+        ft_vector<ft_story_branch_snapshot> branches;
+
+        ft_story_act_snapshot()
+            : act_id(0), name(), theme(), is_active(false),
+              is_completed(false), awaiting_branch_choice(false),
+              completed_main_quests(0), total_main_quests(0), branches()
+        {}
+    };
+
+    struct ft_story_epilogue_snapshot
+    {
+        bool                    is_available;
+        ft_string               title;
+        ft_vector<ft_string>    paragraphs;
+
+        ft_story_epilogue_snapshot()
+            : is_available(false), title(), paragraphs()
+        {}
+    };
+
     struct ft_quest_log_snapshot
     {
         ft_vector<ft_quest_log_entry>    main_quests;
@@ -296,11 +385,19 @@ public:
         ft_vector<int>                   awaiting_choice_ids;
         ft_vector<ft_string>             recent_journal_entries;
         ft_vector<ft_string>             recent_lore_entries;
+        ft_vector<ft_story_choice_snapshot> critical_choices;
+        ft_vector<ft_story_act_snapshot>  story_acts;
+        ft_story_epilogue_snapshot        epilogue;
         int                              active_main_quest_id;
+        int                              current_act_id;
+        double                           ui_scale;
+        int                              lore_panel_anchor;
 
         ft_quest_log_snapshot()
             : main_quests(), side_quests(), awaiting_choice_ids(),
-              recent_journal_entries(), recent_lore_entries(), active_main_quest_id(0)
+              recent_journal_entries(), recent_lore_entries(), critical_choices(), story_acts(), epilogue(),
+              active_main_quest_id(0), current_act_id(STORY_ACT_RISING_THREAT),
+              ui_scale(1.0), lore_panel_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT)
         {}
     };
 
@@ -452,6 +549,9 @@ private:
     double                                       _resource_multiplier;
     double                                       _quest_time_scale_base;
     double                                       _quest_time_scale_dynamic;
+    double                                       _ui_scale;
+    int                                          _lore_panel_anchor;
+    double                                       _combat_speed_multiplier;
     double                                       _research_duration_scale;
     double                                       _assault_difficulty_multiplier;
     double                                       _ship_weapon_multiplier;
@@ -599,6 +699,7 @@ private:
     void handle_quest_choice_prompt(int quest_id);
     void handle_quest_choice_resolution(int quest_id, int choice_id);
     void configure_difficulty(int difficulty);
+    void configure_from_preferences(const PlayerProfilePreferences &preferences);
     void update_combat_modifiers();
     void apply_quest_time_scale();
     void update_dynamic_quest_pressure();
@@ -730,6 +831,12 @@ public:
     long get_backend_retry_delay_ms_for_testing() const;
     long get_backend_next_retry_ms_for_testing() const;
     double get_effective_quest_time_scale() const;
+    void set_ui_scale(double scale);
+    double get_ui_scale() const { return this->_ui_scale; }
+    void set_lore_panel_anchor(int anchor);
+    int get_lore_panel_anchor() const { return this->_lore_panel_anchor; }
+    void set_combat_speed_multiplier(double multiplier);
+    double get_combat_speed_multiplier() const { return this->_combat_speed_multiplier; }
 
     const ft_vector<ft_string> &get_journal_entries() const;
     bool is_journal_entry_unlocked(int entry_id) const;

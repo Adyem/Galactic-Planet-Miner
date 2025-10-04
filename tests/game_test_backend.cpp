@@ -10,6 +10,7 @@
 #include "game.hpp"
 #include "fleets.hpp"
 #include "game_test_scenarios.hpp"
+#include "player_profile.hpp"
 #include "planets.hpp"
 #include "research.hpp"
 #include <cstdint>
@@ -870,6 +871,38 @@ int verify_quest_log_snapshot()
     Game::ft_quest_log_snapshot snapshot;
     game.get_quest_log_snapshot(snapshot);
 
+    FT_ASSERT_EQ(Game::STORY_ACT_RISING_THREAT, snapshot.current_act_id);
+    FT_ASSERT(snapshot.story_acts.size() == 3);
+    FT_ASSERT(!snapshot.epilogue.is_available);
+    FT_ASSERT(snapshot.critical_choices.size() == 0);
+    const Game::ft_story_act_snapshot *act_one = ft_nullptr;
+    const Game::ft_story_act_snapshot *act_two = ft_nullptr;
+    const Game::ft_story_act_snapshot *act_three = ft_nullptr;
+    for (size_t i = 0; i < snapshot.story_acts.size(); ++i)
+    {
+        const Game::ft_story_act_snapshot &act = snapshot.story_acts[i];
+        if (act.act_id == Game::STORY_ACT_RISING_THREAT)
+            act_one = &snapshot.story_acts[i];
+        else if (act.act_id == Game::STORY_ACT_UNRAVELING_TRUTH)
+            act_two = &snapshot.story_acts[i];
+        else if (act.act_id == Game::STORY_ACT_CROSSROADS)
+            act_three = &snapshot.story_acts[i];
+    }
+    FT_ASSERT(act_one != ft_nullptr);
+    FT_ASSERT(act_two != ft_nullptr);
+    FT_ASSERT(act_three != ft_nullptr);
+    FT_ASSERT(act_one->is_active);
+    FT_ASSERT(!act_one->is_completed);
+    FT_ASSERT_EQ(0, act_one->completed_main_quests);
+    FT_ASSERT_EQ(6, act_one->total_main_quests);
+    FT_ASSERT(ft_strstr(act_one->theme.c_str(), "Raiders") != ft_nullptr);
+    FT_ASSERT(!act_two->is_active);
+    FT_ASSERT_EQ(0, act_two->completed_main_quests);
+    FT_ASSERT_EQ(2, act_two->total_main_quests);
+    FT_ASSERT(!act_two->awaiting_branch_choice);
+    FT_ASSERT(!act_three->is_active);
+    FT_ASSERT(act_three->branches.size() == 2);
+
     FT_ASSERT_EQ(QUEST_INITIAL_SKIRMISHES, snapshot.active_main_quest_id);
     const Game::ft_quest_log_entry *initial_entry = ft_nullptr;
     for (size_t i = 0; i < snapshot.main_quests.size(); ++i)
@@ -899,6 +932,133 @@ int verify_quest_log_snapshot()
     FT_ASSERT(advance_to_order_final_verdict(game));
 
     game.get_quest_log_snapshot(snapshot);
+
+    act_one = ft_nullptr;
+    act_two = ft_nullptr;
+    act_three = ft_nullptr;
+    for (size_t i = 0; i < snapshot.story_acts.size(); ++i)
+    {
+        const Game::ft_story_act_snapshot &act = snapshot.story_acts[i];
+        if (act.act_id == Game::STORY_ACT_RISING_THREAT)
+            act_one = &snapshot.story_acts[i];
+        else if (act.act_id == Game::STORY_ACT_UNRAVELING_TRUTH)
+            act_two = &snapshot.story_acts[i];
+        else if (act.act_id == Game::STORY_ACT_CROSSROADS)
+            act_three = &snapshot.story_acts[i];
+    }
+
+    FT_ASSERT_EQ(Game::STORY_ACT_CROSSROADS, snapshot.current_act_id);
+    FT_ASSERT(act_one != ft_nullptr && act_two != ft_nullptr && act_three != ft_nullptr);
+    FT_ASSERT(act_one->is_completed);
+    FT_ASSERT(act_two->is_completed);
+    FT_ASSERT(!act_two->awaiting_branch_choice);
+    FT_ASSERT(act_three->is_active);
+    FT_ASSERT(!act_three->is_completed);
+    FT_ASSERT_EQ(4, act_three->total_main_quests);
+
+    FT_ASSERT(snapshot.critical_choices.size() >= 2);
+    const Game::ft_story_choice_snapshot *blackthorne_choice = ft_nullptr;
+    const Game::ft_story_choice_snapshot *verdict_choice_snapshot = ft_nullptr;
+    for (size_t i = 0; i < snapshot.critical_choices.size(); ++i)
+    {
+        const Game::ft_story_choice_snapshot &choice = snapshot.critical_choices[i];
+        if (choice.quest_id == QUEST_CRITICAL_DECISION)
+            blackthorne_choice = &snapshot.critical_choices[i];
+        else if (choice.quest_id == QUEST_ORDER_FINAL_VERDICT)
+            verdict_choice_snapshot = &snapshot.critical_choices[i];
+    }
+    FT_ASSERT(blackthorne_choice != ft_nullptr);
+    FT_ASSERT(verdict_choice_snapshot != ft_nullptr);
+
+    FT_ASSERT(blackthorne_choice->has_been_made);
+    FT_ASSERT(!blackthorne_choice->awaiting_selection);
+    FT_ASSERT(blackthorne_choice->options.size() == 2);
+    bool saw_execute_summary = false;
+    bool saw_spare_summary = false;
+    bool execute_selected = false;
+    bool spare_selected = false;
+    for (size_t i = 0; i < blackthorne_choice->options.size(); ++i)
+    {
+        const Game::ft_story_choice_option_snapshot &option = blackthorne_choice->options[i];
+        FT_ASSERT(option.is_available);
+        if (option.choice_id == QUEST_CHOICE_EXECUTE_BLACKTHORNE)
+        {
+            execute_selected = option.is_selected;
+            if (ft_strstr(option.summary.c_str(), "martyring") != ft_nullptr
+                || ft_strstr(option.summary.c_str(), "rallying the rebellion") != ft_nullptr)
+                saw_execute_summary = true;
+        }
+        else if (option.choice_id == QUEST_CHOICE_SPARE_BLACKTHORNE)
+        {
+            spare_selected = option.is_selected;
+            if (ft_strstr(option.summary.c_str(), "corruption") != ft_nullptr
+                && ft_strstr(option.summary.c_str(), "weakness") != ft_nullptr)
+                saw_spare_summary = true;
+        }
+    }
+    FT_ASSERT(execute_selected);
+    FT_ASSERT(!spare_selected);
+    FT_ASSERT(saw_execute_summary);
+    FT_ASSERT(saw_spare_summary);
+
+    FT_ASSERT(verdict_choice_snapshot->awaiting_selection);
+    FT_ASSERT(!verdict_choice_snapshot->has_been_made);
+    FT_ASSERT(verdict_choice_snapshot->options.size() == 2);
+    bool saw_fear_summary = false;
+    bool saw_reform_summary = false;
+    for (size_t i = 0; i < verdict_choice_snapshot->options.size(); ++i)
+    {
+        const Game::ft_story_choice_option_snapshot &option = verdict_choice_snapshot->options[i];
+        FT_ASSERT(option.is_available);
+        FT_ASSERT(!option.is_selected);
+        if (option.choice_id == QUEST_CHOICE_ORDER_EXECUTE_REBELS)
+        {
+            if (ft_strstr(option.summary.c_str(), "fear") != ft_nullptr)
+                saw_fear_summary = true;
+        }
+        else if (option.choice_id == QUEST_CHOICE_ORDER_TRIAL_REBELS)
+        {
+            if (ft_strstr(option.summary.c_str(), "reform") != ft_nullptr)
+                saw_reform_summary = true;
+        }
+    }
+    FT_ASSERT(saw_fear_summary);
+    FT_ASSERT(saw_reform_summary);
+
+    const Game::ft_story_branch_snapshot *order_branch_info = ft_nullptr;
+    const Game::ft_story_branch_snapshot *rebellion_branch_info = ft_nullptr;
+    for (size_t i = 0; i < act_three->branches.size(); ++i)
+    {
+        const Game::ft_story_branch_snapshot &branch = act_three->branches[i];
+        if (branch.branch_id == Game::STORY_BRANCH_ORDER_DOMINION)
+            order_branch_info = &act_three->branches[i];
+        else if (branch.branch_id == Game::STORY_BRANCH_REBELLION_LIBERATION)
+            rebellion_branch_info = &act_three->branches[i];
+    }
+    FT_ASSERT(order_branch_info != ft_nullptr);
+    FT_ASSERT(rebellion_branch_info != ft_nullptr);
+    FT_ASSERT(order_branch_info->is_active);
+    FT_ASSERT(order_branch_info->is_available);
+    FT_ASSERT(order_branch_info->completed_quests >= 3);
+    FT_ASSERT(order_branch_info->completed_quests < order_branch_info->total_quests);
+    FT_ASSERT(ft_strstr(order_branch_info->summary.c_str(), "Dominion") != ft_nullptr);
+    FT_ASSERT(!rebellion_branch_info->is_available);
+    FT_ASSERT(!rebellion_branch_info->is_active);
+
+    FT_ASSERT(snapshot.epilogue.is_available);
+    FT_ASSERT(ft_strstr(snapshot.epilogue.title.c_str(), "Dominion") != ft_nullptr);
+    FT_ASSERT(snapshot.epilogue.paragraphs.size() >= 1);
+    bool mentions_verdict = false;
+    for (size_t i = 0; i < snapshot.epilogue.paragraphs.size(); ++i)
+    {
+        if (ft_strstr(snapshot.epilogue.paragraphs[i].c_str(), "verdict") != ft_nullptr
+            || ft_strstr(snapshot.epilogue.paragraphs[i].c_str(), "rebels") != ft_nullptr)
+        {
+            mentions_verdict = true;
+            break;
+        }
+    }
+    FT_ASSERT(mentions_verdict);
 
     const Game::ft_quest_log_entry *verdict_entry = ft_nullptr;
     const Game::ft_quest_log_entry *dominion_entry = ft_nullptr;
@@ -988,6 +1148,86 @@ int verify_quest_log_snapshot()
     FT_ASSERT(snapshot.recent_lore_entries.size() <= 5);
     if (snapshot.recent_lore_entries.size() > 0)
         FT_ASSERT(snapshot.recent_lore_entries.back().size() > 0);
+
+    FT_ASSERT(game.resolve_quest_choice(QUEST_ORDER_FINAL_VERDICT, QUEST_CHOICE_ORDER_TRIAL_REBELS));
+    game.tick(0.0);
+
+    game.get_quest_log_snapshot(snapshot);
+    FT_ASSERT(snapshot.epilogue.is_available);
+    FT_ASSERT(ft_strstr(snapshot.epilogue.title.c_str(), "Dominion") != ft_nullptr);
+    bool mentions_reform = false;
+    for (size_t i = 0; i < snapshot.epilogue.paragraphs.size(); ++i)
+    {
+        if (ft_strstr(snapshot.epilogue.paragraphs[i].c_str(), "reform") != ft_nullptr
+            || ft_strstr(snapshot.epilogue.paragraphs[i].c_str(), "trials") != ft_nullptr)
+        {
+            mentions_reform = true;
+            break;
+        }
+    }
+    FT_ASSERT(mentions_reform);
+
+    const Game::ft_story_choice_snapshot *final_verdict_record = ft_nullptr;
+    for (size_t i = 0; i < snapshot.critical_choices.size(); ++i)
+    {
+        if (snapshot.critical_choices[i].quest_id == QUEST_ORDER_FINAL_VERDICT)
+        {
+            final_verdict_record = &snapshot.critical_choices[i];
+            break;
+        }
+    }
+    FT_ASSERT(final_verdict_record != ft_nullptr);
+    FT_ASSERT(final_verdict_record->has_been_made);
+    FT_ASSERT(!final_verdict_record->awaiting_selection);
+    bool trial_selected = false;
+    for (size_t i = 0; i < final_verdict_record->options.size(); ++i)
+    {
+        const Game::ft_story_choice_option_snapshot &option = final_verdict_record->options[i];
+        if (option.choice_id == QUEST_CHOICE_ORDER_TRIAL_REBELS)
+            trial_selected = option.is_selected;
+    }
+    FT_ASSERT(trial_selected);
+
+    return 1;
+}
+
+int verify_player_preference_application()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    PlayerProfilePreferences preferences;
+    preferences.ui_scale_percent = 135U;
+    preferences.combat_speed_percent = 180U;
+    preferences.lore_panel_anchor = PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
+    game.configure_from_preferences(preferences);
+
+    double scale_delta = math_fabs(game.get_ui_scale() - 1.35);
+    FT_ASSERT(scale_delta < 0.0001);
+    FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT, game.get_lore_panel_anchor());
+
+    double speed_delta = math_fabs(game.get_combat_speed_multiplier() - 1.8);
+    FT_ASSERT(speed_delta < 0.0001);
+
+    Game::ft_quest_log_snapshot snapshot;
+    game.get_quest_log_snapshot(snapshot);
+    double snapshot_scale_delta = math_fabs(snapshot.ui_scale - game.get_ui_scale());
+    FT_ASSERT(snapshot_scale_delta < 0.0001);
+    FT_ASSERT_EQ(game.get_lore_panel_anchor(), snapshot.lore_panel_anchor);
+
+    game.set_ui_scale(0.2);
+    FT_ASSERT(game.get_ui_scale() >= 0.5);
+    game.set_combat_speed_multiplier(5.0);
+    FT_ASSERT(game.get_combat_speed_multiplier() <= 2.0);
+    game.set_lore_panel_anchor(99);
+    FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT, game.get_lore_panel_anchor());
+
+    preferences.ui_scale_percent = 300U;
+    preferences.combat_speed_percent = 10U;
+    preferences.lore_panel_anchor = 0U;
+    game.configure_from_preferences(preferences);
+    FT_ASSERT(game.get_ui_scale() <= static_cast<double>(PLAYER_PROFILE_UI_SCALE_MAX_PERCENT) / 100.0 + 0.0001);
+    FT_ASSERT(game.get_combat_speed_multiplier() >= static_cast<double>(PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT) / 100.0 - 0.0001);
+    FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT, game.get_lore_panel_anchor());
 
     return 1;
 }
