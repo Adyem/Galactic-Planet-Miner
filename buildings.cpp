@@ -4,6 +4,41 @@
 #include "libft/Libft/libft.hpp"
 #include "ft_map_snapshot.hpp"
 
+namespace
+{
+    void gather_helios_neighbors(int planet_id, ft_vector<int> &neighbors)
+    {
+        neighbors.clear();
+        switch (planet_id)
+        {
+        case PLANET_TERRA:
+            neighbors.push_back(PLANET_MARS);
+            neighbors.push_back(PLANET_LUNA);
+            break;
+        case PLANET_MARS:
+            neighbors.push_back(PLANET_TERRA);
+            neighbors.push_back(PLANET_ZALTHOR);
+            break;
+        case PLANET_ZALTHOR:
+            neighbors.push_back(PLANET_MARS);
+            neighbors.push_back(PLANET_VULCAN);
+            break;
+        case PLANET_VULCAN:
+            neighbors.push_back(PLANET_ZALTHOR);
+            neighbors.push_back(PLANET_NOCTARIS_PRIME);
+            break;
+        case PLANET_NOCTARIS_PRIME:
+            neighbors.push_back(PLANET_VULCAN);
+            break;
+        case PLANET_LUNA:
+            neighbors.push_back(PLANET_TERRA);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 void BuildingManager::clone_from(const BuildingManager &other)
 {
     if (this == &other)
@@ -59,7 +94,9 @@ void BuildingManager::clone_from(const BuildingManager &other)
         ft_map_snapshot(source.instances, inst_entries);
         for (size_t j = 0; j < inst_entries.size(); ++j)
             state.instances.insert(inst_entries[j].key, inst_entries[j].value);
+        recalculate_planet_statistics(state);
     }
+    this->refresh_helios_network();
 }
 
 void BuildingManager::register_definition(const ft_sharedptr<ft_building_definition> &definition)
@@ -166,6 +203,8 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
     state.convoy_speed_bonus = 0.0;
     state.convoy_raid_risk_modifier = 0.0;
     state.energy_deficit_pressure = 0.0;
+    state.helios_projection = 0.0;
+    state.helios_incoming = 0.0;
     ft_vector<Pair<int, ft_building_instance> > entries;
     ft_map_snapshot(state.instances, entries);
     for (size_t i = 0; i < entries.size(); ++i)
@@ -175,7 +214,10 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
         if (definition == ft_nullptr)
             continue;
         state.logistic_capacity += definition->logistic_gain;
-        state.energy_generation += definition->energy_gain;
+        if (definition->id == BUILDING_HELIOS_BEACON)
+            state.helios_projection += definition->energy_gain;
+        else
+            state.energy_generation += definition->energy_gain;
         state.mine_multiplier += definition->mine_bonus;
         state.convoy_speed_bonus += definition->convoy_speed_bonus;
         state.convoy_raid_risk_modifier += definition->convoy_raid_risk_modifier;
@@ -190,6 +232,73 @@ void BuildingManager::recalculate_planet_statistics(ft_planet_build_state &state
         state.convoy_raid_risk_modifier = 0.0;
     state.energy_consumption = state.support_energy;
     state.logistic_usage = 0;
+}
+
+void BuildingManager::refresh_helios_network()
+{
+    ft_vector<Pair<int, ft_planet_build_state> > entries;
+    ft_map_snapshot(this->_planets, entries);
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        Pair<int, ft_planet_build_state> *entry = this->_planets.find(entries[i].key);
+        if (entry == ft_nullptr)
+            continue;
+        if (entry->value.helios_incoming > 0.0)
+        {
+            entry->value.energy_generation -= entry->value.helios_incoming;
+            if (entry->value.energy_generation < 0.0)
+                entry->value.energy_generation = 0.0;
+        }
+        entry->value.helios_incoming = 0.0;
+    }
+    ft_vector<int> neighbors;
+    neighbors.reserve(4);
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        Pair<int, ft_planet_build_state> *entry = this->_planets.find(entries[i].key);
+        if (entry == ft_nullptr)
+            continue;
+        ft_planet_build_state &state = entry->value;
+        if (state.helios_projection <= 0.0)
+            continue;
+        gather_helios_neighbors(state.planet_id, neighbors);
+        if (neighbors.size() == 0)
+            continue;
+        double stability = 1.0;
+        if (state.support_energy > 0.0 && state.energy_generation < state.support_energy)
+        {
+            double deficit = state.support_energy - state.energy_generation;
+            double ratio = deficit / state.support_energy;
+            if (ratio >= 1.0)
+                stability = 0.15;
+            else
+            {
+                stability = 1.0 - ratio * 0.7;
+                if (stability < 0.15)
+                    stability = 0.15;
+            }
+        }
+        if (stability <= 0.0)
+            continue;
+        double per_neighbor = state.helios_projection * 0.9 * stability;
+        if (per_neighbor <= 0.0)
+            continue;
+        for (size_t j = 0; j < neighbors.size(); ++j)
+        {
+            Pair<int, ft_planet_build_state> *target = this->_planets.find(neighbors[j]);
+            if (target == ft_nullptr)
+                continue;
+            target->value.helios_incoming += per_neighbor;
+        }
+    }
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        Pair<int, ft_planet_build_state> *entry = this->_planets.find(entries[i].key);
+        if (entry == ft_nullptr)
+            continue;
+        if (entry->value.helios_incoming > 0.0)
+            entry->value.energy_generation += entry->value.helios_incoming;
+    }
 }
 
 bool BuildingManager::check_build_costs(const Game &game, int planet_id, const ft_vector<Pair<int, int> > &costs) const
@@ -307,6 +416,8 @@ void BuildingManager::initialize_planet(Game &game, int planet_id)
     stored.energy_consumption = 0.0;
     stored.support_energy = 0.0;
     stored.mine_multiplier = 1.0;
+    stored.helios_projection = 0.0;
+    stored.helios_incoming = 0.0;
     stored.next_instance_id = 1;
     stored.instances.clear();
     const ft_building_definition *mine = this->get_definition(BUILDING_MINE_CORE);
@@ -324,6 +435,7 @@ void BuildingManager::initialize_planet(Game &game, int planet_id)
         stored.instances.insert(instance.uid, instance);
     }
     recalculate_planet_statistics(stored);
+    this->refresh_helios_network();
     game.ensure_planet_item_slot(planet_id, ITEM_IRON_BAR);
     game.ensure_planet_item_slot(planet_id, ITEM_COPPER_BAR);
     game.ensure_planet_item_slot(planet_id, ITEM_MITHRIL_BAR);
@@ -346,6 +458,7 @@ void BuildingManager::add_planet_logistic_bonus(int planet_id, int amount)
     if (state->research_logistic_bonus < 0)
         state->research_logistic_bonus = 0;
     recalculate_planet_statistics(*state);
+    this->refresh_helios_network();
 }
 
 void BuildingManager::apply_research_unlock(int research_id)
@@ -432,6 +545,7 @@ int BuildingManager::place_building(Game &game, int planet_id, int building_id, 
     state->instances.insert(instance.uid, instance);
     this->ensure_outputs_registered(game, planet_id, definition->outputs);
     recalculate_planet_statistics(*state);
+    this->refresh_helios_network();
     return instance.uid;
 }
 
@@ -452,6 +566,7 @@ bool BuildingManager::remove_building(Game &game, int planet_id, int instance_id
     this->clear_area(*state, instance_id);
     state->instances.remove(instance_id);
     recalculate_planet_statistics(*state);
+    this->refresh_helios_network();
     return true;
 }
 
@@ -549,6 +664,16 @@ double BuildingManager::get_planet_energy_consumption(int planet_id) const
     if (state == ft_nullptr)
         return 0.0;
     return state->energy_consumption;
+}
+
+double BuildingManager::get_planet_support_energy(int planet_id) const
+{
+    const ft_planet_build_state *state = this->get_state(planet_id);
+    if (state == ft_nullptr)
+        return 0.0;
+    if (state->support_energy < 0.0)
+        return 0.0;
+    return state->support_energy;
 }
 
 double BuildingManager::get_mine_multiplier(int planet_id) const

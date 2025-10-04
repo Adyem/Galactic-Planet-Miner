@@ -121,6 +121,10 @@ private:
         int                     defender_line_ships;
         int                     raider_support_ships;
         int                     defender_support_ships;
+        int                     sunflare_target_fleet_id;
+        int                     sunflare_target_ship_uid;
+        double                  sunflare_focus_pool;
+        double                  auto_generator_stability;
         ft_combat_encounter()
             : planet_id(0), fleet_ids(new ft_vector<int>()), raider_fleet(), modifiers(),
               attack_multiplier(1.0), defense_multiplier(1.0), energy_pressure(0.0),
@@ -133,7 +137,9 @@ private:
               defender_line(-40.0), formation_time(0.0),
               raider_operational_ships(0), defender_operational_ships(0),
               raider_line_ships(0), defender_line_ships(0),
-              raider_support_ships(0), defender_support_ships(0)
+              raider_support_ships(0), defender_support_ships(0),
+              sunflare_target_fleet_id(0), sunflare_target_ship_uid(0),
+              sunflare_focus_pool(0.0), auto_generator_stability(0.0)
         {}
     };
 
@@ -160,7 +166,7 @@ private:
     void build_raider_fleet(ft_combat_encounter &encounter, double difficulty,
         double energy_pressure, double narrative_pressure);
 
-    void apply_support(const ft_combat_encounter &encounter,
+    void apply_support(ft_combat_encounter &encounter,
         ft_vector<ft_sharedptr<ft_fleet> > &defenders,
         double seconds);
 
@@ -197,11 +203,14 @@ public:
     bool add_fleet(int planet_id, int fleet_id);
     bool set_support(int planet_id, bool sunflare_docked,
         bool repair_drones_active, bool shield_generator_online);
+    bool set_sunflare_dock_target(int planet_id, int fleet_id, int ship_uid);
     bool set_control_mode(int planet_id, int control_mode);
     bool set_raider_aggression(int planet_id, double aggression);
     bool trigger_focus_fire(int planet_id);
     bool request_tactical_pause(int planet_id);
     bool is_assault_active(int planet_id) const;
+    void get_active_planets(ft_vector<int> &out) const;
+    void set_auto_shield_generator(int planet_id, double stability);
     double get_raider_shield(int planet_id) const;
     double get_raider_hull(int planet_id) const;
     double get_elapsed(int planet_id) const;

@@ -7,8 +7,10 @@
 #include "../libft/JSon/document.hpp"
 #include "../libft/JSon/json.hpp"
 #include "../libft/CMA/CMA.hpp"
+#include "../libft/File/file_utils.hpp"
 #include "save_system.hpp"
 #include "player_profile.hpp"
+#include "main_menu_system.hpp"
 
 #define private public
 #define protected public
@@ -2401,6 +2403,76 @@ int verify_buildings_unchanged_on_failed_load()
 
     FT_ASSERT_EQ(logistic_after_removal, game.get_planet_logistic_usage(PLANET_TERRA));
     FT_ASSERT_EQ(0, game.get_building_count(PLANET_TERRA, BUILDING_SMELTER));
+
+    return 1;
+}
+
+int verify_new_game_save_name_rules()
+{
+    const unsigned int max_length = new_game_flow_testing::max_save_name_length();
+
+    FT_ASSERT(new_game_flow_testing::is_character_allowed('a'));
+    FT_ASSERT(new_game_flow_testing::is_character_allowed('Z'));
+    FT_ASSERT(new_game_flow_testing::is_character_allowed('5'));
+    FT_ASSERT(!new_game_flow_testing::is_character_allowed('!'));
+
+    ft_string save_name;
+    FT_ASSERT(new_game_flow_testing::append_character(save_name, 'A'));
+    for (unsigned int index = 1U; index < max_length; ++index)
+        FT_ASSERT(new_game_flow_testing::append_character(save_name, 'B'));
+
+    FT_ASSERT_EQ(max_length, static_cast<unsigned int>(save_name.size()));
+    FT_ASSERT(!new_game_flow_testing::append_character(save_name, 'C'));
+
+    new_game_flow_testing::remove_last_character(save_name);
+    FT_ASSERT_EQ(max_length - 1U, static_cast<unsigned int>(save_name.size()));
+
+    FT_ASSERT(!new_game_flow_testing::append_character(save_name, '!'));
+    FT_ASSERT(new_game_flow_testing::append_character(save_name, '3'));
+
+    FT_ASSERT(new_game_flow_testing::validate_save_name(save_name));
+
+    ft_string empty_name;
+    new_game_flow_testing::remove_last_character(empty_name);
+    FT_ASSERT(empty_name.empty());
+    FT_ASSERT(!new_game_flow_testing::validate_save_name(empty_name));
+
+    return 1;
+}
+
+int verify_new_game_save_creation()
+{
+    const ft_string commander_name("FlowTesterAlpha");
+    const ft_string save_name("FirstCampaign");
+
+    FT_ASSERT(player_profile_delete(commander_name));
+
+    ft_string expected_directory = player_profile_resolve_save_directory(commander_name);
+    FT_ASSERT(!expected_directory.empty());
+
+    ft_string expected_path = expected_directory;
+    expected_path.append("/");
+    expected_path.append(save_name);
+    expected_path.append(".json");
+
+    ft_string resolved_path = new_game_flow_testing::compute_save_file_path(commander_name, save_name);
+    FT_ASSERT_EQ(expected_path, resolved_path);
+
+    ft_string error_message;
+    FT_ASSERT(new_game_flow_testing::create_save_file(commander_name, save_name, error_message));
+    FT_ASSERT(error_message.empty());
+
+    FT_ASSERT_EQ(1, file_exists(expected_path.c_str()));
+
+    ft_string duplicate_error;
+    FT_ASSERT(!new_game_flow_testing::create_save_file(commander_name, save_name, duplicate_error));
+    FT_ASSERT_EQ(ft_string("A save with that name already exists."), duplicate_error);
+
+    ft_string missing_commander_error;
+    FT_ASSERT(!new_game_flow_testing::create_save_file(ft_string(), save_name, missing_commander_error));
+    FT_ASSERT_EQ(ft_string("Unable to resolve the save file location."), missing_commander_error);
+
+    FT_ASSERT(player_profile_delete(commander_name));
 
     return 1;
 }

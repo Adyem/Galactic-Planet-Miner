@@ -70,13 +70,21 @@ void CombatManager::tick(double seconds, ft_map<int, ft_sharedptr<ft_fleet> > &f
         {
             encounter.spike_timer += time_leftover;
             double spike_threshold = 30.0 - encounter.narrative_pressure * 8.0;
-            if (spike_threshold < 12.0)
-                spike_threshold = 12.0;
+            double prolonged_adjustment = encounter.elapsed * 0.08;
+            if (prolonged_adjustment > 10.0)
+                prolonged_adjustment = 10.0;
+            spike_threshold -= prolonged_adjustment;
+            if (encounter.energy_pressure > 1.2)
+                spike_threshold -= (encounter.energy_pressure - 1.2) * 4.0;
+            if (spike_threshold < 10.0)
+                spike_threshold = 10.0;
             if (encounter.spike_timer >= spike_threshold)
             {
                 encounter.spike_time_remaining = 4.0 + encounter.narrative_pressure * 4.0;
                 if (encounter.energy_pressure > 0.0)
                     encounter.spike_time_remaining += encounter.energy_pressure * 2.0;
+                if (prolonged_adjustment > 0.0)
+                    encounter.spike_time_remaining += prolonged_adjustment * 0.1;
                 encounter.spike_timer = 0.0;
                 spike_active = true;
             }

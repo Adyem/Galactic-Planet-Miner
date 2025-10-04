@@ -6,6 +6,56 @@
 #include "quests.hpp"
 #include "game_test_scenarios.hpp"
 
+static int advance_game_to_climactic(Game &game)
+{
+    game.set_ore(PLANET_TERRA, ORE_IRON, 20);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 20);
+    game.tick(0.0);
+
+    game.create_fleet(1);
+    int setup_one = game.create_ship(1, SHIP_SHIELD);
+    FT_ASSERT(setup_one != 0);
+    game.set_ship_hp(1, setup_one, 80);
+    game.create_fleet(2);
+    int setup_two = game.create_ship(2, SHIP_SHIELD);
+    FT_ASSERT(setup_two != 0);
+    game.set_ship_hp(2, setup_two, 60);
+    game.tick(0.0);
+
+    game.set_ore(PLANET_TERRA, ORE_IRON, 40);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 30);
+    game.set_ore(PLANET_TERRA, ORE_COAL, 12);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_MARS));
+    game.tick(30.0);
+    game.set_ore(PLANET_TERRA, ORE_MITHRIL, 8);
+    game.set_ore(PLANET_TERRA, ORE_COAL, 12);
+    FT_ASSERT(game.start_research(RESEARCH_UNLOCK_ZALTHOR));
+    game.tick(40.0);
+    game.tick(0.0);
+    FT_ASSERT_EQ(QUEST_SECURE_SUPPLY_LINES, game.get_active_quest());
+
+    game.ensure_planet_item_slot(PLANET_MARS, ITEM_IRON_BAR);
+    game.set_ore(PLANET_MARS, ITEM_IRON_BAR, 0);
+    game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    for (int convoy = 0; convoy < 8; ++convoy)
+    {
+        int moved = game.transfer_ore(PLANET_TERRA, PLANET_MARS, ITEM_IRON_BAR, 20);
+        FT_ASSERT(moved >= 20);
+        double waited = 0.0;
+        while (game.get_active_convoy_count() > 0 && waited < 240.0)
+        {
+            game.tick(4.0);
+            waited += 4.0;
+        }
+        FT_ASSERT(waited < 240.0);
+    }
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_HIGH_VALUE_ESCORT));
+    FT_ASSERT_EQ(QUEST_CLIMACTIC_BATTLE, game.get_active_quest());
+    game.remove_ship(1, setup_one);
+    game.remove_ship(2, setup_two);
+    return 1;
+}
+
 int compare_energy_pressure_scenarios()
 {
     Game energy_game(ft_string("127.0.0.1:8080"), ft_string("/"));
@@ -121,6 +171,68 @@ int compare_energy_pressure_scenarios()
     FT_ASSERT(surge_raider_positions.size() >= energy_raider_positions.size());
     FT_ASSERT(surge_radar_count >= energy_radar_count + 1);
     FT_ASSERT(surge_shield_count >= energy_shield_count + 1);
+    return 1;
+}
+
+int verify_helios_beacon_energy_network()
+{
+    Game network_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+    network_game.set_ore(PLANET_TERRA, ORE_IRON, 400);
+    network_game.set_ore(PLANET_TERRA, ORE_COPPER, 360);
+    network_game.set_ore(PLANET_TERRA, ORE_COAL, 320);
+    network_game.set_ore(PLANET_TERRA, ORE_MITHRIL, 180);
+    network_game.set_ore(PLANET_TERRA, ORE_CRYSTAL, 160);
+    network_game.set_ore(PLANET_TERRA, ORE_TRITIUM, 90);
+    network_game.set_ore(PLANET_TERRA, ITEM_COPPER_BAR, 220);
+    network_game.set_ore(PLANET_TERRA, ITEM_MITHRIL_BAR, 160);
+    network_game.set_ore(PLANET_TERRA, ITEM_ACCUMULATOR, 40);
+    network_game.set_ore(PLANET_TERRA, ITEM_ADVANCED_ENGINE_PART, 80);
+    network_game.set_ore(PLANET_TERRA, ITEM_FUSION_REACTOR, 6);
+    network_game.set_ore(PLANET_MARS, ITEM_COPPER_BAR, 60);
+    network_game.set_ore(PLANET_MARS, ITEM_ADVANCED_ENGINE_PART, 24);
+    network_game.set_ore(PLANET_MARS, ITEM_ACCUMULATOR, 12);
+
+    FT_ASSERT(network_game.start_research(RESEARCH_UNLOCK_MARS));
+    network_game.tick(120.0);
+    FT_ASSERT(network_game.start_research(RESEARCH_UNLOCK_ZALTHOR));
+    network_game.tick(120.0);
+    FT_ASSERT(network_game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_I));
+    network_game.tick(120.0);
+    FT_ASSERT(network_game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_II));
+    network_game.tick(120.0);
+    FT_ASSERT(network_game.start_research(RESEARCH_DEFENSIVE_FORTIFICATION_III));
+    network_game.tick(150.0);
+    FT_ASSERT(network_game.start_research(RESEARCH_SHIELD_TECHNOLOGY));
+    network_game.tick(150.0);
+
+    int generator = network_game.place_building(PLANET_TERRA, BUILDING_POWER_GENERATOR, 0, 2);
+    if (generator == 0)
+        generator = network_game.place_building(PLANET_TERRA, BUILDING_POWER_GENERATOR, 2, 0);
+    FT_ASSERT(generator != 0);
+
+    int relay = network_game.place_building(PLANET_MARS, BUILDING_TRADE_RELAY, 1, 0);
+    if (relay == 0)
+        relay = network_game.place_building(PLANET_MARS, BUILDING_TRADE_RELAY, 1, 1);
+    FT_ASSERT(relay != 0);
+
+    network_game.tick(0.0);
+    double baseline = network_game.get_planet_energy_pressure(PLANET_MARS);
+    FT_ASSERT(baseline > 3.4);
+
+    int helios = network_game.place_building(PLANET_TERRA, BUILDING_HELIOS_BEACON, 2, 1);
+    if (helios == 0)
+        helios = network_game.place_building(PLANET_TERRA, BUILDING_HELIOS_BEACON, 1, 1);
+    FT_ASSERT(helios != 0);
+
+    network_game.tick(0.0);
+    double boosted = network_game.get_planet_energy_pressure(PLANET_MARS);
+    FT_ASSERT(boosted < baseline - 1.2);
+
+    FT_ASSERT(network_game.remove_building(PLANET_TERRA, generator));
+    network_game.tick(0.0);
+    double collapsed = network_game.get_planet_energy_pressure(PLANET_MARS);
+    FT_ASSERT(collapsed > boosted + 1.0);
+    FT_ASSERT(collapsed < baseline - 0.2);
     return 1;
 }
 
@@ -286,5 +398,72 @@ int compare_storyline_assaults()
     FT_ASSERT_EQ(0, early_capital_count);
     FT_ASSERT(narrative_capital_count >= 1);
     FT_ASSERT(narrative_raider_positions.size() > early_raider_positions.size());
+    return 1;
+}
+
+int verify_narrative_assault_spikes()
+{
+    Game baseline(ft_string("127.0.0.1:8080"), ft_string("/"));
+    baseline.set_ore(PLANET_TERRA, ORE_IRON, 200);
+    baseline.set_ore(PLANET_TERRA, ORE_COPPER, 200);
+    baseline.set_ore(PLANET_TERRA, ORE_COAL, 200);
+    FT_ASSERT(baseline.place_building(PLANET_TERRA, BUILDING_POWER_GENERATOR, 2, 0) != 0);
+    baseline.tick(0.0);
+    baseline.create_fleet(1);
+    int baseline_capital = baseline.create_ship(1, SHIP_CAPITAL);
+    baseline.set_ship_hp(1, baseline_capital, 220);
+    baseline.set_ship_shield(1, baseline_capital, 120);
+    baseline.create_fleet(2);
+    int baseline_guard = baseline.create_ship(2, SHIP_SHIELD);
+    baseline.set_ship_hp(2, baseline_guard, 140);
+    baseline.set_ship_shield(2, baseline_guard, 90);
+    FT_ASSERT(baseline.start_raider_assault(PLANET_TERRA, 1.0, ASSAULT_CONTROL_ACTIVE));
+    FT_ASSERT(baseline.assign_fleet_to_assault(PLANET_TERRA, 1));
+    FT_ASSERT(baseline.assign_fleet_to_assault(PLANET_TERRA, 2));
+    int baseline_start_shield = baseline.get_ship_shield(1, baseline_capital);
+    int baseline_start_hp = baseline.get_ship_hp(1, baseline_capital);
+    baseline.tick(1.2);
+    int baseline_end_shield = baseline.get_ship_shield(1, baseline_capital);
+    int baseline_end_hp = baseline.get_ship_hp(1, baseline_capital);
+    int baseline_shield_loss = baseline_start_shield - baseline_end_shield;
+    int baseline_hp_loss = baseline_start_hp - baseline_end_hp;
+    if (baseline_shield_loss < 0)
+        baseline_shield_loss = 0;
+    if (baseline_hp_loss < 0)
+        baseline_hp_loss = 0;
+
+    Game narrative(ft_string("127.0.0.1:8080"), ft_string("/"));
+    FT_ASSERT(advance_game_to_climactic(narrative));
+    narrative.set_ore(PLANET_TERRA, ORE_IRON, 220);
+    narrative.set_ore(PLANET_TERRA, ORE_COPPER, 220);
+    narrative.set_ore(PLANET_TERRA, ORE_COAL, 220);
+    FT_ASSERT(narrative.place_building(PLANET_TERRA, BUILDING_POWER_GENERATOR, 2, 0) != 0);
+    narrative.tick(0.0);
+    narrative.create_fleet(1);
+    int narrative_capital = narrative.create_ship(1, SHIP_CAPITAL);
+    narrative.set_ship_hp(1, narrative_capital, 220);
+    narrative.set_ship_shield(1, narrative_capital, 120);
+    narrative.create_fleet(2);
+    int narrative_guard = narrative.create_ship(2, SHIP_SHIELD);
+    narrative.set_ship_hp(2, narrative_guard, 140);
+    narrative.set_ship_shield(2, narrative_guard, 90);
+    FT_ASSERT(narrative.start_raider_assault(PLANET_TERRA, 1.0, ASSAULT_CONTROL_ACTIVE));
+    FT_ASSERT(narrative.assign_fleet_to_assault(PLANET_TERRA, 1));
+    FT_ASSERT(narrative.assign_fleet_to_assault(PLANET_TERRA, 2));
+    int narrative_start_shield = narrative.get_ship_shield(1, narrative_capital);
+    int narrative_start_hp = narrative.get_ship_hp(1, narrative_capital);
+    narrative.tick(1.2);
+    int narrative_end_shield = narrative.get_ship_shield(1, narrative_capital);
+    int narrative_end_hp = narrative.get_ship_hp(1, narrative_capital);
+    int narrative_shield_loss = narrative_start_shield - narrative_end_shield;
+    int narrative_hp_loss = narrative_start_hp - narrative_end_hp;
+    if (narrative_shield_loss < 0)
+        narrative_shield_loss = 0;
+    if (narrative_hp_loss < 0)
+        narrative_hp_loss = 0;
+    int baseline_combined = baseline_shield_loss + baseline_hp_loss;
+    int narrative_combined = narrative_shield_loss + narrative_hp_loss;
+    FT_ASSERT(narrative_combined > baseline_combined + 10);
+    FT_ASSERT(narrative_shield_loss > baseline_shield_loss);
     return 1;
 }

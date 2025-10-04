@@ -64,3 +64,14 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
 // Profile window preference helpers
 bool save_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept;
 void apply_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept;
+
+namespace new_game_flow_testing
+{
+    unsigned int max_save_name_length() noexcept;
+    bool         is_character_allowed(char character) noexcept;
+    bool         append_character(ft_string &save_name, char character) noexcept;
+    void         remove_last_character(ft_string &save_name) noexcept;
+    bool         validate_save_name(const ft_string &save_name) noexcept;
+    ft_string    compute_save_file_path(const ft_string &commander_name, const ft_string &save_name);
+    bool         create_save_file(const ft_string &commander_name, const ft_string &save_name, ft_string &out_error) noexcept;
+}

@@ -586,6 +586,7 @@ private:
     void handle_quest_choice_resolution(int quest_id, int choice_id);
     void configure_difficulty(int difficulty);
     void update_combat_modifiers();
+    double compute_auto_shield_generator_stability(int planet_id) const;
     int count_capital_ships_in_collection(const ft_map<int, ft_sharedptr<ft_fleet> > &collection) const;
     int count_capital_ships() const;
     void clear_escape_pod_records(const ft_fleet &fleet);
@@ -665,8 +666,11 @@ public:
     int get_planet_logistic_usage(int planet_id) const;
     double get_planet_energy_generation(int planet_id) const;
     double get_planet_energy_consumption(int planet_id) const;
+    double get_planet_support_energy(int planet_id) const;
     double get_planet_mine_multiplier(int planet_id) const;
     double get_planet_energy_pressure(int planet_id) const;
+    int get_planet_escort_rating(int planet_id) const;
+    double get_planet_convoy_raid_risk_modifier(int planet_id) const;
     void ensure_planet_item_slot(int planet_id, int resource_id);
 
     bool can_start_research(int research_id) const;
@@ -692,6 +696,7 @@ public:
     bool assign_fleet_to_assault(int planet_id, int fleet_id);
     bool set_assault_support(int planet_id, bool sunflare_docked,
                              bool repair_drones_active, bool shield_generator_online);
+    bool set_assault_sunflare_target(int planet_id, int fleet_id, int ship_uid);
     bool set_assault_control_mode(int planet_id, int control_mode);
     bool set_assault_aggression(int planet_id, double aggression);
     bool trigger_assault_focus_fire(int planet_id);

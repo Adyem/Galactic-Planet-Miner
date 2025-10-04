@@ -978,6 +978,29 @@ void ft_fleet::apply_support(int shield_amount, int repair_amount) noexcept
     }
 }
 
+int ft_fleet::apply_targeted_shield(int ship_uid, int amount) noexcept
+{
+    if (amount <= 0)
+        return 0;
+    ft_ship *ship = this->find_ship(ship_uid);
+    if (ship == ft_nullptr)
+        return 0;
+    if (ship->max_shield <= 0)
+        return 0;
+    if (ship->shield >= ship->max_shield)
+        return 0;
+    if (ship->hp <= 0 && ship->shield <= 0)
+        return 0;
+    int capacity = ship->max_shield - ship->shield;
+    if (capacity <= 0)
+        return 0;
+    int applied = amount;
+    if (applied > capacity)
+        applied = capacity;
+    ship->shield += applied;
+    return applied;
+}
+
 bool ft_fleet::has_operational_ships() const noexcept
 {
     size_t count = this->_ships.size();
