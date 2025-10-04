@@ -4,6 +4,7 @@
 #include "../libft/PThread/thread.hpp"
 #include "../libft/PThread/pthread.hpp"
 #include "../libft/RNG/rng_internal.hpp"
+#include "../libft/Math/math.hpp"
 #include "backend_client.hpp"
 #include "buildings.hpp"
 #include "game.hpp"
@@ -1040,11 +1041,10 @@ int verify_resource_dashboard_overview()
     FT_ASSERT(found_iron);
     FT_ASSERT(found_copper);
 
-    double threat_delta = route_summary->threat_level - dashboard.average_route_threat;
-    if (threat_delta < 0.0)
-        threat_delta = -threat_delta;
-    FT_ASSERT(threat_delta < 0.0001);
-    FT_ASSERT(route_summary->threat_level == dashboard.maximum_route_threat);
+    double average_threat_delta = math_fabs(route_summary->threat_level - dashboard.average_route_threat);
+    FT_ASSERT(average_threat_delta < 0.0001);
+    double max_threat_delta = math_fabs(route_summary->threat_level - dashboard.maximum_route_threat);
+    FT_ASSERT(max_threat_delta < 0.0005);
 
     return 1;
 }

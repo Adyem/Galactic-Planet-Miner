@@ -1881,7 +1881,7 @@ void Game::get_resource_dashboard(ft_resource_dashboard &out) const
     size_t active_count = this->_active_convoys.size();
     if (active_count > 0)
     {
-        Pair<int, ft_supply_convoy> *convoys = this->_active_convoys.end();
+        const Pair<int, ft_supply_convoy> *convoys = this->_active_convoys.end();
         convoys -= active_count;
         for (size_t i = 0; i < active_count; ++i)
         {

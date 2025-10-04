@@ -30,6 +30,7 @@ int verify_nanomaterial_resource_lore();
 int verify_raider_lore_rotation();
 int verify_side_quest_rotation();
 int verify_escort_veterancy_progression();
+int verify_combat_victory_journal_rewards();
 int verify_building_tick_state_persistence();
 int compare_energy_pressure_scenarios();
 int verify_crafting_resume_requires_full_cycle();

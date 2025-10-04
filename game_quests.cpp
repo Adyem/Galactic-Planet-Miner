@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "libft/Libft/libft.hpp"
+#include "libft/Template/move.hpp"
 #include "libft/Template/pair.hpp"
 #include "ft_map_snapshot.hpp"
 
@@ -662,9 +663,9 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
             out.awaiting_choice_ids.push_back(entry.quest_id);
 
         if (definition.is_side_quest)
-            out.side_quests.push_back(entry);
+            out.side_quests.push_back(ft_move(entry));
         else
-            out.main_quests.push_back(entry);
+            out.main_quests.push_back(ft_move(entry));
     }
 
     const ft_vector<ft_string> &journal_entries = this->get_journal_entries();

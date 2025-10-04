@@ -131,6 +131,8 @@ int main()
         return 0;
     if (!verify_escort_veterancy_progression())
         return 0;
+    if (!verify_combat_victory_journal_rewards())
+        return 0;
 
 
     if (!verify_building_tick_state_persistence())

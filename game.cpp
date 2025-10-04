@@ -5,6 +5,51 @@
 #include "libft/Math/math.hpp"
 #include "ft_map_snapshot.hpp"
 
+namespace
+{
+struct CombatVictoryNarrative
+{
+    int         journal_entry_id;
+    const char  *journal_text;
+    const char  *lore_text;
+};
+
+static const CombatVictoryNarrative kCombatVictoryNarratives[] = {
+    {
+        JOURNAL_ENTRY_COMBAT_VICTORY_RAIDER_BROADCAST,
+        "Journal – Raider Broadcast Intercept: Raider captains curse Terra's shield wall as Sunflare sloops and repair drones bleed their formations dry.",
+        "Intercepted raider gunner: \"They're cycling Sunflare charges again—shields are blinding us! Pull back before they cut the flank to ribbons.\""
+    },
+    {
+        JOURNAL_ENTRY_COMBAT_VICTORY_DEFENSE_DEBRIEF,
+        "Journal – Defense Debrief: Professor Lumen and Old Miner Joe document how frontline escorts layered shield generators and repair drones to stabilize the battle.",
+        "Old Miner Joe to Professor Lumen: \"Repair drones sealed the hull breach—keep those shield generators humming and we'll hold the line.\""
+    },
+    {
+        JOURNAL_ENTRY_COMBAT_VICTORY_LIBERATION_SIGNAL,
+        "Journal – Liberation Signal: Rebel couriers whisper that Zara's sacrifice still echoes as loyal convoys repel the raid and the belt dares to hope.",
+        "Encrypted rebel courier: \"Zara's sacrifice wasn't wasted—the convoy escorts fought like ghosts. The belt is listening.\""
+    }
+};
+
+static const char *get_planet_story_name(int planet_id)
+{
+    if (planet_id == PLANET_TERRA)
+        return "Terra";
+    if (planet_id == PLANET_MARS)
+        return "Mars";
+    if (planet_id == PLANET_ZALTHOR)
+        return "Zalthor";
+    if (planet_id == PLANET_VULCAN)
+        return "Vulcan";
+    if (planet_id == PLANET_NOCTARIS_PRIME)
+        return "Noctaris Prime";
+    if (planet_id == PLANET_LUNA)
+        return "Luna";
+    return "the frontier";
+}
+} // namespace
+
 void Game::append_lore_entry(const ft_string &entry)
 {
     if (this->_lore_log_count < LORE_LOG_MAX_ENTRIES)
@@ -303,6 +348,32 @@ void Game::update_gameplay(double milliseconds)
         this->handle_quest_choice_prompt(quest_choices[i]);
 }
 
+void Game::record_combat_victory_narrative(int planet_id)
+{
+    size_t count = sizeof(kCombatVictoryNarratives) / sizeof(kCombatVictoryNarratives[0]);
+    for (size_t i = 0; i < count; ++i)
+    {
+        const CombatVictoryNarrative &narrative = kCombatVictoryNarratives[i];
+        if (this->is_journal_entry_unlocked(narrative.journal_entry_id))
+            continue;
+        if (narrative.journal_text != ft_nullptr)
+        {
+            ft_string journal_entry(narrative.journal_text);
+            this->unlock_journal_entry(narrative.journal_entry_id, journal_entry);
+        }
+        if (narrative.lore_text != ft_nullptr)
+        {
+            ft_string lore_entry(narrative.lore_text);
+            const char *planet_name = get_planet_story_name(planet_id);
+            lore_entry.append(ft_string(" (Defense logged at "));
+            lore_entry.append(ft_string(planet_name));
+            lore_entry.append(ft_string(".)"));
+            this->append_lore_entry(lore_entry);
+        }
+        return;
+    }
+}
+
 void Game::update_combat(double milliseconds)
 {
     double seconds = milliseconds * 0.001;
@@ -346,6 +417,7 @@ void Game::update_combat(double milliseconds)
             branch_entry.append(ft_string("."));
             this->append_lore_entry(branch_entry);
         }
+        this->record_combat_victory_narrative(planet_id);
     }
     for (size_t i = 0; i < assault_failed.size(); ++i)
     {
