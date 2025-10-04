@@ -143,6 +143,17 @@ setback in the lore feed. UI layers can surface progression with
 while level-up and decay events are automatically narrated so designers can
 react to the evolving logistics story.
 
+## Commander Preferences and UI Customization
+
+Commander profiles now persist interface preferences alongside the usual window
+dimensions. Saving a profile writes `ui_scale_percent`,
+`combat_speed_percent`, and `lore_panel_anchor`, clamping inputs so legacy saves
+and extreme values fall back to sensible ranges when the profile is reloaded.【F:player_profile.cpp†L360-L413】【F:player_profile.cpp†L418-L447】
+`Game::configure_from_preferences` consumes these values at runtime, updating
+quest snapshots and combat pacing so front-end layers can scale HUD elements,
+pin the lore feed to a preferred edge, and accelerate or slow real-time
+assaults without desynchronizing simulations.【F:game.cpp†L900-L950】【F:game_quests.cpp†L606-L618】
+
 ## Base Building
 
 The `BuildingManager` now exposes a full roster of factory, defense, and infrastructure

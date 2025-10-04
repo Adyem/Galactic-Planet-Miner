@@ -128,6 +128,9 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _resource_multiplier(1.0),
       _quest_time_scale_base(1.0),
       _quest_time_scale_dynamic(1.0),
+      _ui_scale(1.0),
+      _lore_panel_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT),
+      _combat_speed_multiplier(1.0),
       _research_duration_scale(1.0),
       _assault_difficulty_multiplier(1.0),
       _ship_weapon_multiplier(1.0),
@@ -422,6 +425,7 @@ void Game::update_combat(double milliseconds)
     double seconds = milliseconds * 0.001;
     if (seconds < 0.0)
         seconds = 0.0;
+    seconds *= this->_combat_speed_multiplier;
     ft_vector<int> active_planets;
     this->_combat.get_active_planets(active_planets);
     for (size_t i = 0; i < active_planets.size(); ++i)
@@ -928,6 +932,50 @@ void Game::configure_difficulty(int difficulty)
     this->_research.set_duration_scale(this->_research_duration_scale);
     this->update_dynamic_quest_pressure();
     this->update_combat_modifiers();
+}
+
+void Game::set_ui_scale(double scale)
+{
+    double clamped = scale;
+    if (clamped < 0.5)
+        clamped = 0.5;
+    if (clamped > 2.0)
+        clamped = 2.0;
+    this->_ui_scale = clamped;
+}
+
+void Game::set_lore_panel_anchor(int anchor)
+{
+    int normalized = anchor;
+    if (normalized != PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT
+        && normalized != PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT)
+        normalized = PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT;
+    this->_lore_panel_anchor = normalized;
+}
+
+void Game::set_combat_speed_multiplier(double multiplier)
+{
+    double clamped = multiplier;
+    if (clamped < 0.25)
+        clamped = 0.25;
+    if (clamped > 2.0)
+        clamped = 2.0;
+    this->_combat_speed_multiplier = clamped;
+}
+
+void Game::configure_from_preferences(const PlayerProfilePreferences &preferences)
+{
+    double ui_scale = static_cast<double>(preferences.ui_scale_percent);
+    if (ui_scale <= 0.0)
+        ui_scale = 100.0;
+    this->set_ui_scale(ui_scale / 100.0);
+
+    this->set_lore_panel_anchor(static_cast<int>(preferences.lore_panel_anchor));
+
+    double combat_speed = static_cast<double>(preferences.combat_speed_percent);
+    if (combat_speed <= 0.0)
+        combat_speed = 100.0;
+    this->set_combat_speed_multiplier(combat_speed / 100.0);
 }
 
 double Game::get_effective_quest_time_scale() const

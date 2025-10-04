@@ -72,6 +72,7 @@ int verify_resource_dashboard_overview();
 int verify_fleet_management_snapshot();
 int verify_building_layout_snapshot();
 int verify_quest_log_snapshot();
+int verify_player_preference_application();
 int verify_quick_quest_completion_bonus();
 int verify_achievement_catalog();
 int verify_achievement_progression();

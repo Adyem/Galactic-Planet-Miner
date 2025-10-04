@@ -2485,6 +2485,9 @@ int verify_player_profile_save()
     preferences.commander_name = commander_name;
     preferences.window_width = 1920U;
     preferences.window_height = 1080U;
+    preferences.ui_scale_percent = 125U;
+    preferences.combat_speed_percent = 140U;
+    preferences.lore_panel_anchor = PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
 
     FT_ASSERT(player_profile_delete(commander_name));
 
@@ -2514,11 +2517,29 @@ int verify_player_profile_save()
     FT_ASSERT(height_item->value != ft_nullptr);
     FT_ASSERT_EQ(1080, ft_atoi(height_item->value));
 
+    json_item *ui_scale_item = document.find_item(group, "ui_scale_percent");
+    FT_ASSERT(ui_scale_item != ft_nullptr);
+    FT_ASSERT(ui_scale_item->value != ft_nullptr);
+    FT_ASSERT_EQ(125, ft_atoi(ui_scale_item->value));
+
+    json_item *combat_speed_item = document.find_item(group, "combat_speed_percent");
+    FT_ASSERT(combat_speed_item != ft_nullptr);
+    FT_ASSERT(combat_speed_item->value != ft_nullptr);
+    FT_ASSERT_EQ(140, ft_atoi(combat_speed_item->value));
+
+    json_item *anchor_item = document.find_item(group, "lore_panel_anchor");
+    FT_ASSERT(anchor_item != ft_nullptr);
+    FT_ASSERT(anchor_item->value != ft_nullptr);
+    FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT, ft_atoi(anchor_item->value));
+
     PlayerProfilePreferences loaded;
     FT_ASSERT(player_profile_load_or_create(loaded, commander_name));
     FT_ASSERT_EQ(preferences.commander_name, loaded.commander_name);
     FT_ASSERT_EQ(preferences.window_width, loaded.window_width);
     FT_ASSERT_EQ(preferences.window_height, loaded.window_height);
+    FT_ASSERT_EQ(preferences.ui_scale_percent, loaded.ui_scale_percent);
+    FT_ASSERT_EQ(preferences.combat_speed_percent, loaded.combat_speed_percent);
+    FT_ASSERT_EQ(preferences.lore_panel_anchor, loaded.lore_panel_anchor);
 
     FT_ASSERT(player_profile_delete(commander_name));
 

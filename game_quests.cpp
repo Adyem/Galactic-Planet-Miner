@@ -80,6 +80,60 @@ static bool is_objective_met_for_snapshot(const ft_quest_objective &objective,
         return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     return false;
 }
+
+static const int kActOneQuestIds[] = {
+    QUEST_INITIAL_SKIRMISHES,
+    QUEST_DEFENSE_OF_TERRA,
+    QUEST_INVESTIGATE_RAIDERS,
+    QUEST_SECURE_SUPPLY_LINES,
+    QUEST_STEADY_SUPPLY_STREAK,
+    QUEST_HIGH_VALUE_ESCORT
+};
+
+static const int kActTwoQuestIds[] = {
+    QUEST_CLIMACTIC_BATTLE,
+    QUEST_CRITICAL_DECISION
+};
+
+static const int kOrderBranchQuestIds[] = {
+    QUEST_ORDER_UPRISING,
+    QUEST_ORDER_SUPPRESS_RAIDS,
+    QUEST_ORDER_DOMINION,
+    QUEST_ORDER_FINAL_VERDICT
+};
+
+static const int kRebellionBranchQuestIds[] = {
+    QUEST_REBELLION_FLEET,
+    QUEST_REBELLION_NETWORK,
+    QUEST_REBELLION_LIBERATION,
+    QUEST_REBELLION_FINAL_PUSH
+};
+
+static void populate_branch_snapshot(const QuestManager &manager,
+    Game::ft_story_branch_snapshot &out, int branch_id,
+    const char *name, const char *summary,
+    const int *quest_ids, size_t quest_count,
+    int required_choice, int active_choice)
+{
+    out.branch_id = branch_id;
+    out.name = ft_string(name);
+    out.summary = ft_string(summary);
+    out.total_quests = static_cast<int>(quest_count);
+    out.completed_quests = 0;
+    bool any_unlocked = false;
+    for (size_t i = 0; i < quest_count; ++i)
+    {
+        int quest_id = quest_ids[i];
+        int status = manager.get_status(quest_id);
+        if (status != QUEST_STATUS_LOCKED)
+            any_unlocked = true;
+        if (status == QUEST_STATUS_COMPLETED)
+            out.completed_quests += 1;
+    }
+    bool choice_selected = (active_choice == required_choice && required_choice != QUEST_CHOICE_NONE);
+    out.is_available = any_unlocked || choice_selected;
+    out.is_active = choice_selected && out.is_available;
+}
 } // namespace
 
 void Game::build_quest_context(ft_quest_context &context) const
@@ -611,7 +665,12 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
     out.awaiting_choice_ids.clear();
     out.recent_journal_entries.clear();
     out.recent_lore_entries.clear();
+    out.critical_choices.clear();
+    out.story_acts.clear();
+    out.current_act_id = STORY_ACT_RISING_THREAT;
     out.active_main_quest_id = this->get_active_quest();
+    out.ui_scale = this->_ui_scale;
+    out.lore_panel_anchor = this->_lore_panel_anchor;
 
     ft_quest_context context;
     this->build_quest_context(context);
@@ -704,6 +763,254 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
         else
             out.main_quests.push_back(ft_move(entry));
     }
+
+    Game::ft_story_act_snapshot act_one;
+    act_one.act_id = STORY_ACT_RISING_THREAT;
+    act_one.name = ft_string("Act I: The Rising Threat");
+    act_one.theme = ft_string("Raiders strike the colonies while Terra rallies escorts and convoys to shield the core worlds.");
+    act_one.total_main_quests = static_cast<int>(sizeof(kActOneQuestIds) / sizeof(kActOneQuestIds[0]));
+    act_one.is_completed = (act_one.total_main_quests > 0);
+    for (size_t i = 0; i < sizeof(kActOneQuestIds) / sizeof(kActOneQuestIds[0]); ++i)
+    {
+        int status = this->_quests.get_status(kActOneQuestIds[i]);
+        if (status == QUEST_STATUS_COMPLETED)
+            act_one.completed_main_quests += 1;
+        else
+            act_one.is_completed = false;
+    }
+
+    Game::ft_story_act_snapshot act_two;
+    act_two.act_id = STORY_ACT_UNRAVELING_TRUTH;
+    act_two.name = ft_string("Act II: The Unraveling Truth");
+    act_two.theme = ft_string("Investigations expose the raiders' motives and force a pivotal judgment on Blackthorne's fate.");
+    act_two.total_main_quests = static_cast<int>(sizeof(kActTwoQuestIds) / sizeof(kActTwoQuestIds[0]));
+    act_two.is_completed = (act_two.total_main_quests > 0);
+    for (size_t i = 0; i < sizeof(kActTwoQuestIds) / sizeof(kActTwoQuestIds[0]); ++i)
+    {
+        int status = this->_quests.get_status(kActTwoQuestIds[i]);
+        if (status == QUEST_STATUS_COMPLETED)
+            act_two.completed_main_quests += 1;
+        else
+            act_two.is_completed = false;
+    }
+    act_two.awaiting_branch_choice = (this->_quests.get_status(QUEST_CRITICAL_DECISION) == QUEST_STATUS_AWAITING_CHOICE);
+
+    int active_choice = this->_quests.get_choice(QUEST_CRITICAL_DECISION);
+
+    Game::ft_story_act_snapshot act_three;
+    act_three.act_id = STORY_ACT_CROSSROADS;
+    act_three.name = ft_string("Act III: Crossroads of Order and Rebellion");
+    act_three.theme = ft_string("With the system in turmoil, commanders either enforce Dominion rule or join the uprising to reshape the frontier.");
+
+    Game::ft_story_branch_snapshot order_branch;
+    populate_branch_snapshot(this->_quests, order_branch,
+        STORY_BRANCH_ORDER_DOMINION,
+        "Branch A: Dominion Crackdown",
+        "Crush uprisings sparked by Blackthorne's execution and cement Order control.",
+        kOrderBranchQuestIds, sizeof(kOrderBranchQuestIds) / sizeof(kOrderBranchQuestIds[0]),
+        QUEST_CHOICE_EXECUTE_BLACKTHORNE, active_choice);
+
+    Game::ft_story_branch_snapshot rebellion_branch;
+    populate_branch_snapshot(this->_quests, rebellion_branch,
+        STORY_BRANCH_REBELLION_LIBERATION,
+        "Branch B: Liberation Offensive",
+        "Rally hidden allies after sparing Blackthorne and liberate the frontier worlds.",
+        kRebellionBranchQuestIds, sizeof(kRebellionBranchQuestIds) / sizeof(kRebellionBranchQuestIds[0]),
+        QUEST_CHOICE_SPARE_BLACKTHORNE, active_choice);
+
+    bool branch_selected = false;
+    if (order_branch.is_active)
+    {
+        act_three.total_main_quests = order_branch.total_quests;
+        act_three.completed_main_quests = order_branch.completed_quests;
+        branch_selected = true;
+    }
+    else if (rebellion_branch.is_active)
+    {
+        act_three.total_main_quests = rebellion_branch.total_quests;
+        act_three.completed_main_quests = rebellion_branch.completed_quests;
+        branch_selected = true;
+    }
+    else if (order_branch.is_available)
+    {
+        act_three.total_main_quests = order_branch.total_quests;
+        act_three.completed_main_quests = order_branch.completed_quests;
+    }
+    else if (rebellion_branch.is_available)
+    {
+        act_three.total_main_quests = rebellion_branch.total_quests;
+        act_three.completed_main_quests = rebellion_branch.completed_quests;
+    }
+    else
+    {
+        act_three.total_main_quests = static_cast<int>(sizeof(kOrderBranchQuestIds) / sizeof(kOrderBranchQuestIds[0]));
+        act_three.completed_main_quests = 0;
+    }
+    if (act_three.total_main_quests > 0 && act_three.completed_main_quests >= act_three.total_main_quests)
+        act_three.is_completed = true;
+
+    bool act_one_completed = act_one.is_completed;
+    bool act_two_completed = act_two.is_completed;
+
+    out.current_act_id = STORY_ACT_RISING_THREAT;
+    if (act_one_completed)
+        out.current_act_id = STORY_ACT_UNRAVELING_TRUTH;
+    if (act_one_completed && act_two_completed)
+        out.current_act_id = STORY_ACT_CROSSROADS;
+
+    act_one.is_active = (out.current_act_id == STORY_ACT_RISING_THREAT);
+    act_two.is_active = (out.current_act_id == STORY_ACT_UNRAVELING_TRUTH);
+    act_three.is_active = (out.current_act_id == STORY_ACT_CROSSROADS);
+    if (!branch_selected)
+        act_three.is_completed = false;
+
+    act_three.branches.push_back(ft_move(order_branch));
+    act_three.branches.push_back(ft_move(rebellion_branch));
+
+    out.story_acts.push_back(ft_move(act_one));
+    out.story_acts.push_back(ft_move(act_two));
+    out.story_acts.push_back(ft_move(act_three));
+
+    int critical_decision_status = this->_quests.get_status(QUEST_CRITICAL_DECISION);
+    int critical_decision_choice = this->_quests.get_choice(QUEST_CRITICAL_DECISION);
+    if (critical_decision_status != QUEST_STATUS_LOCKED || critical_decision_choice != QUEST_CHOICE_NONE)
+    {
+        ft_story_choice_snapshot decision_snapshot;
+        decision_snapshot.quest_id = QUEST_CRITICAL_DECISION;
+        decision_snapshot.title = ft_string("Critical Decision: Blackthorne's Fate");
+        decision_snapshot.awaiting_selection = (critical_decision_status == QUEST_STATUS_AWAITING_CHOICE);
+        decision_snapshot.has_been_made = (critical_decision_choice != QUEST_CHOICE_NONE
+            && critical_decision_status == QUEST_STATUS_COMPLETED);
+
+        ft_story_choice_option_snapshot execute_option;
+        execute_option.choice_id = QUEST_CHOICE_EXECUTE_BLACKTHORNE;
+        execute_option.title = ft_string("Execute Blackthorne");
+        execute_option.summary = ft_string("Decisive justice steadies loyalists, yet the execution risks martyring him and rallying the rebellion.");
+        execute_option.is_available = (critical_decision_status != QUEST_STATUS_LOCKED);
+        execute_option.is_selected = (critical_decision_choice == QUEST_CHOICE_EXECUTE_BLACKTHORNE);
+        decision_snapshot.options.push_back(execute_option);
+
+        ft_story_choice_option_snapshot spare_option;
+        spare_option.choice_id = QUEST_CHOICE_SPARE_BLACKTHORNE;
+        spare_option.title = ft_string("Spare Blackthorne");
+        spare_option.summary = ft_string("Sparing him uncovers Dominion corruption but emboldens raiders who frame mercy as weakness.");
+        spare_option.is_available = (critical_decision_status != QUEST_STATUS_LOCKED);
+        spare_option.is_selected = (critical_decision_choice == QUEST_CHOICE_SPARE_BLACKTHORNE);
+        decision_snapshot.options.push_back(spare_option);
+
+        out.critical_choices.push_back(decision_snapshot);
+    }
+
+    int verdict_status = this->_quests.get_status(QUEST_ORDER_FINAL_VERDICT);
+    int verdict_choice = this->_quests.get_choice(QUEST_ORDER_FINAL_VERDICT);
+    if (verdict_status != QUEST_STATUS_LOCKED || verdict_choice != QUEST_CHOICE_NONE)
+    {
+        ft_story_choice_snapshot verdict_snapshot;
+        verdict_snapshot.quest_id = QUEST_ORDER_FINAL_VERDICT;
+        verdict_snapshot.title = ft_string("Final Mandate for Rebel Prisoners");
+        verdict_snapshot.awaiting_selection = (verdict_status == QUEST_STATUS_AWAITING_CHOICE);
+        verdict_snapshot.has_been_made = (verdict_choice != QUEST_CHOICE_NONE
+            && verdict_status == QUEST_STATUS_COMPLETED);
+
+        ft_story_choice_option_snapshot purge_option;
+        purge_option.choice_id = QUEST_CHOICE_ORDER_EXECUTE_REBELS;
+        purge_option.title = ft_string("Purge the Rebels");
+        purge_option.summary = ft_string("Executing the captives cements Dominion control yet spreads fear through every colony broadcast.");
+        purge_option.is_available = (verdict_status != QUEST_STATUS_LOCKED);
+        purge_option.is_selected = (verdict_choice == QUEST_CHOICE_ORDER_EXECUTE_REBELS);
+        verdict_snapshot.options.push_back(purge_option);
+
+        ft_story_choice_option_snapshot trial_option;
+        trial_option.choice_id = QUEST_CHOICE_ORDER_TRIAL_REBELS;
+        trial_option.title = ft_string("Stage Public Trials");
+        trial_option.summary = ft_string("Public tribunals promise reform even as loyalists fear clemency will fracture the regime's authority.");
+        trial_option.is_available = (verdict_status != QUEST_STATUS_LOCKED);
+        trial_option.is_selected = (verdict_choice == QUEST_CHOICE_ORDER_TRIAL_REBELS);
+        verdict_snapshot.options.push_back(trial_option);
+
+        out.critical_choices.push_back(verdict_snapshot);
+    }
+
+    Game::ft_story_epilogue_snapshot epilogue;
+    int critical_choice = this->_quests.get_choice(QUEST_CRITICAL_DECISION);
+    bool spared_blackthorne = (critical_choice == QUEST_CHOICE_SPARE_BLACKTHORNE);
+    bool executed_blackthorne = (critical_choice == QUEST_CHOICE_EXECUTE_BLACKTHORNE);
+    int order_final_status = this->_quests.get_status(QUEST_ORDER_FINAL_VERDICT);
+    int rebellion_final_status = this->_quests.get_status(QUEST_REBELLION_FINAL_PUSH);
+    int order_dominion_status = this->_quests.get_status(QUEST_ORDER_DOMINION);
+    int order_uprising_status = this->_quests.get_status(QUEST_ORDER_UPRISING);
+    int rebellion_liberation_status = this->_quests.get_status(QUEST_REBELLION_LIBERATION);
+    int rebellion_fleet_status = this->_quests.get_status(QUEST_REBELLION_FLEET);
+
+    if (order_final_status == QUEST_STATUS_COMPLETED)
+    {
+        epilogue.is_available = true;
+        epilogue.title = ft_string("Epilogue: Dominion's Shadow");
+        ft_string paragraph("Dominion fleets sweep the trade lanes, restoring stability while fear quietly settles over every habitat.");
+        epilogue.paragraphs.push_back(paragraph);
+        int verdict_choice = this->_quests.get_choice(QUEST_ORDER_FINAL_VERDICT);
+        if (verdict_choice == QUEST_CHOICE_ORDER_EXECUTE_REBELS)
+        {
+            ft_string martyr("Captain Blackthorne's execution cements his legacy as a martyr; underground cells whisper his name even as public purges broadcast the price of defiance.");
+            epilogue.paragraphs.push_back(martyr);
+        }
+        else if (verdict_choice == QUEST_CHOICE_ORDER_TRIAL_REBELS)
+        {
+            ft_string reform("Public trials promise reform, yet colonists debate whether contrition can erase the rot that killed Blackthorne and scarred the frontier.");
+            epilogue.paragraphs.push_back(reform);
+        }
+        else
+        {
+            ft_string warning("Even with Dominion banners raised, the uncertain fate of the rebels reminds citizens that calculated fear still anchors the regime.");
+            epilogue.paragraphs.push_back(warning);
+        }
+    }
+    else if (rebellion_final_status == QUEST_STATUS_COMPLETED)
+    {
+        epilogue.is_available = true;
+        epilogue.title = ft_string("Epilogue: Reborn Frontier");
+        ft_string struggle("Victory topples the corrupt regime, but liberated worlds inherit shattered shipyards and hungry colonies struggling to rebuild.");
+        epilogue.paragraphs.push_back(struggle);
+        if (spared_blackthorne)
+        {
+            ft_string redemption("Blackthorne now works beside the commander, striving to mend the belt even as survivors question whether his redemption can balance the cost of revolt.");
+            epilogue.paragraphs.push_back(redemption);
+        }
+        else
+        {
+            ft_string legacy("Blackthorne's martyrdom becomes a rallying cry for justice as settlers vow never to repeat the Dominion's oppression.");
+            epilogue.paragraphs.push_back(legacy);
+        }
+    }
+    else if (executed_blackthorne &&
+        (order_dominion_status == QUEST_STATUS_COMPLETED || order_dominion_status == QUEST_STATUS_ACTIVE ||
+         order_uprising_status == QUEST_STATUS_COMPLETED))
+    {
+        epilogue.is_available = true;
+        epilogue.title = ft_string("Epilogue Forecast: Dominion Ascendant");
+        ft_string buildup("With Blackthorne dead, Dominion loyalists prepare to decide how ruthlessly they will cement control over the colonies.");
+        epilogue.paragraphs.push_back(buildup);
+        if (order_final_status == QUEST_STATUS_AWAITING_CHOICE)
+        {
+            ft_string verdict("The pending verdict over captured rebels will determine whether fear or staged reform defines the coming era.");
+            epilogue.paragraphs.push_back(verdict);
+        }
+    }
+    else if (spared_blackthorne &&
+        (rebellion_liberation_status == QUEST_STATUS_COMPLETED || rebellion_liberation_status == QUEST_STATUS_ACTIVE ||
+         rebellion_fleet_status == QUEST_STATUS_COMPLETED))
+    {
+        epilogue.is_available = true;
+        epilogue.title = ft_string("Epilogue Forecast: Resistance Musters");
+        ft_string rally("Sparing Blackthorne ignites a swelling resistance as allied cells assemble fleets for the coming Battle for Freedom.");
+        epilogue.paragraphs.push_back(rally);
+        if (rebellion_final_status == QUEST_STATUS_ACTIVE || rebellion_final_status == QUEST_STATUS_AVAILABLE)
+        {
+            ft_string cost("Every convoy of aid highlights how liberation will demand sacrifice long after the decisive strike.");
+            epilogue.paragraphs.push_back(cost);
+        }
+    }
+    out.epilogue = epilogue;
 
     const ft_vector<ft_string> &journal_entries = this->get_journal_entries();
     size_t journal_count = journal_entries.size();

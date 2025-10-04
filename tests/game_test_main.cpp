@@ -83,6 +83,9 @@ int main()
     if (!verify_quest_log_snapshot())
         return 0;
 
+    if (!verify_player_preference_application())
+        return 0;
+
     if (!verify_quick_quest_completion_bonus())
         return 0;
 
