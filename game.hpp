@@ -50,6 +50,7 @@ enum e_journal_entry_id
     JOURNAL_ENTRY_LORE_MARS_OUTPOSTS,
     JOURNAL_ENTRY_LORE_ZALTHOR_ANOMALY,
     JOURNAL_ENTRY_LORE_CONVOY_CORPS,
+    JOURNAL_ENTRY_LORE_EMERGENCY_GRID,
     JOURNAL_ENTRY_RESOURCE_IRON_FOUNDATION,
     JOURNAL_ENTRY_RESOURCE_COPPER_NETWORK,
     JOURNAL_ENTRY_RESOURCE_MITHRIL_MYSTERIES,
@@ -208,6 +209,7 @@ public:
         double                              mine_multiplier;
         double                              convoy_speed_bonus;
         double                              convoy_raid_risk_modifier;
+        bool                                emergency_energy_conservation;
         ft_vector<ft_building_grid_cell_snapshot> grid;
         ft_vector<ft_building_instance_snapshot>  instances;
 
@@ -219,6 +221,7 @@ public:
               energy_consumption(0.0), support_energy(0.0),
               energy_deficit_pressure(0.0), mine_multiplier(1.0),
               convoy_speed_bonus(0.0), convoy_raid_risk_modifier(0.0),
+              emergency_energy_conservation(false),
               grid(), instances()
         {}
     };
@@ -265,6 +268,7 @@ public:
         int                                      status;
         double                                   time_remaining;
         double                                   time_limit;
+        double                                   time_remaining_ratio;
         bool                                     is_side_quest;
         bool                                     requires_choice;
         bool                                     awaiting_choice;
@@ -277,7 +281,7 @@ public:
 
         ft_quest_log_entry()
             : quest_id(0), name(), description(), status(QUEST_STATUS_LOCKED),
-              time_remaining(0.0), time_limit(0.0), is_side_quest(false),
+              time_remaining(0.0), time_limit(0.0), time_remaining_ratio(0.0), is_side_quest(false),
               requires_choice(false), awaiting_choice(false),
               objectives_completed(false), prerequisites_met(false),
               branch_requirement_met(true), selected_choice(QUEST_CHOICE_NONE),
@@ -291,11 +295,12 @@ public:
         ft_vector<ft_quest_log_entry>    side_quests;
         ft_vector<int>                   awaiting_choice_ids;
         ft_vector<ft_string>             recent_journal_entries;
+        ft_vector<ft_string>             recent_lore_entries;
         int                              active_main_quest_id;
 
         ft_quest_log_snapshot()
             : main_quests(), side_quests(), awaiting_choice_ids(),
-              recent_journal_entries(), active_main_quest_id(0)
+              recent_journal_entries(), recent_lore_entries(), active_main_quest_id(0)
         {}
     };
 
@@ -404,6 +409,7 @@ private:
     friend int verify_nanomaterial_resource_lore();
     friend int verify_fleet_management_snapshot();
     friend int verify_building_layout_snapshot();
+    friend int verify_late_campaign_raider_focus();
 
     ft_game_state                                 _state;
     ft_map<int, ft_sharedptr<ft_planet> >         _planets;
@@ -429,6 +435,7 @@ private:
     mutable bool                                 _journal_cache_dirty;
     ft_map<int, int>                             _resource_lore_cursors;
     int                                          _raider_lore_cursor;
+    int                                          _quick_completion_cursor;
     void                                        append_lore_entry(const ft_string &entry);
     void                                         unlock_journal_entry(int entry_id, const ft_string &text);
     bool                                         append_resource_lore_snippet(int resource_id, int origin_planet_id, int destination_planet_id);
@@ -437,9 +444,14 @@ private:
     bool                                         handle_celestial_barrens_salvage(const ft_supply_convoy &convoy);
     bool                                         handle_nebula_outpost_scan(const ft_supply_convoy &convoy);
     void                                         maybe_unlock_imperium_pressure(const ft_supply_route &route);
+    bool                                         update_energy_conservation_state(int planet_id, bool active,
+        bool assault_active, bool escalation_target, bool convoy_danger, bool threat_triggered);
+    void                                         log_energy_conservation_transition(int planet_id, bool active,
+        bool assault_active, bool escalation_target, bool convoy_danger, bool threat_triggered);
     int                                          _difficulty;
     double                                       _resource_multiplier;
-    double                                       _quest_time_scale;
+    double                                       _quest_time_scale_base;
+    double                                       _quest_time_scale_dynamic;
     double                                       _research_duration_scale;
     double                                       _assault_difficulty_multiplier;
     double                                       _ship_weapon_multiplier;
@@ -450,6 +462,8 @@ private:
     bool                                         _shield_support_unlocked;
     bool                                         _escape_pod_protocol;
     ft_map<int, bool>                            _escape_pod_rescued;
+    bool                                         _emergency_energy_protocol;
+    ft_map<int, bool>                            _energy_conservation_active;
     struct ft_supply_route
     {
         int     id;
@@ -586,6 +600,9 @@ private:
     void handle_quest_choice_resolution(int quest_id, int choice_id);
     void configure_difficulty(int difficulty);
     void update_combat_modifiers();
+    void apply_quest_time_scale();
+    void update_dynamic_quest_pressure();
+    void handle_quick_quest_completion(const ft_quest_definition &definition, double completion_ratio);
     double compute_auto_shield_generator_stability(int planet_id) const;
     int count_capital_ships_in_collection(const ft_map<int, ft_sharedptr<ft_fleet> > &collection) const;
     int count_capital_ships() const;
@@ -669,6 +686,8 @@ public:
     double get_planet_support_energy(int planet_id) const;
     double get_planet_mine_multiplier(int planet_id) const;
     double get_planet_energy_pressure(int planet_id) const;
+    bool update_planet_energy_conservation(int planet_id);
+    bool is_planet_energy_conservation_active(int planet_id) const noexcept;
     int get_planet_escort_rating(int planet_id) const;
     double get_planet_convoy_raid_risk_modifier(int planet_id) const;
     void ensure_planet_item_slot(int planet_id, int resource_id);
@@ -710,6 +729,7 @@ public:
     bool is_backend_online() const;
     long get_backend_retry_delay_ms_for_testing() const;
     long get_backend_next_retry_ms_for_testing() const;
+    double get_effective_quest_time_scale() const;
 
     const ft_vector<ft_string> &get_journal_entries() const;
     bool is_journal_entry_unlocked(int entry_id) const;

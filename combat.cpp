@@ -106,6 +106,7 @@ bool CombatManager::start_raider_assault(int planet_id, double difficulty,
         base_aggression = 1.8;
     encounter.raider_aggression = base_aggression;
     encounter.elapsed = 0.0;
+    encounter.auto_repair_drones_active = false;
     encounter.active = encounter.raider_fleet && encounter.raider_fleet->has_operational_ships();
     this->_encounters.insert(planet_id, encounter);
     return true;
@@ -140,6 +141,7 @@ bool CombatManager::set_support(int planet_id, bool sunflare_docked,
     entry->value.modifiers.sunflare_docked = sunflare_docked;
     entry->value.modifiers.repair_drones_active = repair_drones_active;
     entry->value.modifiers.shield_generator_online = shield_generator_online;
+    entry->value.auto_repair_drones_active = false;
     if (!sunflare_docked)
     {
         entry->value.sunflare_target_fleet_id = 0;
@@ -217,10 +219,12 @@ bool CombatManager::set_control_mode(int planet_id, int control_mode)
         entry->value.manual_focus_cooldown = 0.0;
         entry->value.tactical_pause_remaining = 0.0;
         entry->value.tactical_pause_cooldown = 0.0;
+        entry->value.auto_repair_drones_active = false;
     }
     else
     {
         entry->value.auto_generator_stability = 0.0;
+        entry->value.auto_repair_drones_active = false;
     }
     return true;
 }

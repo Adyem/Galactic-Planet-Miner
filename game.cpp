@@ -123,9 +123,11 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _journal_cache_dirty(false),
       _resource_lore_cursors(),
       _raider_lore_cursor(0),
+      _quick_completion_cursor(0),
       _difficulty(GAME_DIFFICULTY_STANDARD),
       _resource_multiplier(1.0),
-      _quest_time_scale(1.0),
+      _quest_time_scale_base(1.0),
+      _quest_time_scale_dynamic(1.0),
       _research_duration_scale(1.0),
       _assault_difficulty_multiplier(1.0),
       _ship_weapon_multiplier(1.0),
@@ -136,6 +138,8 @@ Game::Game(const ft_string &host, const ft_string &path, int difficulty)
       _shield_support_unlocked(false),
       _escape_pod_protocol(false),
       _escape_pod_rescued(),
+      _emergency_energy_protocol(false),
+      _energy_conservation_active(),
       _supply_routes(),
       _route_lookup(),
       _active_convoys(),
@@ -372,6 +376,45 @@ void Game::record_combat_victory_narrative(int planet_id)
         }
         return;
     }
+}
+
+void Game::handle_quick_quest_completion(const ft_quest_definition &definition, double completion_ratio)
+{
+    static const char *kQuickVoices[] = {
+        "Old Miner Joe",
+        "Professor Lumen",
+        "Farmer Daisy",
+        "Captain Blackthorne"
+    };
+    size_t voice_count = sizeof(kQuickVoices) / sizeof(kQuickVoices[0]);
+    const char *speaker = "Old Miner Joe";
+    if (voice_count > 0)
+    {
+        size_t index = static_cast<size_t>(this->_quick_completion_cursor % static_cast<int>(voice_count));
+        speaker = kQuickVoices[index];
+        this->_quick_completion_cursor += 1;
+        if (this->_quick_completion_cursor >= static_cast<int>(voice_count))
+            this->_quick_completion_cursor = 0;
+    }
+    int percent = static_cast<int>(completion_ratio * 100.0 + 0.5);
+    if (percent < 0)
+        percent = 0;
+    if (percent > 100)
+        percent = 100;
+    ft_string lore_entry(speaker);
+    lore_entry.append(ft_string(" praises the swift resolution of \""));
+    lore_entry.append(definition.name);
+    lore_entry.append(ft_string("\" with "));
+    lore_entry.append(ft_to_string(percent));
+    lore_entry.append(ft_string("% of the timer remaining."));
+    this->append_lore_entry(lore_entry);
+    if (!definition.is_side_quest)
+    {
+        this->ensure_planet_item_slot(PLANET_TERRA, ITEM_ENGINE_PART);
+        this->add_ore(PLANET_TERRA, ITEM_ENGINE_PART, 1);
+    }
+    else
+        this->add_ore(PLANET_TERRA, ORE_COPPER, 2);
 }
 
 void Game::update_combat(double milliseconds)
@@ -864,27 +907,73 @@ void Game::configure_difficulty(int difficulty)
     if (selected == GAME_DIFFICULTY_EASY)
     {
         this->_resource_multiplier = 1.25;
-        this->_quest_time_scale = 1.25;
+        this->_quest_time_scale_base = 1.25;
         this->_research_duration_scale = 0.85;
         this->_assault_difficulty_multiplier = 0.85;
     }
     else if (selected == GAME_DIFFICULTY_HARD)
     {
         this->_resource_multiplier = 0.85;
-        this->_quest_time_scale = 0.75;
+        this->_quest_time_scale_base = 0.75;
         this->_research_duration_scale = 1.2;
         this->_assault_difficulty_multiplier = 1.25;
     }
     else
     {
         this->_resource_multiplier = 1.0;
-        this->_quest_time_scale = 1.0;
+        this->_quest_time_scale_base = 1.0;
         this->_research_duration_scale = 1.0;
         this->_assault_difficulty_multiplier = 1.0;
     }
     this->_research.set_duration_scale(this->_research_duration_scale);
-    this->_quests.set_time_scale(this->_quest_time_scale);
+    this->update_dynamic_quest_pressure();
     this->update_combat_modifiers();
+}
+
+double Game::get_effective_quest_time_scale() const
+{
+    return this->_quest_time_scale_base * this->_quest_time_scale_dynamic;
+}
+
+void Game::apply_quest_time_scale()
+{
+    double effective = this->get_effective_quest_time_scale();
+    if (effective <= 0.0)
+        effective = 0.0001;
+    this->_quests.set_time_scale(effective);
+}
+
+void Game::update_dynamic_quest_pressure()
+{
+    ft_vector<Pair<int, ft_sharedptr<ft_quest_definition> > > definitions;
+    this->_quests.snapshot_definitions(definitions);
+    size_t count = definitions.size();
+    int completed_main = 0;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const ft_sharedptr<ft_quest_definition> &definition_ptr = definitions[i].value;
+        if (!definition_ptr)
+            continue;
+        const ft_quest_definition &definition = *definition_ptr;
+        if (definition.is_side_quest)
+            continue;
+        if (this->_quests.get_status(definition.id) == QUEST_STATUS_COMPLETED)
+            completed_main += 1;
+    }
+    int stage = completed_main - 1;
+    if (stage < 0)
+        stage = 0;
+    double reduction = 0.03 * static_cast<double>(stage);
+    if (reduction > 0.25)
+        reduction = 0.25;
+    double dynamic_scale = 1.0 - reduction;
+    if (dynamic_scale < 0.75)
+        dynamic_scale = 0.75;
+    if (dynamic_scale > 1.0)
+        dynamic_scale = 1.0;
+    if (ft_fabs(dynamic_scale - this->_quest_time_scale_dynamic) > 0.0001)
+        this->_quest_time_scale_dynamic = dynamic_scale;
+    this->apply_quest_time_scale();
 }
 
 void Game::update_combat_modifiers()
@@ -1093,6 +1182,135 @@ double Game::get_planet_energy_pressure(int planet_id) const
     if (!this->is_planet_unlocked(planet_id))
         return 0.0;
     return this->_buildings.get_planet_energy_pressure(planet_id);
+}
+
+bool Game::update_planet_energy_conservation(int planet_id)
+{
+    if (planet_id <= 0)
+        return this->update_energy_conservation_state(planet_id, false, false, false, false, false);
+    if (!this->_emergency_energy_protocol || !this->is_planet_unlocked(planet_id))
+        return this->update_energy_conservation_state(planet_id, false, false, false, false, false);
+
+    bool assault_active = this->_combat.is_assault_active(planet_id);
+    bool escalation_target = false;
+    bool convoy_danger = false;
+    bool threat_triggered = false;
+    bool active = assault_active;
+    double highest_threat = 0.0;
+
+    const double escalation_timer_threshold = 40.0;
+    const double threat_activation_threshold = 4.0;
+
+    ft_vector<Pair<RouteKey, ft_supply_route> > route_entries;
+    ft_map_snapshot(this->_supply_routes, route_entries);
+    for (size_t i = 0; i < route_entries.size(); ++i)
+    {
+        const ft_supply_route &route = route_entries[i].value;
+        if (route.origin_planet_id != planet_id && route.destination_planet_id != planet_id)
+            continue;
+        if (route.threat_level > highest_threat)
+            highest_threat = route.threat_level;
+        if (!escalation_target && route.escalation_planet_id == planet_id)
+        {
+            if (route.escalation_pending)
+                escalation_target = true;
+            else if (route.escalation_timer >= escalation_timer_threshold)
+                escalation_target = true;
+        }
+    }
+
+    if (!active)
+    {
+        ft_vector<Pair<int, ft_supply_convoy> > convoy_entries;
+        ft_map_snapshot(this->_active_convoys, convoy_entries);
+        for (size_t i = 0; i < convoy_entries.size(); ++i)
+        {
+            const ft_supply_convoy &convoy = convoy_entries[i].value;
+            if (convoy.origin_planet_id != planet_id && convoy.destination_planet_id != planet_id)
+                continue;
+            if (convoy.raided || convoy.destroyed || convoy.raid_meter >= 0.6)
+            {
+                convoy_danger = true;
+                break;
+            }
+        }
+    }
+
+    if (!active)
+    {
+        if (highest_threat >= threat_activation_threshold)
+        {
+            active = true;
+            threat_triggered = true;
+        }
+        else if (escalation_target)
+            active = true;
+        else if (convoy_danger && highest_threat >= 2.5)
+            active = true;
+    }
+
+    return this->update_energy_conservation_state(planet_id, active,
+        assault_active, escalation_target, convoy_danger, threat_triggered);
+}
+
+bool Game::update_energy_conservation_state(int planet_id, bool active,
+    bool assault_active, bool escalation_target, bool convoy_danger, bool threat_triggered)
+{
+    Pair<int, bool> *entry = this->_energy_conservation_active.find(planet_id);
+    bool previous = (entry != ft_nullptr && entry->value);
+    if (active)
+    {
+        if (entry == ft_nullptr)
+            this->_energy_conservation_active.insert(planet_id, true);
+        else
+            entry->value = true;
+    }
+    else if (entry != ft_nullptr)
+        this->_energy_conservation_active.remove(planet_id);
+
+    if (active != previous)
+        this->log_energy_conservation_transition(planet_id, active,
+            assault_active, escalation_target, convoy_danger, threat_triggered);
+    return active;
+}
+
+void Game::log_energy_conservation_transition(int planet_id, bool active,
+    bool assault_active, bool escalation_target, bool convoy_danger, bool threat_triggered)
+{
+    const char *planet_name = get_planet_story_name(planet_id);
+    if (planet_name == ft_nullptr)
+        planet_name = "Unknown Colony";
+    ft_string entry;
+    if (active)
+    {
+        entry = ft_string("Engineer cadres on ");
+        entry.append(ft_string(planet_name));
+        if (assault_active)
+            entry.append(ft_string(" divert factory power into shield grids as raider assault sirens wail."));
+        else if (escalation_target)
+            entry.append(ft_string(" follow Professor Lumen's warning, spinning down fabrication lines before the strike hits."));
+        else if (convoy_danger)
+            entry.append(ft_string(" freeze smelters while convoy controllers coordinate with escort wings to break the ambush."));
+        else if (threat_triggered)
+            entry.append(ft_string(" pivot into emergency conservation after proximity radars spike with raider chatter."));
+        else
+            entry.append(ft_string(" slip into emergency conservation drills to preserve defensive reserves."));
+    }
+    else
+    {
+        entry = ft_string("Operations crews on ");
+        entry.append(ft_string(planet_name));
+        entry.append(ft_string(" restore full production as emergency drills stand down."));
+    }
+    this->append_lore_entry(entry);
+}
+
+bool Game::is_planet_energy_conservation_active(int planet_id) const noexcept
+{
+    const Pair<int, bool> *entry = this->_energy_conservation_active.find(planet_id);
+    if (entry == ft_nullptr)
+        return false;
+    return entry->value;
 }
 
 int Game::get_planet_escort_rating(int planet_id) const
@@ -1553,6 +1771,11 @@ bool Game::load_campaign_from_save(const ft_string &planet_json, const ft_string
         this->_research.set_progress_state(research_state);
         this->_research_duration_scale = this->_research.get_duration_scale();
     }
+    if (this->_research.get_status(RESEARCH_EMERGENCY_ENERGY_CONSERVATION) == RESEARCH_STATUS_COMPLETED)
+        this->_emergency_energy_protocol = true;
+    else
+        this->_emergency_energy_protocol = false;
+    this->_energy_conservation_active.clear();
     if (achievement_snapshot_present)
         this->_achievements.set_progress_state(achievement_state);
     if (building_snapshot_present)

@@ -1687,6 +1687,48 @@ int verify_supply_route_escalation()
     return 1;
 }
 
+int verify_late_campaign_raider_focus()
+{
+    Game raid_focus_game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    raid_focus_game.ensure_planet_item_slot(PLANET_TERRA, ITEM_IRON_BAR);
+    raid_focus_game.ensure_planet_item_slot(PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR);
+    raid_focus_game.set_ore(PLANET_TERRA, ITEM_IRON_BAR, 200);
+    raid_focus_game.set_ore(PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR, 0);
+
+    int moved = raid_focus_game.transfer_ore(PLANET_TERRA, PLANET_NOCTARIS_PRIME, ITEM_IRON_BAR, 40);
+    FT_ASSERT(moved >= 40);
+
+    size_t convoy_count = raid_focus_game._active_convoys.size();
+    FT_ASSERT(convoy_count > 0);
+    Pair<int, Game::ft_supply_convoy> *entries = raid_focus_game._active_convoys.end();
+    entries -= convoy_count;
+    Game::ft_supply_convoy &convoy = entries[0].value;
+
+    convoy.origin_escort = 0;
+    convoy.destination_escort = 0;
+    convoy.escort_rating = 0;
+
+    double early_risk = raid_focus_game.calculate_convoy_raid_risk(convoy, false, false);
+    FT_ASSERT(early_risk > 0.0);
+
+    raid_focus_game._convoys_delivered_total = 48;
+    raid_focus_game._order_branch_assault_victories = 4;
+    raid_focus_game._rebellion_branch_assault_victories = 3;
+
+    double late_risk = raid_focus_game.calculate_convoy_raid_risk(convoy, false, false);
+    FT_ASSERT(late_risk > early_risk * 1.5);
+
+    convoy.origin_escort = 6;
+    convoy.destination_escort = 6;
+    double fortified_risk = raid_focus_game.calculate_convoy_raid_risk(convoy, false, false);
+
+    FT_ASSERT(fortified_risk < late_risk);
+    FT_ASSERT(fortified_risk <= early_risk * 1.1);
+
+    return 1;
+}
+
 int verify_escort_veterancy_progression()
 {
     Game veterancy_game(ft_string("127.0.0.1:8080"), ft_string("/"));

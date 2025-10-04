@@ -8,6 +8,7 @@
 #include "backend_client.hpp"
 #include "buildings.hpp"
 #include "game.hpp"
+#include "fleets.hpp"
 #include "game_test_scenarios.hpp"
 #include "planets.hpp"
 #include "research.hpp"
@@ -965,6 +966,75 @@ int verify_quest_log_snapshot()
     }
     FT_ASSERT(found_final_mandate);
 
+    for (size_t i = 0; i < snapshot.main_quests.size(); ++i)
+    {
+        const Game::ft_quest_log_entry &entry = snapshot.main_quests[i];
+        if (entry.time_limit > 0.0)
+        {
+            FT_ASSERT(entry.time_remaining_ratio >= 0.0);
+            FT_ASSERT(entry.time_remaining_ratio <= 1.0);
+        }
+    }
+    for (size_t i = 0; i < snapshot.side_quests.size(); ++i)
+    {
+        const Game::ft_quest_log_entry &entry = snapshot.side_quests[i];
+        if (entry.time_limit > 0.0)
+        {
+            FT_ASSERT(entry.time_remaining_ratio >= 0.0);
+            FT_ASSERT(entry.time_remaining_ratio <= 1.0);
+        }
+    }
+
+    FT_ASSERT(snapshot.recent_lore_entries.size() <= 5);
+    if (snapshot.recent_lore_entries.size() > 0)
+        FT_ASSERT(snapshot.recent_lore_entries.back().size() > 0);
+
+    return 1;
+}
+
+int verify_quick_quest_completion_bonus()
+{
+    Game game(ft_string("127.0.0.1:8080"), ft_string("/"));
+
+    double initial_scale = game.get_effective_quest_time_scale();
+    FT_ASSERT(initial_scale > 0.99 && initial_scale < 1.01);
+
+    game.set_ore(PLANET_TERRA, ORE_IRON, 40);
+    game.set_ore(PLANET_TERRA, ORE_COPPER, 30);
+    game.set_ore(PLANET_TERRA, ORE_COAL, 12);
+    game.tick(0.0);
+
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_INITIAL_SKIRMISHES));
+    FT_ASSERT_EQ(QUEST_DEFENSE_OF_TERRA, game.get_active_quest());
+
+    int parts_before = game.get_ore(PLANET_TERRA, ITEM_ENGINE_PART);
+    size_t lore_before = game.get_lore_log().size();
+
+    game.create_fleet(1);
+    int flagship = game.create_ship(1, SHIP_CAPITAL);
+    FT_ASSERT(flagship != 0);
+    game.set_ship_hp(1, flagship, 140);
+    game.create_fleet(2);
+    int shield = game.create_ship(2, SHIP_SHIELD);
+    FT_ASSERT(shield != 0);
+    game.set_ship_hp(2, shield, 90);
+
+    game.tick(0.0);
+
+    FT_ASSERT_EQ(QUEST_STATUS_COMPLETED, game.get_quest_status(QUEST_DEFENSE_OF_TERRA));
+
+    int parts_after = game.get_ore(PLANET_TERRA, ITEM_ENGINE_PART);
+    FT_ASSERT(parts_after >= parts_before + 1);
+
+    const ft_vector<ft_string> &lore_after = game.get_lore_log();
+    FT_ASSERT(lore_after.size() >= lore_before + 2);
+    const ft_string &quick_entry = lore_after.back();
+    FT_ASSERT(ft_strstr(quick_entry.c_str(), "praises the swift resolution") != ft_nullptr);
+
+    double scaled = game.get_effective_quest_time_scale();
+    FT_ASSERT(scaled < initial_scale);
+    FT_ASSERT(scaled > 0.94);
+
     return 1;
 }
 
@@ -1193,6 +1263,7 @@ int verify_building_layout_snapshot()
     FT_ASSERT(terra_snapshot->mine_multiplier >= 1.0);
     FT_ASSERT(terra_snapshot->convoy_speed_bonus < 0.0001);
     FT_ASSERT(terra_snapshot->convoy_raid_risk_modifier < 0.0001);
+    FT_ASSERT(!terra_snapshot->emergency_energy_conservation);
 
     FT_ASSERT_EQ(static_cast<size_t>(terra_snapshot->width * terra_snapshot->height),
                  terra_snapshot->grid.size());

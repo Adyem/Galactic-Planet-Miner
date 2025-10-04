@@ -80,6 +80,7 @@ void BuildingManager::clone_from(const BuildingManager &other)
         state.convoy_speed_bonus = source.convoy_speed_bonus;
         state.convoy_raid_risk_modifier = source.convoy_raid_risk_modifier;
         state.energy_deficit_pressure = source.energy_deficit_pressure;
+        state.emergency_conservation_active = source.emergency_conservation_active;
         state.next_instance_id = source.next_instance_id;
         state.grid.clear();
         size_t grid_size = source.grid.size();
@@ -716,6 +717,8 @@ double BuildingManager::get_planet_convoy_raid_risk_modifier(int planet_id) cons
 
 void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, double seconds)
 {
+    bool conserve_energy = game.update_planet_energy_conservation(state.planet_id);
+    state.emergency_conservation_active = conserve_energy;
     state.energy_deficit_pressure = 0.0;
     state.energy_consumption = state.support_energy;
     if (state.energy_consumption > state.energy_generation)
@@ -744,6 +747,12 @@ void BuildingManager::tick_planet(Game &game, ft_planet_build_state &state, doub
         if (definition->cycle_time <= 0.0 || definition->outputs.size() == 0)
             continue;
         bool can_run = true;
+        if (conserve_energy && definition->energy_cost > 0.0 && definition->outputs.size() > 0)
+        {
+            if (instance.progress > definition->cycle_time)
+                instance.progress = definition->cycle_time;
+            continue;
+        }
         if (definition->logistic_cost > 0)
         {
             if (state.logistic_usage + definition->logistic_cost > state.logistic_capacity)

@@ -74,6 +74,7 @@ void Game::get_building_layout_snapshot(ft_building_layout_snapshot &out) const
         planet_snapshot.mine_multiplier = state.mine_multiplier;
         planet_snapshot.convoy_speed_bonus = state.convoy_speed_bonus;
         planet_snapshot.convoy_raid_risk_modifier = state.convoy_raid_risk_modifier;
+        planet_snapshot.emergency_energy_conservation = state.emergency_conservation_active;
 
         size_t grid_size = state.grid.size();
         if (grid_size > 0 && state.width > 0)

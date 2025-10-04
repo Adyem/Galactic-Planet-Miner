@@ -108,6 +108,17 @@ struct ft_quest_progress
     ft_quest_progress() : status(QUEST_STATUS_LOCKED), time_remaining(0.0) {}
 };
 
+struct ft_quest_completion_info
+{
+    double  time_limit;
+    double  time_remaining;
+    bool    timed;
+
+    ft_quest_completion_info()
+        : time_limit(0.0), time_remaining(0.0), timed(false)
+    {}
+};
+
 struct ft_quest_context
 {
     ft_map<int, int> resource_totals;
@@ -136,6 +147,7 @@ private:
     ft_map<int, ft_sharedptr<ft_quest_definition> > _definitions;
     ft_map<int, ft_quest_progress>                  _progress;
     ft_map<int, int>                                _quest_choices;
+    ft_map<int, ft_quest_completion_info>           _recent_completion_info;
     double                                          _time_scale;
     ft_vector<int>                                  _side_quest_cycle;
     size_t                                          _side_cycle_index;
@@ -162,6 +174,8 @@ public:
     const ft_quest_definition *get_definition(int quest_id) const;
     bool make_choice(int quest_id, int choice_id);
     int get_choice(int quest_id) const;
+
+    bool consume_completion_info(int quest_id, ft_quest_completion_info &out);
 
     void snapshot_definitions(ft_vector<Pair<int, ft_sharedptr<ft_quest_definition> > > &out) const;
 };

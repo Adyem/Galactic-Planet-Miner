@@ -196,11 +196,22 @@ void CombatManager::apply_support(ft_combat_encounter &encounter,
     ft_vector<ft_sharedptr<ft_fleet> > &defenders,
     double seconds)
 {
-    if ((!encounter.modifiers.sunflare_docked && !encounter.modifiers.repair_drones_active)
-        || seconds <= 0.0)
+    bool auto_candidate = (encounter.control_mode == ASSAULT_CONTROL_AUTO);
+    if (!auto_candidate && !encounter.modifiers.sunflare_docked
+        && !encounter.modifiers.repair_drones_active)
+    {
+        encounter.auto_repair_drones_active = false;
+        return ;
+    }
+    if (seconds < 0.0)
+        seconds = 0.0;
+    if (seconds == 0.0 && !auto_candidate)
         return ;
     int sunflare_count = 0;
     int drone_count = 0;
+    int total_missing_hp = 0;
+    int total_max_hp = 0;
+    int severely_wounded = 0;
     ft_vector<int> ship_ids;
     size_t defender_count = defenders.size();
     for (size_t i = 0; i < defender_count; ++i)
@@ -243,11 +254,45 @@ void CombatManager::apply_support(ft_combat_encounter &encounter,
             }
             if (ship->type == SHIP_REPAIR_DRONE)
                 drone_count += 1;
+            if (ship->hp > 0 && ship->max_hp > 0)
+            {
+                total_max_hp += ship->max_hp;
+                int missing = ship->max_hp - ship->hp;
+                if (missing > 0)
+                {
+                    total_missing_hp += missing;
+                    double severe_threshold = static_cast<double>(ship->max_hp) * 0.75;
+                    if (static_cast<double>(ship->hp) < severe_threshold)
+                        severely_wounded += 1;
+                }
+            }
         }
     }
     double shield_rate = 0.0;
     double targeted_rate = 0.0;
     double repair_rate = 0.0;
+    bool auto_repair = false;
+    if (auto_candidate && drone_count > 0)
+    {
+        if (total_missing_hp > 0)
+        {
+            if (severely_wounded > 0)
+                auto_repair = true;
+            else if (total_missing_hp >= 12)
+                auto_repair = true;
+            else if (total_max_hp > 0)
+            {
+                double missing_ratio = static_cast<double>(total_missing_hp) / static_cast<double>(total_max_hp);
+                if (missing_ratio >= 0.03)
+                    auto_repair = true;
+            }
+            if (!auto_repair && encounter.elapsed > 20.0)
+                auto_repair = true;
+        }
+    }
+    if (!auto_candidate)
+        auto_repair = false;
+    encounter.auto_repair_drones_active = auto_repair;
     if (encounter.modifiers.sunflare_docked && sunflare_count > 0)
     {
         double sunflare_rate = 8.0 * static_cast<double>(sunflare_count);
@@ -280,7 +325,10 @@ void CombatManager::apply_support(ft_combat_encounter &encounter,
             shield_rate += throughput + amplification;
         }
     }
-    if (encounter.modifiers.repair_drones_active && drone_count > 0)
+    bool repair_enabled = encounter.modifiers.repair_drones_active;
+    if (!repair_enabled && auto_repair)
+        repair_enabled = true;
+    if (repair_enabled && drone_count > 0)
         repair_rate = 10.0 * static_cast<double>(drone_count);
     if (targeted_rate > 0.0)
         encounter.sunflare_focus_pool += targeted_rate * seconds;

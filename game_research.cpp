@@ -90,7 +90,18 @@ void Game::handle_research_completion(int research_id)
     else if (research_id == RESEARCH_FASTER_CRAFTING)
         this->_buildings.set_crafting_speed_multiplier(1.25);
     else if (research_id == RESEARCH_EMERGENCY_ENERGY_CONSERVATION)
+    {
         this->_buildings.set_global_energy_multiplier(0.9);
+        this->_emergency_energy_protocol = true;
+        this->_energy_conservation_active.clear();
+        if (!this->is_journal_entry_unlocked(JOURNAL_ENTRY_LORE_EMERGENCY_GRID))
+        {
+            ft_string journal_text("Journal – Emergency Grid Drills: Professor Lumen coordinates with Old Miner Joe to stage system-wide power reroutes, ensuring colonies can dump every spare watt into defenses the moment raider telemetry spikes.");
+            this->unlock_journal_entry(JOURNAL_ENTRY_LORE_EMERGENCY_GRID, journal_text);
+        }
+        ft_string lore_entry("Professor Lumen schedules emergency conservation drills so generators can flood planetary shields the instant raids flare.");
+        this->append_lore_entry(lore_entry);
+    }
     else if (research_id == RESEARCH_SHIELD_TECHNOLOGY)
         this->_shield_support_unlocked = true;
     else if (research_id == RESEARCH_REPAIR_DRONE_TECHNOLOGY)
