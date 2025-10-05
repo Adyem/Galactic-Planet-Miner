@@ -837,6 +837,7 @@ public:
     int get_lore_panel_anchor() const { return this->_lore_panel_anchor; }
     void set_combat_speed_multiplier(double multiplier);
     double get_combat_speed_multiplier() const { return this->_combat_speed_multiplier; }
+    void apply_preferences(const PlayerProfilePreferences &preferences);
 
     const ft_vector<ft_string> &get_journal_entries() const;
     bool is_journal_entry_unlocked(int entry_id) const;

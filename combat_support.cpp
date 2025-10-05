@@ -1,4 +1,5 @@
 #include "combat.hpp"
+#include "libft_math_bridge.hpp"
 
 namespace
 {
@@ -205,7 +206,8 @@ void CombatManager::apply_support(ft_combat_encounter &encounter,
     }
     if (seconds < 0.0)
         seconds = 0.0;
-    if (seconds == 0.0 && !auto_candidate)
+    const double seconds_epsilon = 1e-6;
+    if (math_fabs(seconds) <= seconds_epsilon && !auto_candidate)
         return ;
     int sunflare_count = 0;
     int drone_count = 0;
