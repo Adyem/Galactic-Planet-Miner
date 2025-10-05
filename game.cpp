@@ -4,6 +4,7 @@
 #include "libft/Template/set.hpp"
 #include "libft/Math/math.hpp"
 #include "ft_map_snapshot.hpp"
+#include "libft_math_bridge.hpp"
 
 namespace
 {
@@ -963,6 +964,11 @@ void Game::set_combat_speed_multiplier(double multiplier)
     this->_combat_speed_multiplier = clamped;
 }
 
+void Game::apply_preferences(const PlayerProfilePreferences &preferences)
+{
+    this->configure_from_preferences(preferences);
+}
+
 void Game::configure_from_preferences(const PlayerProfilePreferences &preferences)
 {
     double ui_scale = static_cast<double>(preferences.ui_scale_percent);
@@ -1019,7 +1025,7 @@ void Game::update_dynamic_quest_pressure()
         dynamic_scale = 0.75;
     if (dynamic_scale > 1.0)
         dynamic_scale = 1.0;
-    if (ft_fabs(dynamic_scale - this->_quest_time_scale_dynamic) > 0.0001)
+    if (math_fabs(dynamic_scale - this->_quest_time_scale_dynamic) > 0.0001)
         this->_quest_time_scale_dynamic = dynamic_scale;
     this->apply_quest_time_scale();
 }

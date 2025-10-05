@@ -1146,8 +1146,9 @@ int verify_quest_log_snapshot()
     }
 
     FT_ASSERT(snapshot.recent_lore_entries.size() <= 5);
-    if (snapshot.recent_lore_entries.size() > 0)
-        FT_ASSERT(snapshot.recent_lore_entries.back().size() > 0);
+    size_t recent_lore_size = snapshot.recent_lore_entries.size();
+    if (recent_lore_size > 0)
+        FT_ASSERT(snapshot.recent_lore_entries[recent_lore_size - 1].size() > 0);
 
     FT_ASSERT(game.resolve_quest_choice(QUEST_ORDER_FINAL_VERDICT, QUEST_CHOICE_ORDER_TRIAL_REBELS));
     game.tick(0.0);
@@ -1199,7 +1200,7 @@ int verify_player_preference_application()
     preferences.ui_scale_percent = 135U;
     preferences.combat_speed_percent = 180U;
     preferences.lore_panel_anchor = PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
-    game.configure_from_preferences(preferences);
+    game.apply_preferences(preferences);
 
     double scale_delta = math_fabs(game.get_ui_scale() - 1.35);
     FT_ASSERT(scale_delta < 0.0001);
@@ -1224,7 +1225,7 @@ int verify_player_preference_application()
     preferences.ui_scale_percent = 300U;
     preferences.combat_speed_percent = 10U;
     preferences.lore_panel_anchor = 0U;
-    game.configure_from_preferences(preferences);
+    game.apply_preferences(preferences);
     FT_ASSERT(game.get_ui_scale() <= static_cast<double>(PLAYER_PROFILE_UI_SCALE_MAX_PERCENT) / 100.0 + 0.0001);
     FT_ASSERT(game.get_combat_speed_multiplier() >= static_cast<double>(PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT) / 100.0 - 0.0001);
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT, game.get_lore_panel_anchor());
@@ -1268,7 +1269,7 @@ int verify_quick_quest_completion_bonus()
 
     const ft_vector<ft_string> &lore_after = game.get_lore_log();
     FT_ASSERT(lore_after.size() >= lore_before + 2);
-    const ft_string &quick_entry = lore_after.back();
+    const ft_string &quick_entry = lore_after[lore_after.size() - 1];
     FT_ASSERT(ft_strstr(quick_entry.c_str(), "praises the swift resolution") != ft_nullptr);
 
     double scaled = game.get_effective_quest_time_scale();

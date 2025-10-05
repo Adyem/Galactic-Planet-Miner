@@ -898,7 +898,7 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
         spare_option.is_selected = (critical_decision_choice == QUEST_CHOICE_SPARE_BLACKTHORNE);
         decision_snapshot.options.push_back(spare_option);
 
-        out.critical_choices.push_back(decision_snapshot);
+        out.critical_choices.push_back(ft_move(decision_snapshot));
     }
 
     int verdict_status = this->_quests.get_status(QUEST_ORDER_FINAL_VERDICT);
@@ -928,10 +928,13 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
         trial_option.is_selected = (verdict_choice == QUEST_CHOICE_ORDER_TRIAL_REBELS);
         verdict_snapshot.options.push_back(trial_option);
 
-        out.critical_choices.push_back(verdict_snapshot);
+        out.critical_choices.push_back(ft_move(verdict_snapshot));
     }
 
-    Game::ft_story_epilogue_snapshot epilogue;
+    Game::ft_story_epilogue_snapshot &epilogue = out.epilogue;
+    epilogue.is_available = false;
+    epilogue.title = ft_string();
+    epilogue.paragraphs.clear();
     int critical_choice = this->_quests.get_choice(QUEST_CRITICAL_DECISION);
     bool spared_blackthorne = (critical_choice == QUEST_CHOICE_SPARE_BLACKTHORNE);
     bool executed_blackthorne = (critical_choice == QUEST_CHOICE_EXECUTE_BLACKTHORNE);
@@ -948,13 +951,13 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
         epilogue.title = ft_string("Epilogue: Dominion's Shadow");
         ft_string paragraph("Dominion fleets sweep the trade lanes, restoring stability while fear quietly settles over every habitat.");
         epilogue.paragraphs.push_back(paragraph);
-        int verdict_choice = this->_quests.get_choice(QUEST_ORDER_FINAL_VERDICT);
-        if (verdict_choice == QUEST_CHOICE_ORDER_EXECUTE_REBELS)
+        int final_verdict_choice = this->_quests.get_choice(QUEST_ORDER_FINAL_VERDICT);
+        if (final_verdict_choice == QUEST_CHOICE_ORDER_EXECUTE_REBELS)
         {
             ft_string martyr("Captain Blackthorne's execution cements his legacy as a martyr; underground cells whisper his name even as public purges broadcast the price of defiance.");
             epilogue.paragraphs.push_back(martyr);
         }
-        else if (verdict_choice == QUEST_CHOICE_ORDER_TRIAL_REBELS)
+        else if (final_verdict_choice == QUEST_CHOICE_ORDER_TRIAL_REBELS)
         {
             ft_string reform("Public trials promise reform, yet colonists debate whether contrition can erase the rot that killed Blackthorne and scarred the frontier.");
             epilogue.paragraphs.push_back(reform);
@@ -1010,7 +1013,6 @@ void Game::get_quest_log_snapshot(ft_quest_log_snapshot &out) const
             epilogue.paragraphs.push_back(cost);
         }
     }
-    out.epilogue = epilogue;
 
     const ft_vector<ft_string> &journal_entries = this->get_journal_entries();
     size_t journal_count = journal_entries.size();

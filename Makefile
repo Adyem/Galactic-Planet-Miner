@@ -142,7 +142,19 @@ TEST_OBJS   = $(SRC_TEST:%.cpp=$(OBJ_DIR)/%.o)
 
 all: build test
 
-build: check_sdl dirs $(TARGET)
+initialize:
+	git submodule update --init --recursive libft
+
+check_libft_initialized:
+	@status=$$(git submodule status --recursive libft 2>/dev/null || echo "__missing__"); \
+	if [ "$$status" = "__missing__" ] || \
+	   printf "%s" "$$status" | grep -Eq '^[+-U]' || \
+	   [ ! -f "$(LIBFT_DIR)/Makefile" ]; then \
+		printf "Error: libft submodule is not initialized. Run 'make initialize' first.\n" >&2; \
+		exit 1; \
+	fi
+
+build: check_sdl check_libft_initialized dirs $(TARGET)
 
 dirs:
 	-$(MKDIR) $(OBJ_DIR)
@@ -158,10 +170,10 @@ $(OBJ_DIR)/%.o: %.cpp
 $(TARGET): $(LIBFT) $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
 
-test: $(LIBFT) $(TEST_OBJS)
+test: check_libft_initialized $(LIBFT) $(TEST_OBJS)
 	$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
 
-$(LIBFT):
+$(LIBFT): check_libft_initialized
 	$(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"
 
 clean:
@@ -174,9 +186,10 @@ re: fclean all
 
 
 check_sdl:
-	@if ! pkg-config --exists sdl2 SDL2_ttf; then \
-		printf "Error: SDL2 development libraries (SDL2 and SDL2_ttf) not found.\n" >&2; \
-		printf "Please install the SDL2 and SDL2_ttf development packages for your platform and ensure pkg-config can locate them.\n" >&2; \
-		exit 1; \
+	@if pkg-config --exists sdl2 SDL2_ttf; then \
+		printf "Info: SDL2 development libraries detected.\n"; \
+	else \
+		printf "Warning: SDL2 development libraries (SDL2 and SDL2_ttf) not found.\n" >&2; \
+		printf "         Continuing without SDL2 UI support.\n" >&2; \
 	fi
-.PHONY: all build clean fclean re debug dirs test check_sdl
+.PHONY: all build clean fclean re debug dirs test check_sdl initialize check_libft_initialized
