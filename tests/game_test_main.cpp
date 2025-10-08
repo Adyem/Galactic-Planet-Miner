@@ -109,6 +109,12 @@ int main()
     if (!verify_main_menu_save_alerts())
         return 0;
 
+    if (!verify_resume_latest_save_resolution())
+        return 0;
+
+    if (!verify_main_menu_campaign_launch_guard())
+        return 0;
+
     if (!verify_main_menu_patch_notes_split())
         return 0;
 
@@ -292,6 +298,8 @@ int main()
     if (!verify_new_game_save_name_rules())
         return 0;
     if (!verify_new_game_save_creation())
+        return 0;
+    if (!verify_new_game_save_launch_readiness())
         return 0;
     if (!verify_player_profile_save())
         return 0;
