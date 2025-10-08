@@ -84,6 +84,8 @@ int verify_main_menu_connectivity_indicator();
 int verify_main_menu_connectivity_failure_logging();
 int verify_main_menu_build_label();
 int verify_main_menu_save_alerts();
+int verify_resume_latest_save_resolution();
+int verify_main_menu_campaign_launch_guard();
 int verify_main_menu_patch_notes_split();
 int verify_settings_flow_helpers();
 int verify_load_flow_save_listing();
@@ -123,6 +125,7 @@ int verify_campaign_rejects_invalid_save();
 int verify_buildings_unchanged_on_failed_load();
 int verify_new_game_save_name_rules();
 int verify_new_game_save_creation();
+int verify_new_game_save_launch_readiness();
 int verify_player_profile_save();
 
 #endif

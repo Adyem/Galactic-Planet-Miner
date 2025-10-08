@@ -61,9 +61,11 @@ namespace
         return full_path;
     }
 
-    bool create_new_game_save(const ft_string &commander_name, const ft_string &save_name, ft_string &out_error) noexcept
+    bool create_new_game_save(const ft_string &commander_name, const ft_string &save_name, ft_string &out_error,
+        ft_string &out_save_path) noexcept
     {
         out_error.clear();
+        out_save_path.clear();
 
         ft_string full_path = build_save_file_path(commander_name, save_name);
         if (full_path.empty())
@@ -91,6 +93,7 @@ namespace
             return false;
         }
 
+        out_save_path = full_path;
         return true;
     }
 
@@ -262,15 +265,23 @@ namespace new_game_flow_testing
 
     bool create_save_file(const ft_string &commander_name, const ft_string &save_name, ft_string &out_error) noexcept
     {
-        return create_new_game_save(commander_name, save_name, out_error);
+        ft_string created_path;
+        return create_new_game_save(commander_name, save_name, out_error, created_path);
+    }
+
+    bool create_save_file_with_path(const ft_string &commander_name, const ft_string &save_name,
+        ft_string &out_save_path, ft_string &out_error) noexcept
+    {
+        return create_new_game_save(commander_name, save_name, out_error, out_save_path);
     }
 }
 
 bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
-    const ft_string &commander_name, bool &out_quit_requested)
+    const ft_string &commander_name, ft_string &out_created_save_path, bool &out_quit_requested)
 {
 #if GALACTIC_HAVE_SDL2
     out_quit_requested = false;
+    out_created_save_path.clear();
     if (window == ft_nullptr || renderer == ft_nullptr)
         return false;
 
@@ -279,6 +290,7 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
     bool status_is_error = false;
     bool running = true;
     bool created = false;
+    ft_string created_save_path;
 
     SDL_StartTextInput();
 
@@ -308,7 +320,7 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
                     else
                     {
                         ft_string error_message;
-                        if (create_new_game_save(commander_name, save_name, error_message))
+                        if (create_new_game_save(commander_name, save_name, error_message, created_save_path))
                         {
                             created = true;
                         }
@@ -380,6 +392,7 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
     if (!created)
         return false;
 
+    out_created_save_path = created_save_path;
     return true;
 #else
     (void)window;
@@ -387,6 +400,7 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
     (void)title_font;
     (void)menu_font;
     (void)commander_name;
+    (void)out_created_save_path;
     out_quit_requested = true;
     return false;
 #endif

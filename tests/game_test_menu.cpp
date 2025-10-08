@@ -15,17 +15,23 @@ int verify_menu_preference_snapshot()
     FT_ASSERT_EQ(ft_string("Cassiopeia"), defaults.commander_name);
     FT_ASSERT_EQ(1280U, defaults.window_width);
     FT_ASSERT_EQ(720U, defaults.window_height);
+    FT_ASSERT_EQ(100U, defaults.music_volume_percent);
+    FT_ASSERT_EQ(100U, defaults.effects_volume_percent);
 
     PlayerProfilePreferences custom = profile_preferences_testing::build_window_preference_snapshot(
         ft_string("Vesta"), 1920U, 1080U);
     FT_ASSERT_EQ(ft_string("Vesta"), custom.commander_name);
     FT_ASSERT_EQ(1920U, custom.window_width);
     FT_ASSERT_EQ(1080U, custom.window_height);
+    FT_ASSERT_EQ(100U, custom.music_volume_percent);
+    FT_ASSERT_EQ(100U, custom.effects_volume_percent);
 
     PlayerProfilePreferences mixed = profile_preferences_testing::build_window_preference_snapshot(
         ft_string("Vega"), 2048U, 0U);
     FT_ASSERT_EQ(2048U, mixed.window_width);
     FT_ASSERT_EQ(720U, mixed.window_height);
+    FT_ASSERT_EQ(100U, mixed.music_volume_percent);
+    FT_ASSERT_EQ(100U, mixed.effects_volume_percent);
 
     return 1;
 }
@@ -33,36 +39,40 @@ int verify_menu_preference_snapshot()
 int verify_main_menu_descriptions()
 {
     ft_vector<ft_menu_item> items = build_main_menu_items();
-    FT_ASSERT_EQ(7U, items.size());
+    FT_ASSERT_EQ(8U, items.size());
 
     FT_ASSERT_EQ(ft_string("new_game"), items[0].identifier);
     FT_ASSERT(items[0].enabled);
     FT_ASSERT(!items[0].description.empty());
 
-    FT_ASSERT_EQ(ft_string("load"), items[1].identifier);
-    FT_ASSERT(items[1].enabled);
-    FT_ASSERT_EQ(ft_string("Review existing saves and prepare to resume a prior campaign."), items[1].description);
+    FT_ASSERT_EQ(ft_string("resume"), items[1].identifier);
+    FT_ASSERT(!items[1].enabled);
+    FT_ASSERT_EQ(ft_string("Jump back into your latest campaign save once one is available."), items[1].description);
 
-    FT_ASSERT_EQ(ft_string("settings"), items[2].identifier);
+    FT_ASSERT_EQ(ft_string("load"), items[2].identifier);
     FT_ASSERT(items[2].enabled);
-    FT_ASSERT_EQ(ft_string("Adjust gameplay, interface scale, and menu layout preferences for this commander."),
-        items[2].description);
+    FT_ASSERT_EQ(ft_string("Review existing saves and prepare to resume a prior campaign."), items[2].description);
 
-    FT_ASSERT_EQ(ft_string("swap_profile"), items[3].identifier);
+    FT_ASSERT_EQ(ft_string("settings"), items[3].identifier);
     FT_ASSERT(items[3].enabled);
-    FT_ASSERT(!items[3].description.empty());
+    FT_ASSERT_EQ(ft_string("Adjust gameplay, interface scale, and menu layout preferences for this commander."),
+        items[3].description);
 
-    FT_ASSERT_EQ(ft_string("changelog"), items[4].identifier);
+    FT_ASSERT_EQ(ft_string("swap_profile"), items[4].identifier);
     FT_ASSERT(items[4].enabled);
     FT_ASSERT(!items[4].description.empty());
 
-    FT_ASSERT_EQ(ft_string("manual"), items[5].identifier);
+    FT_ASSERT_EQ(ft_string("changelog"), items[5].identifier);
     FT_ASSERT(items[5].enabled);
     FT_ASSERT(!items[5].description.empty());
 
-    FT_ASSERT_EQ(ft_string("exit"), items[6].identifier);
+    FT_ASSERT_EQ(ft_string("manual"), items[6].identifier);
     FT_ASSERT(items[6].enabled);
     FT_ASSERT(!items[6].description.empty());
+
+    FT_ASSERT_EQ(ft_string("exit"), items[7].identifier);
+    FT_ASSERT(items[7].enabled);
+    FT_ASSERT(!items[7].description.empty());
 
     return 1;
 }
@@ -77,7 +87,7 @@ int verify_main_menu_description_focus()
     FT_ASSERT_EQ(ft_string("Begin a fresh campaign for the active commander."), description);
 
     const ft_vector<ft_menu_item> &items = menu.get_items();
-    const ft_menu_item           &load_item = items[1];
+    const ft_menu_item           &load_item = items[2];
 
     ft_mouse_state hover_state;
     hover_state.moved = true;
@@ -116,9 +126,9 @@ int verify_main_menu_navigation_hints()
     FT_ASSERT_EQ(ft_string("Enter / A: Select New Game  |  Arrow Keys / D-Pad: Navigate  |  Esc / B: Back"), hint);
 
     const ft_vector<ft_menu_item> &items = menu.get_items();
-    FT_ASSERT_EQ(7U, items.size());
+    FT_ASSERT_EQ(8U, items.size());
 
-    const ft_menu_item &load_item = items[1];
+    const ft_menu_item &load_item = items[2];
 
     ft_mouse_state hover_state;
     hover_state.moved = true;
@@ -263,6 +273,20 @@ int verify_settings_flow_helpers()
     FT_ASSERT_EQ(145U, settings_flow_testing::decrement_combat_speed(150U));
     FT_ASSERT_EQ(50U, settings_flow_testing::decrement_combat_speed(45U));
 
+    FT_ASSERT_EQ(0U, settings_flow_testing::clamp_music_volume(0U));
+    FT_ASSERT_EQ(100U, settings_flow_testing::clamp_music_volume(180U));
+    FT_ASSERT_EQ(55U, settings_flow_testing::increment_music_volume(50U));
+    FT_ASSERT_EQ(100U, settings_flow_testing::increment_music_volume(100U));
+    FT_ASSERT_EQ(45U, settings_flow_testing::decrement_music_volume(50U));
+    FT_ASSERT_EQ(0U, settings_flow_testing::decrement_music_volume(3U));
+
+    FT_ASSERT_EQ(0U, settings_flow_testing::clamp_effects_volume(0U));
+    FT_ASSERT_EQ(100U, settings_flow_testing::clamp_effects_volume(260U));
+    FT_ASSERT_EQ(65U, settings_flow_testing::increment_effects_volume(60U));
+    FT_ASSERT_EQ(100U, settings_flow_testing::increment_effects_volume(100U));
+    FT_ASSERT_EQ(60U, settings_flow_testing::decrement_effects_volume(65U));
+    FT_ASSERT_EQ(0U, settings_flow_testing::decrement_effects_volume(1U));
+
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT,
         settings_flow_testing::toggle_lore_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT));
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT,
@@ -270,6 +294,8 @@ int verify_settings_flow_helpers()
 
     FT_ASSERT_EQ(ft_string("UI Scale: 110%"), settings_flow_testing::format_ui_scale_option(110U));
     FT_ASSERT_EQ(ft_string("Combat Speed: 95%"), settings_flow_testing::format_combat_speed_option(95U));
+    FT_ASSERT_EQ(ft_string("Music Volume: 80%"), settings_flow_testing::format_music_volume_option(80U));
+    FT_ASSERT_EQ(ft_string("Effects Volume: 40%"), settings_flow_testing::format_effects_volume_option(40U));
     FT_ASSERT_EQ(ft_string("Lore Panel Anchor: Right"),
         settings_flow_testing::format_lore_anchor_option(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT));
 
@@ -481,6 +507,94 @@ int verify_main_menu_save_alerts()
     FT_ASSERT(audit_save_directory_for_errors(commander, audit_errors));
     FT_ASSERT_EQ(1U, audit_errors.size());
     FT_ASSERT(ft_strstr(audit_errors[0].c_str(), "corrupt") != ft_nullptr);
+
+    return 1;
+}
+
+int verify_resume_latest_save_resolution()
+{
+    long timestamp = ft_time_ms();
+    ft_string commander("ResumeQuickEntry_");
+    commander.append(ft_to_string(static_cast<int>(timestamp % 1000000L)));
+
+    PlayerProfilePreferences preferences;
+    preferences.commander_name = commander;
+    FT_ASSERT(player_profile_save(preferences));
+
+    ft_string error;
+    FT_ASSERT(new_game_flow_testing::create_save_file(commander, ft_string("alpha"), error));
+    FT_ASSERT(error.empty());
+    time_sleep_ms(50);
+
+    FT_ASSERT(new_game_flow_testing::create_save_file(commander, ft_string("beta"), error));
+    FT_ASSERT(error.empty());
+
+    ft_string beta_path = load_game_flow_testing::resolve_save_file_path(commander, ft_string("beta"));
+    FT_ASSERT(!beta_path.empty());
+    ft_ofstream beta_stream;
+    FT_ASSERT_EQ(0, beta_stream.open(beta_path.c_str()));
+    ft_string beta_contents("{\n");
+    beta_contents.append("  \"metadata\": {\"version\": 1, \"save_type\": \"quicksave\"},\n");
+    beta_contents.append("  \"player\": {\"commander_name\": \"Resume Tester\", \"starting_planet_id\": 2, \"commander_level\": 9},\n");
+    beta_contents.append("  \"campaign\": {\"day\": 11}\n");
+    beta_contents.append("}\n");
+    FT_ASSERT(beta_stream.write(beta_contents.c_str()) >= 0);
+    beta_stream.close();
+
+    time_sleep_ms(50);
+
+    FT_ASSERT(new_game_flow_testing::create_save_file(commander, ft_string("corrupt"), error));
+    FT_ASSERT(error.empty());
+
+    ft_string corrupt_path = load_game_flow_testing::resolve_save_file_path(commander, ft_string("corrupt"));
+    FT_ASSERT(!corrupt_path.empty());
+    ft_ofstream corrupt_stream;
+    FT_ASSERT_EQ(0, corrupt_stream.open(corrupt_path.c_str()));
+    ft_string corrupt_contents("{\"metadata\":\n");
+    FT_ASSERT(corrupt_stream.write(corrupt_contents.c_str()) >= 0);
+    corrupt_stream.close();
+
+    ft_string slot_name;
+    ft_string save_path;
+    ft_string metadata_label;
+    bool      metadata_available = false;
+    FT_ASSERT(resolve_latest_resume_slot(commander, slot_name, save_path, metadata_label, metadata_available));
+    FT_ASSERT_EQ(ft_string("beta"), slot_name);
+    FT_ASSERT_EQ(beta_path, save_path);
+    FT_ASSERT(metadata_available);
+    FT_ASSERT_EQ(ft_string("Day 11 • Level 9"), metadata_label);
+
+    ft_vector<ft_string> errors;
+    FT_ASSERT(audit_save_directory_for_errors(commander, errors));
+    FT_ASSERT_EQ(1U, errors.size());
+
+    return 1;
+}
+
+int verify_main_menu_campaign_launch_guard()
+{
+    FT_ASSERT(!main_menu_can_launch_campaign(ft_string()));
+
+    ft_string invalid_path("data/saves/does-not-exist.json");
+    FT_ASSERT(!main_menu_can_launch_campaign(invalid_path));
+
+    long timestamp = ft_time_ms();
+    ft_string commander("LaunchGuard_");
+    commander.append(ft_to_string(static_cast<int>(timestamp % 1000000L)));
+
+    PlayerProfilePreferences preferences;
+    preferences.commander_name = commander;
+    FT_ASSERT(player_profile_save(preferences));
+
+    ft_string error;
+    FT_ASSERT(new_game_flow_testing::create_save_file(commander, ft_string("launchslot"), error));
+    FT_ASSERT(error.empty());
+
+    ft_string save_path = load_game_flow_testing::resolve_save_file_path(commander, ft_string("launchslot"));
+    FT_ASSERT(!save_path.empty());
+    FT_ASSERT(main_menu_can_launch_campaign(save_path));
+
+    FT_ASSERT(player_profile_delete(commander));
 
     return 1;
 }

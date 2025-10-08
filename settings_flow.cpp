@@ -11,6 +11,7 @@ namespace
 {
     const unsigned int kUiScaleStep = 5U;
     const unsigned int kCombatSpeedStep = 5U;
+    const unsigned int kVolumeStep = 5U;
 
     unsigned int clamp_ui_scale(unsigned int value) noexcept
     {
@@ -27,6 +28,15 @@ namespace
             return PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT;
         if (value > PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT)
             return PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT;
+        return value;
+    }
+
+    unsigned int clamp_volume(unsigned int value) noexcept
+    {
+        if (value < PLAYER_PROFILE_VOLUME_MIN_PERCENT)
+            return PLAYER_PROFILE_VOLUME_MIN_PERCENT;
+        if (value > PLAYER_PROFILE_VOLUME_MAX_PERCENT)
+            return PLAYER_PROFILE_VOLUME_MAX_PERCENT;
         return value;
     }
 
@@ -74,6 +84,28 @@ namespace
         return clamp_combat_speed(candidate);
     }
 
+    unsigned int increment_volume(unsigned int value) noexcept
+    {
+        if (value >= PLAYER_PROFILE_VOLUME_MAX_PERCENT)
+            return PLAYER_PROFILE_VOLUME_MAX_PERCENT;
+        unsigned int candidate = value + kVolumeStep;
+        if (candidate < value)
+            return PLAYER_PROFILE_VOLUME_MAX_PERCENT;
+        return clamp_volume(candidate);
+    }
+
+    unsigned int decrement_volume(unsigned int value) noexcept
+    {
+        if (value <= PLAYER_PROFILE_VOLUME_MIN_PERCENT)
+            return PLAYER_PROFILE_VOLUME_MIN_PERCENT;
+        if (value <= kVolumeStep)
+            return PLAYER_PROFILE_VOLUME_MIN_PERCENT;
+        unsigned int candidate = value - kVolumeStep;
+        if (candidate > value)
+            return PLAYER_PROFILE_VOLUME_MIN_PERCENT;
+        return clamp_volume(candidate);
+    }
+
     unsigned int toggle_lore_anchor(unsigned int anchor) noexcept
     {
         if (anchor == PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT)
@@ -92,6 +124,22 @@ namespace
     ft_string format_combat_speed_label(unsigned int value)
     {
         ft_string label("Combat Speed: ");
+        label.append(ft_to_string(static_cast<int>(value)));
+        label.append("%");
+        return label;
+    }
+
+    ft_string format_music_volume_label(unsigned int value)
+    {
+        ft_string label("Music Volume: ");
+        label.append(ft_to_string(static_cast<int>(value)));
+        label.append("%");
+        return label;
+    }
+
+    ft_string format_effects_volume_label(unsigned int value)
+    {
+        ft_string label("Effects Volume: ");
         label.append(ft_to_string(static_cast<int>(value)));
         label.append("%");
         return label;
@@ -116,6 +164,10 @@ namespace
             return false;
         if (lhs.combat_speed_percent != rhs.combat_speed_percent)
             return false;
+        if (lhs.music_volume_percent != rhs.music_volume_percent)
+            return false;
+        if (lhs.effects_volume_percent != rhs.effects_volume_percent)
+            return false;
         if (lhs.lore_panel_anchor != rhs.lore_panel_anchor)
             return false;
         if (lhs.window_width != rhs.window_width)
@@ -134,7 +186,7 @@ namespace
         const int      spacing = 18;
 
         ft_vector<ft_menu_item> items;
-        items.reserve(5U);
+        items.reserve(7U);
 
         ft_menu_item ui_scale_item(ft_string("setting:ui_scale"), format_ui_scale_label(preferences.ui_scale_percent), base_rect);
         items.push_back(ui_scale_item);
@@ -146,19 +198,32 @@ namespace
         items.push_back(combat_item);
 
         ft_rect anchor_rect = base_rect;
-        anchor_rect.top += 2 * (base_rect.height + spacing);
+        anchor_rect.top += 4 * (base_rect.height + spacing);
+
+        ft_rect music_rect = base_rect;
+        music_rect.top += 2 * (base_rect.height + spacing);
+        ft_menu_item music_item(
+            ft_string("setting:music_volume"), format_music_volume_label(preferences.music_volume_percent), music_rect);
+        items.push_back(music_item);
+
+        ft_rect effects_rect = base_rect;
+        effects_rect.top += 3 * (base_rect.height + spacing);
+        ft_menu_item effects_item(
+            ft_string("setting:effects_volume"), format_effects_volume_label(preferences.effects_volume_percent), effects_rect);
+        items.push_back(effects_item);
+
         ft_menu_item anchor_item(ft_string("setting:lore_anchor"), format_lore_anchor_label(preferences.lore_panel_anchor),
             anchor_rect);
         items.push_back(anchor_item);
 
         ft_rect save_rect = base_rect;
-        save_rect.top += 3 * (base_rect.height + spacing);
+        save_rect.top += 5 * (base_rect.height + spacing);
         ft_menu_item save_item(ft_string("action:save"), ft_string("Save Changes"), save_rect);
         save_item.enabled = allow_save;
         items.push_back(save_item);
 
         ft_rect cancel_rect = base_rect;
-        cancel_rect.top += 4 * (base_rect.height + spacing);
+        cancel_rect.top += 6 * (base_rect.height + spacing);
         ft_menu_item cancel_item(ft_string("action:cancel"), ft_string("Cancel"), cancel_rect);
         items.push_back(cancel_item);
 
@@ -394,6 +459,22 @@ namespace
                 working_preferences.combat_speed_percent = decrement_combat_speed(working_preferences.combat_speed_percent);
             adjusted = true;
         }
+        else if (selected_item->identifier == "setting:music_volume")
+        {
+            if (direction > 0)
+                working_preferences.music_volume_percent = increment_volume(working_preferences.music_volume_percent);
+            else if (direction < 0)
+                working_preferences.music_volume_percent = decrement_volume(working_preferences.music_volume_percent);
+            adjusted = true;
+        }
+        else if (selected_item->identifier == "setting:effects_volume")
+        {
+            if (direction > 0)
+                working_preferences.effects_volume_percent = increment_volume(working_preferences.effects_volume_percent);
+            else if (direction < 0)
+                working_preferences.effects_volume_percent = decrement_volume(working_preferences.effects_volume_percent);
+            adjusted = true;
+        }
         else if (selected_item->identifier == "setting:lore_anchor")
         {
             working_preferences.lore_panel_anchor = toggle_lore_anchor(working_preferences.lore_panel_anchor);
@@ -413,6 +494,16 @@ namespace
         if (item.identifier == "setting:combat_speed")
         {
             working_preferences.combat_speed_percent = increment_combat_speed(working_preferences.combat_speed_percent);
+            return true;
+        }
+        if (item.identifier == "setting:music_volume")
+        {
+            working_preferences.music_volume_percent = increment_volume(working_preferences.music_volume_percent);
+            return true;
+        }
+        if (item.identifier == "setting:effects_volume")
+        {
+            working_preferences.effects_volume_percent = increment_volume(working_preferences.effects_volume_percent);
             return true;
         }
         if (item.identifier == "setting:lore_anchor")
@@ -498,6 +589,7 @@ bool run_settings_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *tit
                     {
                         status_message.clear();
                         status_is_error = false;
+                        values_changed = true;
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_RIGHT)
@@ -665,6 +757,36 @@ namespace settings_flow_testing
         return ::decrement_combat_speed(value);
     }
 
+    unsigned int clamp_music_volume(unsigned int value) noexcept
+    {
+        return ::clamp_volume(value);
+    }
+
+    unsigned int increment_music_volume(unsigned int value) noexcept
+    {
+        return ::increment_volume(value);
+    }
+
+    unsigned int decrement_music_volume(unsigned int value) noexcept
+    {
+        return ::decrement_volume(value);
+    }
+
+    unsigned int clamp_effects_volume(unsigned int value) noexcept
+    {
+        return ::clamp_volume(value);
+    }
+
+    unsigned int increment_effects_volume(unsigned int value) noexcept
+    {
+        return ::increment_volume(value);
+    }
+
+    unsigned int decrement_effects_volume(unsigned int value) noexcept
+    {
+        return ::decrement_volume(value);
+    }
+
     unsigned int toggle_lore_anchor(unsigned int anchor) noexcept
     {
         return ::toggle_lore_anchor(anchor);
@@ -678,6 +800,16 @@ namespace settings_flow_testing
     ft_string format_combat_speed_option(unsigned int value)
     {
         return ::format_combat_speed_label(value);
+    }
+
+    ft_string format_music_volume_option(unsigned int value)
+    {
+        return ::format_music_volume_label(value);
+    }
+
+    ft_string format_effects_volume_option(unsigned int value)
+    {
+        return ::format_effects_volume_label(value);
     }
 
     ft_string format_lore_anchor_option(unsigned int anchor)

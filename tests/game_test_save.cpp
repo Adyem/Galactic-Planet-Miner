@@ -2477,6 +2477,26 @@ int verify_new_game_save_creation()
     return 1;
 }
 
+int verify_new_game_save_launch_readiness()
+{
+    const ft_string commander_name("FlowTesterBravo");
+    const ft_string save_name("LaunchReady");
+
+    FT_ASSERT(player_profile_delete(commander_name));
+
+    ft_string created_path;
+    ft_string error_message;
+    FT_ASSERT(new_game_flow_testing::create_save_file_with_path(commander_name, save_name, created_path, error_message));
+    FT_ASSERT(error_message.empty());
+    FT_ASSERT(!created_path.empty());
+    FT_ASSERT_EQ(1, file_exists(created_path.c_str()));
+    FT_ASSERT(main_menu_can_launch_campaign(created_path));
+
+    FT_ASSERT(player_profile_delete(commander_name));
+
+    return 1;
+}
+
 int verify_player_profile_save()
 {
     const ft_string commander_name("Cmdr/Test:Save?");

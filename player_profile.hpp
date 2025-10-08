@@ -14,6 +14,8 @@ static const unsigned int PLAYER_PROFILE_UI_SCALE_MIN_PERCENT = 75U;
 static const unsigned int PLAYER_PROFILE_UI_SCALE_MAX_PERCENT = 150U;
 static const unsigned int PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT = 50U;
 static const unsigned int PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT = 200U;
+static const unsigned int PLAYER_PROFILE_VOLUME_MIN_PERCENT = 0U;
+static const unsigned int PLAYER_PROFILE_VOLUME_MAX_PERCENT = 100U;
 
 struct PlayerProfilePreferences
 {
@@ -22,6 +24,8 @@ struct PlayerProfilePreferences
     unsigned int window_height;
     unsigned int ui_scale_percent;
     unsigned int combat_speed_percent;
+    unsigned int music_volume_percent;
+    unsigned int effects_volume_percent;
     unsigned int lore_panel_anchor;
     bool         menu_tutorial_seen;
 
@@ -31,6 +35,8 @@ struct PlayerProfilePreferences
           window_height(720U),
           ui_scale_percent(100U),
           combat_speed_percent(100U),
+          music_volume_percent(100U),
+          effects_volume_percent(100U),
           lore_panel_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT),
           menu_tutorial_seen(false)
     {}

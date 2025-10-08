@@ -3,6 +3,7 @@
 #include "app_constants.hpp"
 #include "build_info.hpp"
 
+#include "libft/File/file_utils.hpp"
 #include "libft/Time/time.hpp"
 #include "libft/Printf/printf.hpp"
 
@@ -127,6 +128,18 @@ bool main_menu_append_connectivity_failure_log(const ft_string &host, int status
     return write_connectivity_failure_entry(host, status_code, timestamp_ms, log_path);
 }
 
+bool main_menu_can_launch_campaign(const ft_string &save_path) noexcept
+{
+    if (save_path.empty())
+        return false;
+
+    int exists_result = file_exists(save_path.c_str());
+    if (exists_result <= 0)
+        return false;
+
+    return true;
+}
+
 ft_rect build_main_menu_viewport()
 {
     const ft_rect base_rect(460, 220, 360, 56);
@@ -156,6 +169,7 @@ ft_vector<ft_menu_item> build_main_menu_items()
 
     const menu_entry entries[] = {
         {"new_game", "New Game", "Begin a fresh campaign for the active commander.", true},
+        {"resume", "Resume", "Jump back into your latest campaign save once one is available.", false},
         {"load", "Load", "Review existing saves and prepare to resume a prior campaign.", true},
         {"settings", "Settings", "Adjust gameplay, interface scale, and menu layout preferences for this commander.", true},
         {"swap_profile", "Swap Profile", "Switch to a different commander profile.", true},

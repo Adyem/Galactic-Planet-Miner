@@ -430,10 +430,27 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
     }
 
     unsigned int stored_combat_speed = preferences.combat_speed_percent == 0U ? 100U : preferences.combat_speed_percent;
-    stored_combat_speed = clamp_unsigned(stored_combat_speed, PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT, PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT);
+    stored_combat_speed = clamp_unsigned(
+        stored_combat_speed, PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT, PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT);
     if (!add_int(document, group, "combat_speed_percent", static_cast<int>(stored_combat_speed)))
     {
         log_profile_document_error("Adding combat speed", document, path);
+        return false;
+    }
+
+    unsigned int stored_music_volume = clamp_unsigned(
+        preferences.music_volume_percent, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
+    if (!add_int(document, group, "music_volume_percent", static_cast<int>(stored_music_volume)))
+    {
+        log_profile_document_error("Adding music volume", document, path);
+        return false;
+    }
+
+    unsigned int stored_effects_volume = clamp_unsigned(
+        preferences.effects_volume_percent, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
+    if (!add_int(document, group, "effects_volume_percent", static_cast<int>(stored_effects_volume)))
+    {
+        log_profile_document_error("Adding effects volume", document, path);
         return false;
     }
 
@@ -511,11 +528,15 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     out_preferences.window_height = parsed_height;
     unsigned int parsed_ui_scale = out_preferences.ui_scale_percent;
     unsigned int parsed_combat_speed = out_preferences.combat_speed_percent;
+    unsigned int parsed_music_volume = out_preferences.music_volume_percent;
+    unsigned int parsed_effects_volume = out_preferences.effects_volume_percent;
     unsigned int parsed_anchor = out_preferences.lore_panel_anchor;
     bool         parsed_tutorial_seen = out_preferences.menu_tutorial_seen;
 
     read_int(document, group, "ui_scale_percent", parsed_ui_scale);
     read_int(document, group, "combat_speed_percent", parsed_combat_speed);
+    read_int(document, group, "music_volume_percent", parsed_music_volume);
+    read_int(document, group, "effects_volume_percent", parsed_effects_volume);
     read_int(document, group, "lore_panel_anchor", parsed_anchor);
 
     if (parsed_ui_scale == 0U)
@@ -525,6 +546,10 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
 
     out_preferences.ui_scale_percent = clamp_unsigned(parsed_ui_scale, PLAYER_PROFILE_UI_SCALE_MIN_PERCENT, PLAYER_PROFILE_UI_SCALE_MAX_PERCENT);
     out_preferences.combat_speed_percent = clamp_unsigned(parsed_combat_speed, PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT, PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT);
+    out_preferences.music_volume_percent = clamp_unsigned(
+        parsed_music_volume, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
+    out_preferences.effects_volume_percent = clamp_unsigned(
+        parsed_effects_volume, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
     out_preferences.lore_panel_anchor = normalize_lore_panel_anchor(parsed_anchor);
 
     json_item *tutorial_item = document.find_item(group, "menu_tutorial_seen");

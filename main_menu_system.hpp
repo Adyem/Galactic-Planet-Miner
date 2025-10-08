@@ -107,6 +107,7 @@ ft_string main_menu_resolve_connectivity_label(const MainMenuConnectivityStatus 
 SDL_Color main_menu_resolve_connectivity_color(const MainMenuConnectivityStatus &status);
 bool main_menu_append_connectivity_failure_log(const ft_string &host, int status_code, long timestamp_ms) noexcept;
 ft_string main_menu_resolve_build_label();
+bool      main_menu_can_launch_campaign(const ft_string &save_path) noexcept;
 
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
     int window_width, int window_height, const ft_string &active_profile_name, const MainMenuTutorialContext *tutorial,
@@ -123,12 +124,14 @@ ft_string run_profile_entry_flow(SDL_Window *window, SDL_Renderer *renderer, TTF
 ft_string run_profile_management_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_string &current_profile, bool &out_quit_requested);
 bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
-    const ft_string &commander_name, bool &out_quit_requested);
+    const ft_string &commander_name, ft_string &out_created_save_path, bool &out_quit_requested);
 bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_string &commander_name, ft_string &out_selected_save, bool &out_quit_requested);
 bool run_settings_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     PlayerProfilePreferences &preferences, bool &out_quit_requested);
 bool audit_save_directory_for_errors(const ft_string &commander_name, ft_vector<ft_string> &out_errors) noexcept;
+bool resolve_latest_resume_slot(const ft_string &commander_name, ft_string &out_slot_name, ft_string &out_save_path,
+    ft_string &out_metadata_label, bool &out_metadata_available) noexcept;
 
 // Profile window preference helpers
 bool save_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept;
@@ -144,6 +147,8 @@ namespace new_game_flow_testing
     bool         validate_save_name(const ft_string &save_name) noexcept;
     ft_string    compute_save_file_path(const ft_string &commander_name, const ft_string &save_name);
     bool         create_save_file(const ft_string &commander_name, const ft_string &save_name, ft_string &out_error) noexcept;
+    bool         create_save_file_with_path(const ft_string &commander_name, const ft_string &save_name,
+                ft_string &out_save_path, ft_string &out_error) noexcept;
 }
 
 namespace profile_preferences_testing
@@ -177,9 +182,17 @@ namespace settings_flow_testing
     unsigned int clamp_combat_speed(unsigned int value) noexcept;
     unsigned int increment_combat_speed(unsigned int value) noexcept;
     unsigned int decrement_combat_speed(unsigned int value) noexcept;
+    unsigned int clamp_music_volume(unsigned int value) noexcept;
+    unsigned int increment_music_volume(unsigned int value) noexcept;
+    unsigned int decrement_music_volume(unsigned int value) noexcept;
+    unsigned int clamp_effects_volume(unsigned int value) noexcept;
+    unsigned int increment_effects_volume(unsigned int value) noexcept;
+    unsigned int decrement_effects_volume(unsigned int value) noexcept;
     unsigned int toggle_lore_anchor(unsigned int anchor) noexcept;
     ft_string    format_ui_scale_option(unsigned int value);
     ft_string    format_combat_speed_option(unsigned int value);
+    ft_string    format_music_volume_option(unsigned int value);
+    ft_string    format_effects_volume_option(unsigned int value);
     ft_string    format_lore_anchor_option(unsigned int anchor);
 }
 

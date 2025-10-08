@@ -130,9 +130,35 @@ int main()
 
     apply_profile_preferences(window, active_profile_name);
 
-    ft_ui_menu menu;
-    menu.set_items(build_main_menu_items());
+    ft_ui_menu              menu;
+    ft_vector<ft_menu_item> menu_items = build_main_menu_items();
     menu.set_viewport_bounds(build_main_menu_viewport());
+
+    auto rebuild_menu_items = [&](const ft_string &preferred_selection) {
+        menu.set_items(menu_items);
+        menu.set_viewport_bounds(build_main_menu_viewport());
+        if (!preferred_selection.empty())
+        {
+            for (size_t index = 0; index < menu_items.size(); ++index)
+            {
+                if (menu_items[index].identifier == preferred_selection && menu_items[index].enabled)
+                {
+                    menu.set_selected_index(static_cast<int>(index));
+                    break;
+                }
+            }
+        }
+    };
+
+    auto refresh_menu_selection = [&]() {
+        ft_string preferred_selection;
+        const ft_menu_item *selected_item = menu.get_selected_item();
+        if (selected_item != ft_nullptr)
+            preferred_selection = selected_item->identifier;
+        rebuild_menu_items(preferred_selection);
+    };
+
+    rebuild_menu_items(ft_string());
 
     const ft_vector<ft_string> &tutorial_tips = get_main_menu_tutorial_tips();
     MainMenuTutorialContext     tutorial_context;
@@ -141,6 +167,47 @@ int main()
     MainMenuOverlayContext      changelog_context;
     MainMenuOverlayContext      manual_context;
     MainMenuAlertBanner         alert_banner;
+
+    bool      resume_available = false;
+    bool      resume_metadata_known = false;
+    ft_string resume_slot_label;
+    ft_string resume_metadata_label;
+    ft_string resume_save_path;
+
+    auto update_resume_menu_entry = [&]() {
+        for (size_t index = 0; index < menu_items.size(); ++index)
+        {
+            if (menu_items[index].identifier != "resume")
+                continue;
+
+            if (resume_available && !resume_save_path.empty())
+            {
+                menu_items[index].enabled = true;
+                ft_string description("Jump back into \"");
+                description.append(resume_slot_label);
+                description.append("\"");
+                if (!resume_metadata_label.empty())
+                {
+                    description.append(" (");
+                    description.append(resume_metadata_label);
+                    description.append(")");
+                }
+                description.append(" without opening the load menu.");
+                if (!resume_metadata_known && resume_metadata_label.empty())
+                    description.append(" Metadata details unavailable.");
+                menu_items[index].description = description;
+            }
+            else
+            {
+                menu_items[index].enabled = false;
+                menu_items[index].description
+                    = ft_string("No healthy campaign saves found yet. Create or load a game to enable quick resume.");
+            }
+            break;
+        }
+
+        refresh_menu_selection();
+    };
 
     const ft_string backend_host("127.0.0.1:8080");
     const ft_string backend_path("/");
@@ -155,6 +222,12 @@ int main()
             alert_banner.visible = false;
             alert_banner.is_error = false;
             alert_banner.message.clear();
+            resume_available = false;
+            resume_metadata_known = false;
+            resume_slot_label.clear();
+            resume_metadata_label.clear();
+            resume_save_path.clear();
+            update_resume_menu_entry();
             return;
         }
 
@@ -190,6 +263,30 @@ int main()
             alert_banner.is_error = false;
             alert_banner.message.clear();
         }
+
+        ft_string latest_slot;
+        ft_string latest_path;
+        ft_string latest_metadata;
+        bool      latest_metadata_available = false;
+        if (resolve_latest_resume_slot(active_profile_name, latest_slot, latest_path, latest_metadata,
+                latest_metadata_available))
+        {
+            resume_available = true;
+            resume_slot_label = latest_slot;
+            resume_save_path = latest_path;
+            resume_metadata_label = latest_metadata;
+            resume_metadata_known = latest_metadata_available;
+        }
+        else
+        {
+            resume_available = false;
+            resume_metadata_known = false;
+            resume_slot_label.clear();
+            resume_save_path.clear();
+            resume_metadata_label.clear();
+        }
+
+        update_resume_menu_entry();
     };
 
     auto perform_connectivity_check = [&](long now_ms) {
@@ -207,6 +304,18 @@ int main()
     perform_connectivity_check(ft_time_ms());
 
     bool running = true;
+
+    auto attempt_campaign_launch = [&](const ft_string &save_path) -> bool {
+        if (!main_menu_can_launch_campaign(save_path))
+        {
+            alert_banner.visible = true;
+            alert_banner.is_error = true;
+            alert_banner.message = ft_string("Unable to launch the selected save. It may have been moved or deleted.");
+            return false;
+        }
+
+        return true;
+    };
 
     auto dismiss_tutorial_overlay = [&]() -> bool {
         if (!tutorial_context.visible)
@@ -415,9 +524,10 @@ int main()
         auto process_menu_activation = [&](const ft_menu_item &item) {
             if (item.identifier == "new_game")
             {
-                bool creation_quit = false;
-                bool created_save = run_new_game_creation_flow(window, renderer, title_font, menu_font, active_profile_name,
-                    creation_quit);
+                bool      creation_quit = false;
+                ft_string created_save_path;
+                bool      created_save = run_new_game_creation_flow(window, renderer, title_font, menu_font,
+                    active_profile_name, created_save_path, creation_quit);
                 if (creation_quit)
                 {
                     running = false;
@@ -428,7 +538,27 @@ int main()
                 {
                     player_profile_list(available_profiles);
                     refresh_save_alert();
+                    if (!created_save_path.empty() && attempt_campaign_launch(created_save_path))
+                    {
+                        running = false;
+                        return;
+                    }
                 }
+                return;
+            }
+
+            if (item.identifier == "resume")
+            {
+                if (!resume_available || resume_save_path.empty())
+                    return;
+
+                if (attempt_campaign_launch(resume_save_path))
+                {
+                    running = false;
+                    return;
+                }
+
+                refresh_save_alert();
                 return;
             }
 
@@ -446,7 +576,11 @@ int main()
 
                 if (loaded)
                 {
-                    (void)selected_save_path;
+                    if (attempt_campaign_launch(selected_save_path))
+                    {
+                        running = false;
+                        return;
+                    }
                 }
                 refresh_save_alert();
                 return;

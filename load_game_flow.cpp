@@ -12,6 +12,8 @@
 #include "libft/Libft/libft.hpp"
 #include "libft/Template/algorithm.hpp"
 
+#include <sys/stat.h>
+
 namespace
 {
     struct save_slot_entry
@@ -679,6 +681,78 @@ bool audit_save_directory_for_errors(const ft_string &commander_name, ft_vector<
     return true;
 }
 
+bool resolve_latest_resume_slot(const ft_string &commander_name, ft_string &out_slot_name, ft_string &out_save_path,
+    ft_string &out_metadata_label, bool &out_metadata_available) noexcept
+{
+    out_slot_name.clear();
+    out_save_path.clear();
+    out_metadata_label.clear();
+    out_metadata_available = false;
+
+    ft_vector<save_slot_entry> slots;
+    if (!collect_save_slots(commander_name, slots))
+        return false;
+
+    bool       found = false;
+    long long  best_time = 0;
+    bool       best_metadata_available = false;
+    ft_string  best_label;
+
+    for (size_t index = 0; index < slots.size(); ++index)
+    {
+        const save_slot_entry &slot = slots[index];
+        if (slot.metadata_error)
+            continue;
+        if (slot.file_path.empty())
+            continue;
+
+        struct stat file_info;
+        if (stat(slot.file_path.c_str(), &file_info) != 0)
+            continue;
+
+        long long candidate_time = static_cast<long long>(file_info.st_mtime);
+
+        bool prefer_candidate = false;
+        if (!found)
+            prefer_candidate = true;
+        else if (candidate_time > best_time)
+            prefer_candidate = true;
+        else if (candidate_time == best_time)
+        {
+            if (slot.metadata_available && !best_metadata_available)
+                prefer_candidate = true;
+            else if (slot.metadata_available == best_metadata_available)
+            {
+                if (ft_strcmp(slot.label.c_str(), best_label.c_str()) > 0)
+                    prefer_candidate = true;
+            }
+        }
+
+        if (!prefer_candidate)
+            continue;
+
+        found = true;
+        best_time = candidate_time;
+        best_metadata_available = slot.metadata_available;
+        best_label = slot.label;
+        out_slot_name = slot.label;
+        out_save_path = slot.file_path;
+        out_metadata_label = slot.metadata_label;
+        out_metadata_available = slot.metadata_available;
+    }
+
+    if (!found)
+    {
+        out_slot_name.clear();
+        out_save_path.clear();
+        out_metadata_label.clear();
+        out_metadata_available = false;
+        return false;
+    }
+
+    return true;
+}
+
 bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_string &commander_name, ft_string &out_selected_save, bool &out_quit_requested)
 {
@@ -1138,10 +1212,8 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                     if (slots[index].identifier == item.identifier)
                     {
                         out_selected_save = slots[index].file_path;
-                        status_message = ft_string("Campaign launch not yet implemented. Save prepared: ");
-                        status_message.append(slots[index].label);
-                        status_is_error = false;
-                        loaded = false;
+                        loaded = true;
+                        running = false;
                         return;
                     }
                 }
