@@ -1,0 +1,43 @@
+# Project TODO
+
+- [ ] Wire up the main-menu "Load" item so selecting it lists existing saves for the active commander and boots the chosen campaign. *(Notes: save-selection dialog implemented; still needs to hand off the chosen slot to the campaign launcher once the resume flow exists.)*
+- [x] Wire up the main-menu "Settings" item with a configuration dialog (UI scale, combat speed, lore panel anchor, etc.) that persists changes via the existing profile preference helpers. *(Notes: reuse `save_profile_preferences`/`apply_profile_preferences` once the dialog captures adjustments.)*
+- [x] Persist the active profile's window preferences when the player exits the menu so window size changes survive restarts. *(Notes: handled by calling `save_profile_preferences` from `main.cpp` before shutting down SDL.)*
+- [ ] After creating a new quicksave, transition directly into the campaign (or prompt to do so) instead of dropping back to the menu idle state. *(Notes: requires plumbing the bootstrap data from `game_bootstrap_create_quicksave_with_commander` into whatever launches the main game session once saves load.)*
+- [x] Expose a tooltip or short description for each menu item to clarify what will happen when selected. *(Notes: implemented by attaching descriptions to `ft_menu_item` entries and rendering them beneath the menu viewport.)*
+- [x] Add a disabled-state style so menu entries relying on incomplete features render distinctly from interactive options. *(Notes: menu items now track hover state even when disabled so the renderer can gray them out while leaving activation blocked.)*
+- [x] Audit save-system error paths and surface a non-blocking alert on the main menu when deserialization fails. *(Notes: non-blocking alert banner now appears when metadata parsing fails during save audits, with room to integrate `save_system_load_game` errors later.)*
+- [ ] Offer a "Resume last campaign" quick entry point that loads the most recent save without opening the load dialog. *(Notes: relies on the save audit above to know which snapshot is both latest and healthy before bootstrapping.)*
+- [ ] Allow remapping hotkeys from the menu so fleet controls can be tailored before entering combat. *(Notes: requires expanding the profile preference schema and persisting bindings alongside window/UI data.)*
+- [ ] Add an accessibility preset toggle (high-contrast UI, larger fonts) to the settings dialog. *(Notes: depends on the settings wiring task and on adding palette/scale overrides to `apply_profile_preferences`.)*
+- [x] Display backend connectivity status in a corner of the menu to indicate whether leaderboards and convoys can sync. *(Notes: reuse `backend_client_ping` and existing banner widget once save errors are surfaced.)*
+- [x] Surface a changelog button that opens the latest patch notes fetched via the backend client. *(Notes: blocked on the connectivity indicator so we do not prompt players to open notes when offline.)*
+- [x] Show a confirmation prompt before deleting any save from the load dialog. *(Notes: depends on the load dialog wiring so we can reuse its list view and delete hooks.)*
+- [ ] Add volume sliders for music and effects to the settings dialog. *(Notes: hinges on the settings wiring and on exposing `audio_mixer_set_channel_volume` for UI bindings.)*
+- [ ] Persist the last-used input device (keyboard/gamepad) so the menu defaults to the player's preference. *(Notes: requires saving a new flag alongside hotkey bindings once remapping lands.)*
+- [x] Offer quick tutorial tips on first launch that highlight menu actions. *(Notes: overlay now guides first-time commanders and persists dismissal per profile.)*
+- [ ] Preload commander portraits when showing the resume quick entry so the menu doesn't hitch. *(Notes: build on the quick entry plumbing and use existing asset cache helpers.)*
+- [x] Log backend ping failures to `test_failures.log` with timestamps for QA follow-up. *(Notes: extends the connectivity indicator task to append entries via the failure log helpers.)*
+- [x] Add a save-slot rename affordance inside the load dialog for better organization. *(Notes: rename prompt now uses the load dialog list, accepts alphanumeric names up to 24 characters, and refreshes the listing after renaming.)*
+- [x] Surface slot metadata (campaign day, commander level) alongside each save listing. *(Notes: depends on the save audit work so the metadata payload is already parsed when rendering rows.)*
+- [ ] Include a "clear cloud data" action that wipes backend-linked progress after confirmation. *(Notes: requires the connectivity indicator work to guarantee backend reachability before issuing delete calls.)*
+- [ ] Persist per-slot difficulty modifiers and show them in both resume and load flows. *(Notes: hinges on the save metadata surfacing task and on extending the save schema.)*
+- [x] Add keyboard/gamepad navigation hints at the bottom of the menu. *(Notes: hints now reference the focused entry with controller/keyboard prompts and fall back to guidance when a feature is disabled.)*
+- [ ] Localize menu strings and tooltips using the existing string table loader. *(Notes: depends on capturing all menu text in a central catalog once tooltips are wired.)*
+- [ ] Provide a colorblind-safe palette toggle in accessibility settings. *(Notes: relies on the accessibility preset plumbing and requires palette overrides in the renderer.)*
+- [ ] Expose master brightness and contrast controls within settings. *(Notes: piggybacks on the settings dialog work and needs renderer hooks to adjust post-processing.)*
+- [ ] Allow rebinding of controller layouts separately from keyboard bindings. *(Notes: extends the hotkey remap task after input device persistence is in place.)*
+- [ ] Add an autosave indicator icon when background saves are running. *(Notes: requires save-system error surfacing so the icon can differentiate success vs. failure states.)*
+- [ ] Implement a "sync status" panel that details latest backend convoy and leaderboard updates. *(Notes: depends on the connectivity indicator and backend ping logging to populate timestamps.)*
+- [ ] Surface achievements progress on the menu with quick summaries. *(Notes: needs backend sync status for online achievements and profile preference storage for offline progress.)*
+- [x] Provide a quick link to the in-game encyclopedia/manual from the menu. *(Notes: blocked on tooltip descriptions so the link communicates context.)*
+- [ ] Add a tutorial replay option that replays onboarding missions from the menu. *(Notes: depends on tutorial tip plumbing and resume quick entry to swap campaign states.)*
+- [ ] Gate experimental features behind a toggle inside settings. *(Notes: requires settings dialog completion and the ability to persist feature flags via profile preferences.)*
+- [ ] Offer analytics opt-in/out controls and persist the choice. *(Notes: leverages the settings dialog once feature flag persistence exists.)*
+- [x] Display build version and branch information somewhere on the menu screen. *(Notes: rendered via build-info helper; update during localization pass so strings route through the translation catalog.)*
+- [ ] Hook up crash-report submission prompts that appear after a failure is detected. *(Notes: requires backend connectivity and failure logging to know when to present the prompt.)*
+- [ ] Add a minimal performance overlay that shows FPS and latency while the menu is open. *(Notes: depends on renderer hooks introduced for brightness/contrast and on backend ping data.)*
+- [ ] Ensure menu audio cues respect the global mute flag and newly added volume sliders. *(Notes: blocked on volume slider work and audio mixer exposure.)*
+- [ ] Expand save-system tests to cover corrupt snapshot recovery paths. *(Notes: hinges on error alert work to expose structured failure codes.)*
+- [ ] Add integration tests that exercise new menu flows (load, resume, accessibility toggles). *(Notes: depends on the flows being implemented so scenarios can be scripted.)*
+- [x] Update `test_failures.log` format to include build identifiers for backend issues. *(Notes: backend ping logging now annotates failures with the active build label resolved via the build-info helper.)*

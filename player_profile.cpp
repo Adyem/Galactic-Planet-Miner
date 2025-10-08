@@ -444,6 +444,13 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
         return false;
     }
 
+    ft_string tutorial_value(preferences.menu_tutorial_seen ? "true" : "false");
+    if (!add_string(document, group, "menu_tutorial_seen", tutorial_value))
+    {
+        log_profile_document_error("Adding menu tutorial flag", document, path);
+        return false;
+    }
+
     if (document.write_to_file(path.c_str()) != 0)
     {
         log_profile_document_error("Writing profile", document, path);
@@ -505,6 +512,7 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     unsigned int parsed_ui_scale = out_preferences.ui_scale_percent;
     unsigned int parsed_combat_speed = out_preferences.combat_speed_percent;
     unsigned int parsed_anchor = out_preferences.lore_panel_anchor;
+    bool         parsed_tutorial_seen = out_preferences.menu_tutorial_seen;
 
     read_int(document, group, "ui_scale_percent", parsed_ui_scale);
     read_int(document, group, "combat_speed_percent", parsed_combat_speed);
@@ -518,6 +526,21 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     out_preferences.ui_scale_percent = clamp_unsigned(parsed_ui_scale, PLAYER_PROFILE_UI_SCALE_MIN_PERCENT, PLAYER_PROFILE_UI_SCALE_MAX_PERCENT);
     out_preferences.combat_speed_percent = clamp_unsigned(parsed_combat_speed, PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT, PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT);
     out_preferences.lore_panel_anchor = normalize_lore_panel_anchor(parsed_anchor);
+
+    json_item *tutorial_item = document.find_item(group, "menu_tutorial_seen");
+    if (tutorial_item != ft_nullptr && tutorial_item->value != ft_nullptr)
+    {
+        ft_string normalized(tutorial_item->value);
+        ft_to_lower(normalized.print());
+        const char *normalized_value = normalized.c_str();
+        if (ft_strcmp(normalized_value, "true") == 0 || ft_strcmp(normalized_value, "1") == 0
+            || ft_strcmp(normalized_value, "yes") == 0)
+            parsed_tutorial_seen = true;
+        else if (ft_strcmp(normalized_value, "false") == 0 || ft_strcmp(normalized_value, "0") == 0
+            || ft_strcmp(normalized_value, "no") == 0)
+            parsed_tutorial_seen = false;
+    }
+    out_preferences.menu_tutorial_seen = parsed_tutorial_seen;
     return true;
 }
 

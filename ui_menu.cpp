@@ -22,11 +22,11 @@ bool ft_rect::contains(int point_x, int point_y) const noexcept
 }
 
 ft_menu_item::ft_menu_item()
-    : identifier(), label(), bounds(), enabled(true)
+    : identifier(), label(), bounds(), enabled(true), description()
 {}
 
 ft_menu_item::ft_menu_item(const ft_string &id, const ft_string &text, const ft_rect &area)
-    : identifier(id), label(text), bounds(area), enabled(true)
+    : identifier(id), label(text), bounds(area), enabled(true), description()
 {}
 
 ft_ui_menu::ft_ui_menu()
@@ -114,6 +114,18 @@ const ft_menu_item *ft_ui_menu::get_selected_item() const
     return &this->_items[index];
 }
 
+const ft_menu_item *ft_ui_menu::get_hovered_item() const
+{
+    if (this->_hovered_index < 0)
+        return nullptr;
+
+    const size_t index = static_cast<size_t>(this->_hovered_index);
+    if (index >= this->_items.size())
+        return nullptr;
+
+    return &this->_items[index];
+}
+
 e_ft_input_device ft_ui_menu::get_active_device() const noexcept
 {
     return this->_device_tracker.get_last_device();
@@ -174,8 +186,12 @@ void ft_ui_menu::handle_mouse_input(const ft_mouse_state &mouse)
 
     if (hovered >= 0 && mouse.left_pressed)
     {
-        this->_selected_index = hovered;
-        this->scroll_to_index(this->_selected_index);
+        const size_t index = static_cast<size_t>(hovered);
+        if (index < this->_items.size() && this->_items[index].enabled)
+        {
+            this->_selected_index = hovered;
+            this->scroll_to_index(this->_selected_index);
+        }
     }
 }
 
@@ -223,9 +239,6 @@ int ft_ui_menu::find_item_at(int x, int y) const
 
     for (size_t index = 0; index < this->_items.size(); ++index)
     {
-        if (!this->_items[index].enabled)
-            continue;
-
         if (this->_items[index].bounds.contains(x, adjusted_y))
             return static_cast<int>(index);
     }

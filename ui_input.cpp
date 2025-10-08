@@ -10,12 +10,12 @@ bool ft_mouse_state::has_activity() const noexcept
 }
 
 ft_keyboard_state::ft_keyboard_state() noexcept
-    : pressed_up(false), pressed_down(false)
+    : pressed_up(false), pressed_down(false), pressed_confirm(false), pressed_delete(false)
 {}
 
 bool ft_keyboard_state::has_activity() const noexcept
 {
-    return this->pressed_up || this->pressed_down;
+    return this->pressed_up || this->pressed_down || this->pressed_confirm || this->pressed_delete;
 }
 
 ft_input_device_tracker::ft_input_device_tracker() noexcept

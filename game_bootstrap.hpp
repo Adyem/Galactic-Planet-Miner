@@ -39,8 +39,16 @@ struct GameBootstrapData
     ft_string                    commander_name;
     GameBootstrapPlanet          starting_planet;
     ft_vector<GameBootstrapResource> player_resources;
+    int                          campaign_day;
+    int                          commander_level;
 
-    GameBootstrapData() noexcept : commander_name(), starting_planet(), player_resources() {}
+    GameBootstrapData() noexcept
+        : commander_name()
+        , starting_planet()
+        , player_resources()
+        , campaign_day(1)
+        , commander_level(1)
+    {}
 };
 
 bool      game_bootstrap_initialize_default(GameBootstrapData &out_data) noexcept;

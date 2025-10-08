@@ -1,4 +1,5 @@
 #include "app_constants.hpp"
+#include "backend_client.hpp"
 #include "main_menu_system.hpp"
 #include "player_profile.hpp"
 #include "ui_input.hpp"
@@ -6,6 +7,7 @@
 
 #include "libft/CPP_class/class_nullptr.hpp"
 #include "libft/Libft/libft.hpp"
+#include "libft/Time/time.hpp"
 
 #if GALACTIC_HAVE_SDL2
 #    include <SDL2/SDL.h>
@@ -119,19 +121,200 @@ int main()
         return 0;
     }
 
+    PlayerProfilePreferences active_preferences;
+    if (!player_profile_load_or_create(active_preferences, active_profile_name))
+    {
+        active_preferences = PlayerProfilePreferences();
+        active_preferences.commander_name = active_profile_name;
+    }
+
     apply_profile_preferences(window, active_profile_name);
 
     ft_ui_menu menu;
     menu.set_items(build_main_menu_items());
     menu.set_viewport_bounds(build_main_menu_viewport());
 
+    const ft_vector<ft_string> &tutorial_tips = get_main_menu_tutorial_tips();
+    MainMenuTutorialContext     tutorial_context;
+    tutorial_context.tips = &tutorial_tips;
+    tutorial_context.visible = !active_preferences.menu_tutorial_seen;
+    MainMenuOverlayContext      changelog_context;
+    MainMenuOverlayContext      manual_context;
+    MainMenuAlertBanner         alert_banner;
+
+    const ft_string backend_host("127.0.0.1:8080");
+    const ft_string backend_path("/");
+    const ft_string backend_patch_notes_path("/patch-notes/latest");
+    MainMenuConnectivityStatus connectivity_status;
+    const long connectivity_interval_ms = 7000;
+    long       next_connectivity_check_ms = 0;
+
+    auto refresh_save_alert = [&]() {
+        if (active_profile_name.empty())
+        {
+            alert_banner.visible = false;
+            alert_banner.is_error = false;
+            alert_banner.message.clear();
+            return;
+        }
+
+        ft_vector<ft_string> audit_errors;
+        bool                 audited = audit_save_directory_for_errors(active_profile_name, audit_errors);
+        if (!audited)
+        {
+            alert_banner.visible = true;
+            alert_banner.is_error = true;
+            alert_banner.message = ft_string("Unable to inspect saves for this commander.");
+            return;
+        }
+
+        if (!audit_errors.empty())
+        {
+            alert_banner.visible = true;
+            alert_banner.is_error = true;
+            alert_banner.message = audit_errors[0];
+            const size_t additional = audit_errors.size() - 1U;
+            if (additional > 0U)
+            {
+                alert_banner.message.append(" (");
+                alert_banner.message.append(ft_to_string(static_cast<int>(additional)));
+                alert_banner.message.append(" more issue");
+                if (additional > 1U)
+                    alert_banner.message.append("s");
+                alert_banner.message.append(")");
+            }
+        }
+        else
+        {
+            alert_banner.visible = false;
+            alert_banner.is_error = false;
+            alert_banner.message.clear();
+        }
+    };
+
+    auto perform_connectivity_check = [&](long now_ms) {
+        main_menu_mark_connectivity_checking(connectivity_status, now_ms);
+        int  status_code = 0;
+        bool success = backend_client_ping(backend_host, backend_path, status_code);
+        long result_ms = ft_time_ms();
+        main_menu_apply_connectivity_result(connectivity_status, success, status_code, result_ms);
+        if (!success)
+            main_menu_append_connectivity_failure_log(backend_host, status_code, result_ms);
+        next_connectivity_check_ms = result_ms + connectivity_interval_ms;
+    };
+
+    refresh_save_alert();
+    perform_connectivity_check(ft_time_ms());
+
     bool running = true;
+
+    auto dismiss_tutorial_overlay = [&]() -> bool {
+        if (!tutorial_context.visible)
+            return false;
+        tutorial_context.visible = false;
+        if (!active_preferences.menu_tutorial_seen)
+        {
+            active_preferences.menu_tutorial_seen = true;
+            player_profile_save(active_preferences);
+        }
+        return true;
+    };
+
+    auto dismiss_changelog_overlay = [&]() -> bool {
+        if (!changelog_context.visible)
+            return false;
+        changelog_context.visible = false;
+        return true;
+    };
+
+    auto dismiss_manual_overlay = [&]() -> bool {
+        if (!manual_context.visible)
+            return false;
+        manual_context.visible = false;
+        return true;
+    };
+
+    auto open_changelog_overlay = [&]() {
+        dismiss_tutorial_overlay();
+        dismiss_manual_overlay();
+        changelog_context.visible = false;
+        changelog_context.heading = ft_string();
+        changelog_context.lines.clear();
+        changelog_context.footer = ft_string("Press Enter / Space or click to close.");
+
+        if (connectivity_status.state != MAIN_MENU_CONNECTIVITY_ONLINE)
+        {
+            changelog_context.heading = ft_string("Patch Notes Unavailable");
+            changelog_context.lines.push_back(ft_string("Patch notes require an online connection."));
+            if (connectivity_status.last_status_code != 0)
+            {
+                ft_string status_line("Last backend status: HTTP ");
+                status_line.append(ft_to_string(connectivity_status.last_status_code));
+                changelog_context.lines.push_back(status_line);
+            }
+            changelog_context.lines.push_back(ft_string("Reconnect to view the latest updates."));
+            changelog_context.visible = true;
+            return;
+        }
+
+        ft_string notes_body;
+        int       status_code = 0;
+        bool      success = backend_client_fetch_patch_notes(backend_host, backend_patch_notes_path, notes_body, status_code);
+
+        if (success)
+        {
+            changelog_context.heading = ft_string("Latest Patch Notes");
+            ft_vector<ft_string> note_lines = main_menu_split_patch_notes(notes_body);
+            for (size_t index = 0; index < note_lines.size(); ++index)
+                changelog_context.lines.push_back(note_lines[index]);
+            if (changelog_context.lines.empty())
+                changelog_context.lines.push_back(ft_string("No patch notes were returned by the backend."));
+        }
+        else
+        {
+            changelog_context.heading = ft_string("Patch Notes Unavailable");
+            changelog_context.lines.push_back(ft_string("Unable to fetch patch notes from the backend."));
+            if (status_code != 0)
+            {
+                ft_string status_line("HTTP status: ");
+                status_line.append(ft_to_string(status_code));
+                changelog_context.lines.push_back(status_line);
+            }
+            if (!notes_body.empty())
+                changelog_context.lines.push_back(notes_body);
+            if (changelog_context.lines.size() == 1U)
+                changelog_context.lines.push_back(ft_string("Please try again later."));
+        }
+
+        if (changelog_context.lines.empty())
+            changelog_context.lines.push_back(ft_string("Patch notes are currently empty."));
+
+        changelog_context.visible = true;
+    };
+
+    auto open_manual_overlay = [&]() {
+        dismiss_tutorial_overlay();
+        dismiss_changelog_overlay();
+        manual_context.visible = false;
+        manual_context.heading = ft_string("Galactic Encyclopedia");
+        manual_context.lines.clear();
+
+        const ft_vector<ft_string> &manual_lines = get_main_menu_manual_lines();
+        for (size_t index = 0; index < manual_lines.size(); ++index)
+            manual_context.lines.push_back(manual_lines[index]);
+
+        manual_context.footer = ft_string("Press Enter / Space or click to close.");
+        manual_context.visible = true;
+    };
 
     while (running)
     {
         ft_mouse_state    mouse_state;
         ft_keyboard_state keyboard_state;
         bool              activate_requested = false;
+        bool              tutorial_click_in_progress = false;
+        bool              changelog_click_in_progress = false;
+        bool              manual_click_in_progress = false;
 
         SDL_Event event;
         while (SDL_PollEvent(&event) == 1)
@@ -150,18 +333,41 @@ int main()
             {
                 if (event.button.button == SDL_BUTTON_LEFT)
                 {
-                    mouse_state.left_pressed = true;
                     mouse_state.x = event.button.x;
                     mouse_state.y = event.button.y;
+                    if (tutorial_context.visible)
+                        tutorial_click_in_progress = true;
+                    else if (manual_context.visible)
+                        manual_click_in_progress = true;
+                    else if (changelog_context.visible)
+                        changelog_click_in_progress = true;
+                    else
+                        mouse_state.left_pressed = true;
                 }
             }
             else if (event.type == SDL_MOUSEBUTTONUP)
             {
                 if (event.button.button == SDL_BUTTON_LEFT)
                 {
-                    mouse_state.left_released = true;
                     mouse_state.x = event.button.x;
                     mouse_state.y = event.button.y;
+                    if (tutorial_click_in_progress || tutorial_context.visible)
+                    {
+                        dismiss_tutorial_overlay();
+                        tutorial_click_in_progress = false;
+                    }
+                    else if (manual_click_in_progress || manual_context.visible)
+                    {
+                        dismiss_manual_overlay();
+                        manual_click_in_progress = false;
+                    }
+                    else if (changelog_click_in_progress || changelog_context.visible)
+                    {
+                        dismiss_changelog_overlay();
+                        changelog_click_in_progress = false;
+                    }
+                    else
+                        mouse_state.left_released = true;
                 }
             }
             else if (event.type == SDL_KEYDOWN)
@@ -171,9 +377,26 @@ int main()
                 else if (event.key.keysym.sym == SDLK_DOWN)
                     keyboard_state.pressed_down = true;
                 else if (event.key.keysym.sym == SDLK_RETURN || event.key.keysym.sym == SDLK_SPACE)
-                    activate_requested = true;
+                {
+                    if (manual_context.visible)
+                    {
+                        dismiss_manual_overlay();
+                        manual_click_in_progress = false;
+                    }
+                    else if (changelog_context.visible)
+                    {
+                        dismiss_changelog_overlay();
+                        changelog_click_in_progress = false;
+                    }
+                    else if (!dismiss_tutorial_overlay())
+                        activate_requested = true;
+                    tutorial_click_in_progress = false;
+                }
                 else if (event.key.keysym.sym == SDLK_ESCAPE)
-                    running = false;
+                {
+                    if (!dismiss_manual_overlay() && !dismiss_changelog_overlay())
+                        running = false;
+                }
             }
         }
 
@@ -202,7 +425,30 @@ int main()
                 }
 
                 if (created_save)
+                {
                     player_profile_list(available_profiles);
+                    refresh_save_alert();
+                }
+                return;
+            }
+
+            if (item.identifier == "load")
+            {
+                bool      load_quit = false;
+                ft_string selected_save_path;
+                bool      loaded = run_load_game_flow(window, renderer, title_font, menu_font, active_profile_name,
+                    selected_save_path, load_quit);
+                if (load_quit)
+                {
+                    running = false;
+                    return;
+                }
+
+                if (loaded)
+                {
+                    (void)selected_save_path;
+                }
+                refresh_save_alert();
                 return;
             }
 
@@ -227,9 +473,44 @@ int main()
                 {
                     active_profile_name = selected_profile;
                     apply_profile_preferences(window, active_profile_name);
+                    if (!player_profile_load_or_create(active_preferences, active_profile_name))
+                    {
+                        active_preferences = PlayerProfilePreferences();
+                        active_preferences.commander_name = active_profile_name;
+                    }
+                    tutorial_context.visible = !active_preferences.menu_tutorial_seen;
+                    perform_connectivity_check(ft_time_ms());
                 }
 
                 player_profile_list(available_profiles);
+                refresh_save_alert();
+            }
+
+            if (item.identifier == "settings")
+            {
+                bool settings_quit = false;
+                bool saved = run_settings_flow(window, renderer, title_font, menu_font, active_preferences, settings_quit);
+                if (settings_quit)
+                {
+                    running = false;
+                    return;
+                }
+
+                if (saved)
+                    apply_profile_preferences(window, active_profile_name);
+                return;
+            }
+
+            if (item.identifier == "changelog")
+            {
+                open_changelog_overlay();
+                return;
+            }
+
+            if (item.identifier == "manual")
+            {
+                open_manual_overlay();
+                return;
             }
         };
 
@@ -259,8 +540,16 @@ int main()
         int window_width = 0;
         int window_height = 0;
         SDL_GetWindowSize(window, &window_width, &window_height);
-        render_main_menu(*renderer, menu, title_font, menu_font, window_width, window_height, active_profile_name);
+        long current_time_ms = ft_time_ms();
+        if (current_time_ms >= next_connectivity_check_ms)
+            perform_connectivity_check(current_time_ms);
+
+        render_main_menu(*renderer, menu, title_font, menu_font, window_width, window_height, active_profile_name,
+            &tutorial_context, &manual_context, &changelog_context, &connectivity_status, &alert_banner);
     }
+
+    if (window != ft_nullptr && !active_profile_name.empty())
+        save_profile_preferences(window, active_profile_name);
 
     destroy_renderer(renderer);
     destroy_window(window);

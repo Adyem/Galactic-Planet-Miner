@@ -4,6 +4,7 @@
 #include "game.hpp"
 
 int verify_backend_roundtrip();
+int verify_backend_patch_notes_fetch();
 int verify_backend_host_parsing();
 int verify_locked_planet_reward_delivery();
 int verify_lore_log_retention();
@@ -73,6 +74,22 @@ int verify_fleet_management_snapshot();
 int verify_building_layout_snapshot();
 int verify_quest_log_snapshot();
 int verify_player_preference_application();
+int verify_menu_preference_snapshot();
+int verify_main_menu_descriptions();
+int verify_main_menu_description_focus();
+int verify_main_menu_navigation_hints();
+int verify_main_menu_tutorial_tips();
+int verify_main_menu_manual_sections();
+int verify_main_menu_connectivity_indicator();
+int verify_main_menu_connectivity_failure_logging();
+int verify_main_menu_build_label();
+int verify_main_menu_save_alerts();
+int verify_main_menu_patch_notes_split();
+int verify_settings_flow_helpers();
+int verify_load_flow_save_listing();
+int verify_load_flow_save_deletion();
+int verify_load_flow_save_rename();
+int verify_load_flow_save_metadata();
 int verify_quick_quest_completion_bonus();
 int verify_achievement_catalog();
 int verify_achievement_progression();

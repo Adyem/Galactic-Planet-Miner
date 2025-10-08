@@ -48,6 +48,22 @@ namespace
         }
     }
 
+    void extract_http_body(const ft_string &response, ft_string &out_body)
+    {
+        out_body.clear();
+        const char *cstr = response.c_str();
+        if (cstr == ft_nullptr)
+            return;
+        const char *body_start = ft_strstr(cstr, "\r\n\r\n");
+        if (body_start != ft_nullptr)
+        {
+            body_start += 4;
+            assign_substring(out_body, body_start, cstr + response.size());
+        }
+        else
+            out_body = response;
+    }
+
     ft_string sanitize_host_input(const ft_string &raw)
     {
         const char *begin = raw.c_str();
@@ -206,4 +222,34 @@ const ft_string &BackendClient::get_port_for_testing() const
 bool BackendClient::get_use_ssl_for_testing() const
 {
     return (this->_use_ssl);
+}
+
+bool backend_client_ping(const ft_string &host, const ft_string &path, int &out_status_code) noexcept
+{
+    BackendClient client(host, path);
+    ft_string     response;
+    ft_string     payload("ping");
+
+    int status = client.send_state(payload, response);
+    out_status_code = status;
+
+    if (status >= 200 && status < 400)
+        return true;
+    return false;
+}
+
+bool backend_client_fetch_patch_notes(const ft_string &host, const ft_string &path, ft_string &out_notes,
+    int &out_status_code) noexcept
+{
+    BackendClient client(host, path);
+    ft_string     response;
+    ft_string     payload("patch_notes");
+
+    int status = client.send_state(payload, response);
+    out_status_code = status;
+
+    extract_http_body(response, out_notes);
+    if (status >= 200 && status < 300)
+        return true;
+    return false;
 }
