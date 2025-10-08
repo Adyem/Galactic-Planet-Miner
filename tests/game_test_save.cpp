@@ -2488,6 +2488,7 @@ int verify_player_profile_save()
     preferences.ui_scale_percent = 125U;
     preferences.combat_speed_percent = 140U;
     preferences.lore_panel_anchor = PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
+    preferences.menu_tutorial_seen = true;
 
     FT_ASSERT(player_profile_delete(commander_name));
 
@@ -2532,6 +2533,11 @@ int verify_player_profile_save()
     FT_ASSERT(anchor_item->value != ft_nullptr);
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT, ft_atoi(anchor_item->value));
 
+    json_item *tutorial_item = document.find_item(group, "menu_tutorial_seen");
+    FT_ASSERT(tutorial_item != ft_nullptr);
+    FT_ASSERT(tutorial_item->value != ft_nullptr);
+    FT_ASSERT_EQ(0, ft_strcmp(tutorial_item->value, "true"));
+
     PlayerProfilePreferences loaded;
     FT_ASSERT(player_profile_load_or_create(loaded, commander_name));
     FT_ASSERT_EQ(preferences.commander_name, loaded.commander_name);
@@ -2540,6 +2546,7 @@ int verify_player_profile_save()
     FT_ASSERT_EQ(preferences.ui_scale_percent, loaded.ui_scale_percent);
     FT_ASSERT_EQ(preferences.combat_speed_percent, loaded.combat_speed_percent);
     FT_ASSERT_EQ(preferences.lore_panel_anchor, loaded.lore_panel_anchor);
+    FT_ASSERT(loaded.menu_tutorial_seen);
 
     FT_ASSERT(player_profile_delete(commander_name));
 

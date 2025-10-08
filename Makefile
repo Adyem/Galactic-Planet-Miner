@@ -10,6 +10,7 @@ NAME_DEBUG  = galactic_miner_debug$(EXE_EXT)
 TEST_DIR    = tests
 
 SRC_COMMON  = \
+    build_info.cpp \
     backend_client.cpp \
     achievements.cpp \
     planets.cpp \
@@ -38,6 +39,8 @@ SRC_COMMON  = \
     ui_input.cpp \
     ui_menu.cpp \
     new_game_flow.cpp \
+    load_game_flow.cpp \
+    settings_flow.cpp \
     profile_entry_flow.cpp \
     profile_management_flow.cpp \
     profile_preferences.cpp
@@ -45,6 +48,7 @@ SRC_MAIN    = main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_main.cpp \
+    $(TEST_DIR)/game_test_menu.cpp \
     $(TEST_DIR)/game_test_achievements.cpp \
     $(TEST_DIR)/game_test_backend.cpp \
     $(TEST_DIR)/game_test_campaign.cpp \
@@ -87,6 +91,9 @@ CFLAGS = $(COMPILE_FLAGS)
 
 DEBUG ?= 0
 
+BUILD_VERSION ?= dev
+BUILD_BRANCH ?= local
+
 ifeq ($(OS),Windows_NT)
     MKDIR   = mkdir
     RMDIR   = rmdir /S /Q
@@ -125,6 +132,8 @@ else
     TARGET     = $(NAME)
     LIBFT      = $(LIBFT_DIR)/Full_Libft.a
 endif
+
+CFLAGS += -DGALACTIC_BUILD_VERSION=\"$(BUILD_VERSION)\" -DGALACTIC_BUILD_BRANCH=\"$(BUILD_BRANCH)\"
 
 export COMPILE_FLAGS
 

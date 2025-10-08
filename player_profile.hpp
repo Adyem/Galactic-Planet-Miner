@@ -23,6 +23,7 @@ struct PlayerProfilePreferences
     unsigned int ui_scale_percent;
     unsigned int combat_speed_percent;
     unsigned int lore_panel_anchor;
+    bool         menu_tutorial_seen;
 
     PlayerProfilePreferences() noexcept
         : commander_name(),
@@ -30,7 +31,8 @@ struct PlayerProfilePreferences
           window_height(720U),
           ui_scale_percent(100U),
           combat_speed_percent(100U),
-          lore_panel_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT)
+          lore_panel_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT),
+          menu_tutorial_seen(false)
     {}
 };
 

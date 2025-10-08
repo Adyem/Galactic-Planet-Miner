@@ -24,6 +24,8 @@ struct ft_keyboard_state
 {
     bool pressed_up;
     bool pressed_down;
+    bool pressed_confirm;
+    bool pressed_delete;
 
     ft_keyboard_state() noexcept;
     bool has_activity() const noexcept;

@@ -202,6 +202,19 @@ int verify_backend_roundtrip()
     return 1;
 }
 
+int verify_backend_patch_notes_fetch()
+{
+    ft_string notes;
+    int       status_code = 0;
+
+    FT_ASSERT(!backend_client_fetch_patch_notes(ft_string("127.0.0.1:65535"), ft_string("/patch-notes/latest"), notes,
+        status_code));
+    FT_ASSERT(status_code != 0);
+    FT_ASSERT(!notes.empty());
+
+    return 1;
+}
+
 int verify_backend_host_parsing()
 {
     BackendClient numeric(ft_string("http://127.0.0.1:18090"), ft_string("/"));

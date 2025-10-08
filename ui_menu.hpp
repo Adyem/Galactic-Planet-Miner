@@ -23,6 +23,7 @@ struct ft_menu_item
     ft_string label;
     ft_rect   bounds;
     bool      enabled;
+    ft_string description;
 
     ft_menu_item();
     ft_menu_item(const ft_string &id, const ft_string &text, const ft_rect &area);
@@ -59,6 +60,7 @@ public:
     int                           get_hovered_index() const noexcept;
     int                           get_selected_index() const noexcept;
     const ft_menu_item           *get_selected_item() const;
+    const ft_menu_item           *get_hovered_item() const;
     e_ft_input_device             get_active_device() const noexcept;
     void                          set_selected_index(int index);
     const ft_rect                &get_viewport_bounds() const noexcept;

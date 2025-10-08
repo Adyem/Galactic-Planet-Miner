@@ -23,6 +23,9 @@ int main()
     if (!verify_backend_roundtrip())
         return 0;
 
+    if (!verify_backend_patch_notes_fetch())
+        return 0;
+
     if (!verify_backend_host_parsing())
         return 0;
 
@@ -84,6 +87,44 @@ int main()
         return 0;
 
     if (!verify_player_preference_application())
+        return 0;
+    if (!verify_menu_preference_snapshot())
+        return 0;
+    if (!verify_main_menu_descriptions())
+        return 0;
+    if (!verify_main_menu_description_focus())
+        return 0;
+    if (!verify_main_menu_navigation_hints())
+        return 0;
+    if (!verify_main_menu_tutorial_tips())
+        return 0;
+    if (!verify_main_menu_manual_sections())
+        return 0;
+    if (!verify_main_menu_connectivity_indicator())
+        return 0;
+    if (!verify_main_menu_connectivity_failure_logging())
+        return 0;
+    if (!verify_main_menu_build_label())
+        return 0;
+    if (!verify_main_menu_save_alerts())
+        return 0;
+
+    if (!verify_main_menu_patch_notes_split())
+        return 0;
+
+    if (!verify_settings_flow_helpers())
+        return 0;
+
+    if (!verify_load_flow_save_listing())
+        return 0;
+
+    if (!verify_load_flow_save_deletion())
+        return 0;
+
+    if (!verify_load_flow_save_rename())
+        return 0;
+
+    if (!verify_load_flow_save_metadata())
         return 0;
 
     if (!verify_quick_quest_completion_bonus())
