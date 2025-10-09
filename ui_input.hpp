@@ -5,7 +5,8 @@ enum e_ft_input_device
 {
     FT_INPUT_DEVICE_NONE = 0,
     FT_INPUT_DEVICE_MOUSE,
-    FT_INPUT_DEVICE_KEYBOARD
+    FT_INPUT_DEVICE_KEYBOARD,
+    FT_INPUT_DEVICE_GAMEPAD
 };
 
 struct ft_mouse_state
@@ -42,9 +43,11 @@ public:
 
     void                 notify_mouse_activity() noexcept;
     void                 notify_keyboard_activity() noexcept;
+    void                 notify_gamepad_activity() noexcept;
     e_ft_input_device    get_last_device() const noexcept;
     unsigned long long   get_event_counter() const noexcept;
     void                 reset() noexcept;
+    void                 set_last_device(e_ft_input_device device) noexcept;
 };
 
 #endif

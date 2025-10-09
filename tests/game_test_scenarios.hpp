@@ -5,6 +5,7 @@
 
 int verify_backend_roundtrip();
 int verify_backend_patch_notes_fetch();
+int verify_backend_clear_cloud_data();
 int verify_backend_host_parsing();
 int verify_locked_planet_reward_delivery();
 int verify_lore_log_retention();
@@ -78,6 +79,8 @@ int verify_menu_preference_snapshot();
 int verify_main_menu_descriptions();
 int verify_main_menu_description_focus();
 int verify_main_menu_navigation_hints();
+int verify_main_menu_navigation_hints_custom();
+int verify_main_menu_device_preference_seed();
 int verify_main_menu_tutorial_tips();
 int verify_main_menu_manual_sections();
 int verify_main_menu_connectivity_indicator();
@@ -85,6 +88,7 @@ int verify_main_menu_connectivity_failure_logging();
 int verify_main_menu_build_label();
 int verify_main_menu_save_alerts();
 int verify_resume_latest_save_resolution();
+int verify_main_menu_commander_portrait_preload();
 int verify_main_menu_campaign_launch_guard();
 int verify_main_menu_patch_notes_split();
 int verify_settings_flow_helpers();

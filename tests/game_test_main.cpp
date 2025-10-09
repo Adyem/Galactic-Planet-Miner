@@ -26,6 +26,9 @@ int main()
     if (!verify_backend_patch_notes_fetch())
         return 0;
 
+    if (!verify_backend_clear_cloud_data())
+        return 0;
+
     if (!verify_backend_host_parsing())
         return 0;
 
@@ -96,6 +99,10 @@ int main()
         return 0;
     if (!verify_main_menu_navigation_hints())
         return 0;
+    if (!verify_main_menu_navigation_hints_custom())
+        return 0;
+    if (!verify_main_menu_device_preference_seed())
+        return 0;
     if (!verify_main_menu_tutorial_tips())
         return 0;
     if (!verify_main_menu_manual_sections())
@@ -110,6 +117,9 @@ int main()
         return 0;
 
     if (!verify_resume_latest_save_resolution())
+        return 0;
+
+    if (!verify_main_menu_commander_portrait_preload())
         return 0;
 
     if (!verify_main_menu_campaign_launch_guard())

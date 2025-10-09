@@ -131,6 +131,11 @@ e_ft_input_device ft_ui_menu::get_active_device() const noexcept
     return this->_device_tracker.get_last_device();
 }
 
+void ft_ui_menu::set_active_device(e_ft_input_device device) noexcept
+{
+    this->_device_tracker.set_last_device(device);
+}
+
 void ft_ui_menu::set_selected_index(int index)
 {
     if (index < 0)
