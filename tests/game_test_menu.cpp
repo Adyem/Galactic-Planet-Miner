@@ -2,11 +2,29 @@
 #include "../libft/CPP_class/class_nullptr.hpp"
 #include "../libft/CPP_class/class_ofstream.hpp"
 #include "../libft/File/file_utils.hpp"
+#include "../libft/File/open_dir.hpp"
 #include "../libft/Libft/libft.hpp"
 #include "../libft/Time/time.hpp"
 #include "game_test_scenarios.hpp"
 #include "main_menu_system.hpp"
 #include "build_info.hpp"
+
+#include <errno.h>
+
+namespace
+{
+    bool ensure_directory_exists(const char *path) noexcept
+    {
+        if (path == ft_nullptr)
+            return false;
+        int result = file_create_directory(path, 0755);
+        if (result == 0)
+            return true;
+        if (ft_errno == ERRNO_OFFSET + EEXIST)
+            return true;
+        return false;
+    }
+}
 
 int verify_menu_preference_snapshot()
 {
@@ -17,6 +35,13 @@ int verify_menu_preference_snapshot()
     FT_ASSERT_EQ(720U, defaults.window_height);
     FT_ASSERT_EQ(100U, defaults.music_volume_percent);
     FT_ASSERT_EQ(100U, defaults.effects_volume_percent);
+    FT_ASSERT_EQ(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP, defaults.hotkey_menu_up);
+    FT_ASSERT_EQ(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN, defaults.hotkey_menu_down);
+    FT_ASSERT_EQ(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CONFIRM, defaults.hotkey_menu_confirm);
+    FT_ASSERT_EQ(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CANCEL, defaults.hotkey_menu_cancel);
+    FT_ASSERT_EQ(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DELETE, defaults.hotkey_menu_delete);
+    FT_ASSERT_EQ(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_RENAME, defaults.hotkey_menu_rename);
+    FT_ASSERT_EQ(PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD, defaults.last_menu_input_device);
 
     PlayerProfilePreferences custom = profile_preferences_testing::build_window_preference_snapshot(
         ft_string("Vesta"), 1920U, 1080U);
@@ -25,6 +50,7 @@ int verify_menu_preference_snapshot()
     FT_ASSERT_EQ(1080U, custom.window_height);
     FT_ASSERT_EQ(100U, custom.music_volume_percent);
     FT_ASSERT_EQ(100U, custom.effects_volume_percent);
+    FT_ASSERT_EQ(PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD, custom.last_menu_input_device);
 
     PlayerProfilePreferences mixed = profile_preferences_testing::build_window_preference_snapshot(
         ft_string("Vega"), 2048U, 0U);
@@ -32,6 +58,7 @@ int verify_menu_preference_snapshot()
     FT_ASSERT_EQ(720U, mixed.window_height);
     FT_ASSERT_EQ(100U, mixed.music_volume_percent);
     FT_ASSERT_EQ(100U, mixed.effects_volume_percent);
+    FT_ASSERT_EQ(PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD, mixed.last_menu_input_device);
 
     return 1;
 }
@@ -39,7 +66,7 @@ int verify_menu_preference_snapshot()
 int verify_main_menu_descriptions()
 {
     ft_vector<ft_menu_item> items = build_main_menu_items();
-    FT_ASSERT_EQ(8U, items.size());
+    FT_ASSERT_EQ(9U, items.size());
 
     FT_ASSERT_EQ(ft_string("new_game"), items[0].identifier);
     FT_ASSERT(items[0].enabled);
@@ -70,9 +97,14 @@ int verify_main_menu_descriptions()
     FT_ASSERT(items[6].enabled);
     FT_ASSERT(!items[6].description.empty());
 
-    FT_ASSERT_EQ(ft_string("exit"), items[7].identifier);
+    FT_ASSERT_EQ(ft_string("clear_cloud"), items[7].identifier);
     FT_ASSERT(items[7].enabled);
-    FT_ASSERT(!items[7].description.empty());
+    FT_ASSERT_EQ(ft_string("Remove backend-linked progress for this commander after confirming the action."),
+        items[7].description);
+
+    FT_ASSERT_EQ(ft_string("exit"), items[8].identifier);
+    FT_ASSERT(items[8].enabled);
+    FT_ASSERT(!items[8].description.empty());
 
     return 1;
 }
@@ -122,11 +154,11 @@ int verify_main_menu_navigation_hints()
     menu.set_items(build_main_menu_items());
     menu.set_viewport_bounds(build_main_menu_viewport());
 
-    ft_string hint = main_menu_testing::resolve_navigation_hint(menu);
+    ft_string hint = main_menu_testing::resolve_navigation_hint(menu, ft_nullptr);
     FT_ASSERT_EQ(ft_string("Enter / A: Select New Game  |  Arrow Keys / D-Pad: Navigate  |  Esc / B: Back"), hint);
 
     const ft_vector<ft_menu_item> &items = menu.get_items();
-    FT_ASSERT_EQ(8U, items.size());
+    FT_ASSERT_EQ(9U, items.size());
 
     const ft_menu_item &load_item = items[2];
 
@@ -136,8 +168,59 @@ int verify_main_menu_navigation_hints()
     hover_state.y = load_item.bounds.top + 4;
     menu.handle_mouse_input(hover_state);
 
-    hint = main_menu_testing::resolve_navigation_hint(menu);
+    hint = main_menu_testing::resolve_navigation_hint(menu, ft_nullptr);
     FT_ASSERT_EQ(ft_string("Enter / A: Select Load  |  Arrow Keys / D-Pad: Navigate  |  Esc / B: Back"), hint);
+
+    return 1;
+}
+
+int verify_main_menu_navigation_hints_custom()
+{
+    ft_ui_menu menu;
+    menu.set_items(build_main_menu_items());
+    menu.set_viewport_bounds(build_main_menu_viewport());
+
+    PlayerProfilePreferences custom;
+    custom.hotkey_menu_up = 'w';
+    custom.hotkey_menu_down = 's';
+    custom.hotkey_menu_confirm = 'e';
+    custom.hotkey_menu_cancel = 'q';
+
+    ft_string hint = main_menu_testing::resolve_navigation_hint(menu, &custom);
+    FT_ASSERT_EQ(ft_string("E / A: Select New Game  |  W/S / D-Pad: Navigate  |  Q / B: Back"), hint);
+
+    const ft_vector<ft_menu_item> &items = menu.get_items();
+    FT_ASSERT_EQ(9U, items.size());
+    const ft_menu_item &load_item = items[2];
+
+    ft_mouse_state hover_state;
+    hover_state.moved = true;
+    hover_state.x = load_item.bounds.left + 4;
+    hover_state.y = load_item.bounds.top + 4;
+    menu.handle_mouse_input(hover_state);
+
+    hint = main_menu_testing::resolve_navigation_hint(menu, &custom);
+    FT_ASSERT_EQ(ft_string("E / A: Select Load  |  W/S / D-Pad: Navigate  |  Q / B: Back"), hint);
+
+    return 1;
+}
+
+int verify_main_menu_device_preference_seed()
+{
+    ft_ui_menu menu;
+    menu.set_items(build_main_menu_items());
+    menu.set_viewport_bounds(build_main_menu_viewport());
+
+    FT_ASSERT_EQ(FT_INPUT_DEVICE_NONE, menu.get_active_device());
+
+    menu.set_active_device(FT_INPUT_DEVICE_MOUSE);
+    FT_ASSERT_EQ(FT_INPUT_DEVICE_MOUSE, menu.get_active_device());
+
+    menu.set_active_device(FT_INPUT_DEVICE_GAMEPAD);
+    FT_ASSERT_EQ(FT_INPUT_DEVICE_GAMEPAD, menu.get_active_device());
+
+    menu.set_active_device(FT_INPUT_DEVICE_NONE);
+    FT_ASSERT_EQ(FT_INPUT_DEVICE_NONE, menu.get_active_device());
 
     return 1;
 }
@@ -291,6 +374,8 @@ int verify_settings_flow_helpers()
         settings_flow_testing::toggle_lore_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT));
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT,
         settings_flow_testing::toggle_lore_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT));
+    FT_ASSERT(settings_flow_testing::toggle_accessibility_preset(false));
+    FT_ASSERT(!settings_flow_testing::toggle_accessibility_preset(true));
 
     FT_ASSERT_EQ(ft_string("UI Scale: 110%"), settings_flow_testing::format_ui_scale_option(110U));
     FT_ASSERT_EQ(ft_string("Combat Speed: 95%"), settings_flow_testing::format_combat_speed_option(95U));
@@ -298,6 +383,8 @@ int verify_settings_flow_helpers()
     FT_ASSERT_EQ(ft_string("Effects Volume: 40%"), settings_flow_testing::format_effects_volume_option(40U));
     FT_ASSERT_EQ(ft_string("Lore Panel Anchor: Right"),
         settings_flow_testing::format_lore_anchor_option(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT));
+    FT_ASSERT_EQ(ft_string("Accessibility Preset: Off"), settings_flow_testing::format_accessibility_preset_option(false));
+    FT_ASSERT_EQ(ft_string("Accessibility Preset: On"), settings_flow_testing::format_accessibility_preset_option(true));
 
     return 1;
 }
@@ -567,6 +654,68 @@ int verify_resume_latest_save_resolution()
     ft_vector<ft_string> errors;
     FT_ASSERT(audit_save_directory_for_errors(commander, errors));
     FT_ASSERT_EQ(1U, errors.size());
+
+    return 1;
+}
+
+int verify_main_menu_commander_portrait_preload()
+{
+    main_menu_testing::reset_commander_portrait_cache();
+
+    FT_ASSERT(ensure_directory_exists("assets"));
+    FT_ASSERT(ensure_directory_exists("assets/portraits"));
+
+    ft_string default_path("assets/portraits/default.png");
+    ft_ofstream default_stream;
+    FT_ASSERT_EQ(0, default_stream.open(default_path.c_str()));
+    FT_ASSERT(default_stream.write("default portrait data") >= 0);
+    default_stream.close();
+
+    long timestamp = ft_time_ms();
+
+    ft_string missing_commander("PortraitMissing_");
+    missing_commander.append(ft_to_string(static_cast<int>(timestamp % 1000000L)));
+    PlayerProfilePreferences missing_preferences;
+    missing_preferences.commander_name = missing_commander;
+    FT_ASSERT(player_profile_save(missing_preferences));
+
+    FT_ASSERT(main_menu_preload_commander_portrait(missing_commander));
+    FT_ASSERT(main_menu_testing::commander_portrait_attempted(missing_commander));
+    FT_ASSERT(main_menu_testing::commander_portrait_loaded(missing_commander));
+    ft_string missing_cached_path = main_menu_testing::resolve_cached_portrait_path(missing_commander);
+    FT_ASSERT_EQ(default_path, missing_cached_path);
+    FT_ASSERT(main_menu_testing::commander_portrait_cached_size(missing_commander) > 0U);
+
+    ft_string specific_commander("PortraitSpecific_");
+    specific_commander.append(ft_to_string(static_cast<int>((timestamp + 1) % 1000000L)));
+    PlayerProfilePreferences specific_preferences;
+    specific_preferences.commander_name = specific_commander;
+    FT_ASSERT(player_profile_save(specific_preferences));
+
+    ft_string portrait_filename = main_menu_testing::resolve_commander_portrait_filename(specific_commander);
+    FT_ASSERT(!portrait_filename.empty());
+    ft_string specific_path("assets/portraits/");
+    specific_path.append(portrait_filename);
+    specific_path.append(".png");
+
+    ft_ofstream specific_stream;
+    FT_ASSERT_EQ(0, specific_stream.open(specific_path.c_str()));
+    FT_ASSERT(specific_stream.write("specific portrait data") >= 0);
+    specific_stream.close();
+
+    FT_ASSERT(main_menu_preload_commander_portrait(specific_commander));
+    FT_ASSERT(main_menu_testing::commander_portrait_attempted(specific_commander));
+    FT_ASSERT(main_menu_testing::commander_portrait_loaded(specific_commander));
+    ft_string specific_cached_path = main_menu_testing::resolve_cached_portrait_path(specific_commander);
+    FT_ASSERT_EQ(specific_path, specific_cached_path);
+    FT_ASSERT(main_menu_testing::commander_portrait_cached_size(specific_commander) > 0U);
+
+    FT_ASSERT(player_profile_delete(missing_commander));
+    FT_ASSERT(player_profile_delete(specific_commander));
+    FT_ASSERT_EQ(0, file_delete(default_path.c_str()));
+    FT_ASSERT_EQ(0, file_delete(specific_path.c_str()));
+
+    main_menu_testing::reset_commander_portrait_cache();
 
     return 1;
 }

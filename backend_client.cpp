@@ -253,3 +253,19 @@ bool backend_client_fetch_patch_notes(const ft_string &host, const ft_string &pa
         return true;
     return false;
 }
+
+bool backend_client_clear_cloud_data(const ft_string &host, const ft_string &path, ft_string &out_body,
+    int &out_status_code) noexcept
+{
+    BackendClient client(host, path);
+    ft_string     response;
+    ft_string     payload("clear_cloud_data");
+
+    int status = client.send_state(payload, response);
+    out_status_code = status;
+
+    extract_http_body(response, out_body);
+    if (status >= 200 && status < 300)
+        return true;
+    return false;
+}

@@ -34,6 +34,12 @@ void ft_input_device_tracker::notify_keyboard_activity() noexcept
     this->_last_device = FT_INPUT_DEVICE_KEYBOARD;
 }
 
+void ft_input_device_tracker::notify_gamepad_activity() noexcept
+{
+    ++this->_event_counter;
+    this->_last_device = FT_INPUT_DEVICE_GAMEPAD;
+}
+
 e_ft_input_device ft_input_device_tracker::get_last_device() const noexcept
 {
     return this->_last_device;
@@ -48,4 +54,20 @@ void ft_input_device_tracker::reset() noexcept
 {
     this->_last_device = FT_INPUT_DEVICE_NONE;
     this->_event_counter = 0ULL;
+}
+
+void ft_input_device_tracker::set_last_device(e_ft_input_device device) noexcept
+{
+    this->_event_counter = 0ULL;
+    switch (device)
+    {
+        case FT_INPUT_DEVICE_MOUSE:
+        case FT_INPUT_DEVICE_KEYBOARD:
+        case FT_INPUT_DEVICE_GAMEPAD:
+            this->_last_device = device;
+            break;
+        default:
+            this->_last_device = FT_INPUT_DEVICE_NONE;
+            break;
+    }
 }

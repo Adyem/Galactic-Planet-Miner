@@ -2509,6 +2509,7 @@ int verify_player_profile_save()
     preferences.combat_speed_percent = 140U;
     preferences.lore_panel_anchor = PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
     preferences.menu_tutorial_seen = true;
+    preferences.last_menu_input_device = PLAYER_PROFILE_INPUT_DEVICE_GAMEPAD;
 
     FT_ASSERT(player_profile_delete(commander_name));
 
@@ -2558,6 +2559,11 @@ int verify_player_profile_save()
     FT_ASSERT(tutorial_item->value != ft_nullptr);
     FT_ASSERT_EQ(0, ft_strcmp(tutorial_item->value, "true"));
 
+    json_item *device_item = document.find_item(group, "last_menu_input_device");
+    FT_ASSERT(device_item != ft_nullptr);
+    FT_ASSERT(device_item->value != ft_nullptr);
+    FT_ASSERT_EQ(PLAYER_PROFILE_INPUT_DEVICE_GAMEPAD, ft_atoi(device_item->value));
+
     PlayerProfilePreferences loaded;
     FT_ASSERT(player_profile_load_or_create(loaded, commander_name));
     FT_ASSERT_EQ(preferences.commander_name, loaded.commander_name);
@@ -2567,6 +2573,7 @@ int verify_player_profile_save()
     FT_ASSERT_EQ(preferences.combat_speed_percent, loaded.combat_speed_percent);
     FT_ASSERT_EQ(preferences.lore_panel_anchor, loaded.lore_panel_anchor);
     FT_ASSERT(loaded.menu_tutorial_seen);
+    FT_ASSERT_EQ(preferences.last_menu_input_device, loaded.last_menu_input_device);
 
     FT_ASSERT(player_profile_delete(commander_name));
 

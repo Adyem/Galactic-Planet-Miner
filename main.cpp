@@ -83,8 +83,13 @@ int main()
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    TTF_Font *title_font = resolve_font(48);
-    TTF_Font *menu_font = resolve_font(28);
+    TTF_Font *title_font = resolve_font(main_menu_resolve_title_font_points());
+    TTF_Font *menu_font = resolve_font(main_menu_resolve_menu_font_points());
+
+    auto refresh_fonts = [&]() {
+        title_font = resolve_font(main_menu_resolve_title_font_points());
+        menu_font = resolve_font(main_menu_resolve_menu_font_points());
+    };
 
     bool quit_requested = false;
     ft_vector<ft_string> available_profiles;
@@ -129,6 +134,7 @@ int main()
     }
 
     apply_profile_preferences(window, active_profile_name);
+    refresh_fonts();
 
     ft_ui_menu              menu;
     ft_vector<ft_menu_item> menu_items = build_main_menu_items();
@@ -148,6 +154,10 @@ int main()
                 }
             }
         }
+        e_ft_input_device seeded_device
+            = static_cast<e_ft_input_device>(active_preferences.last_menu_input_device);
+        if (seeded_device != FT_INPUT_DEVICE_NONE)
+            menu.set_active_device(seeded_device);
     };
 
     auto refresh_menu_selection = [&]() {
@@ -166,6 +176,7 @@ int main()
     tutorial_context.visible = !active_preferences.menu_tutorial_seen;
     MainMenuOverlayContext      changelog_context;
     MainMenuOverlayContext      manual_context;
+    MainMenuOverlayContext      clear_cloud_context;
     MainMenuAlertBanner         alert_banner;
 
     bool      resume_available = false;
@@ -212,6 +223,7 @@ int main()
     const ft_string backend_host("127.0.0.1:8080");
     const ft_string backend_path("/");
     const ft_string backend_patch_notes_path("/patch-notes/latest");
+    const ft_string backend_clear_cloud_path("/cloud-data/clear");
     MainMenuConnectivityStatus connectivity_status;
     const long connectivity_interval_ms = 7000;
     long       next_connectivity_check_ms = 0;
@@ -276,6 +288,8 @@ int main()
             resume_save_path = latest_path;
             resume_metadata_label = latest_metadata;
             resume_metadata_known = latest_metadata_available;
+            if (!active_profile_name.empty())
+                main_menu_preload_commander_portrait(active_profile_name);
         }
         else
         {
@@ -340,6 +354,88 @@ int main()
         if (!manual_context.visible)
             return false;
         manual_context.visible = false;
+        return true;
+    };
+
+    auto close_clear_cloud_prompt = [&]() -> bool {
+        if (!clear_cloud_context.visible)
+            return false;
+        clear_cloud_context.visible = false;
+        clear_cloud_context.heading.clear();
+        clear_cloud_context.lines.clear();
+        clear_cloud_context.footer.clear();
+        return true;
+    };
+
+    auto open_clear_cloud_prompt = [&]() {
+        dismiss_tutorial_overlay();
+        dismiss_changelog_overlay();
+        dismiss_manual_overlay();
+        clear_cloud_context.visible = true;
+        clear_cloud_context.heading = ft_string("Clear Cloud Data?");
+        clear_cloud_context.lines.clear();
+        clear_cloud_context.lines.push_back(
+            ft_string("This will remove any cloud-synced progress for this commander."));
+        clear_cloud_context.lines.push_back(ft_string("Local saves on this device will remain intact."));
+        clear_cloud_context.footer = ft_string("Press Enter / A to confirm, Esc / B or click to cancel.");
+    };
+
+    auto confirm_clear_cloud_prompt = [&]() -> bool {
+        if (!clear_cloud_context.visible)
+            return false;
+
+        close_clear_cloud_prompt();
+
+        if (connectivity_status.state != MAIN_MENU_CONNECTIVITY_ONLINE)
+        {
+            alert_banner.visible = true;
+            alert_banner.is_error = true;
+            alert_banner.message
+                = ft_string("Cloud data can only be cleared while online. Reconnect and try again.");
+            return true;
+        }
+
+        ft_string response_body;
+        int       status_code = 0;
+        bool      success
+            = backend_client_clear_cloud_data(backend_host, backend_clear_cloud_path, response_body, status_code);
+
+        alert_banner.visible = true;
+        if (success)
+        {
+            alert_banner.is_error = false;
+            if (!response_body.empty())
+                alert_banner.message = response_body;
+            else
+            {
+                alert_banner.message = ft_string("Cleared cloud data");
+                if (!active_profile_name.empty())
+                {
+                    alert_banner.message.append(" for \"");
+                    alert_banner.message.append(active_profile_name);
+                    alert_banner.message.append("\".");
+                }
+                else
+                    alert_banner.message.append(" for this commander.");
+            }
+        }
+        else
+        {
+            alert_banner.is_error = true;
+            alert_banner.message = ft_string("Failed to clear cloud data.");
+            if (status_code != 0)
+            {
+                alert_banner.message.append(" (HTTP ");
+                alert_banner.message.append(ft_to_string(status_code));
+                alert_banner.message.append(")");
+            }
+            if (!response_body.empty())
+            {
+                alert_banner.message.append(" ");
+                alert_banner.message.append(response_body);
+            }
+            main_menu_append_connectivity_failure_log(backend_host, status_code, ft_time_ms());
+        }
         return true;
     };
 
@@ -424,6 +520,7 @@ int main()
         bool              tutorial_click_in_progress = false;
         bool              changelog_click_in_progress = false;
         bool              manual_click_in_progress = false;
+        bool              clear_cloud_click_in_progress = false;
 
         SDL_Event event;
         while (SDL_PollEvent(&event) == 1)
@@ -446,6 +543,8 @@ int main()
                     mouse_state.y = event.button.y;
                     if (tutorial_context.visible)
                         tutorial_click_in_progress = true;
+                    else if (clear_cloud_context.visible)
+                        clear_cloud_click_in_progress = true;
                     else if (manual_context.visible)
                         manual_click_in_progress = true;
                     else if (changelog_context.visible)
@@ -475,19 +574,36 @@ int main()
                         dismiss_changelog_overlay();
                         changelog_click_in_progress = false;
                     }
+                    else if (clear_cloud_click_in_progress || clear_cloud_context.visible)
+                    {
+                        close_clear_cloud_prompt();
+                        clear_cloud_click_in_progress = false;
+                    }
                     else
                         mouse_state.left_released = true;
                 }
             }
             else if (event.type == SDL_KEYDOWN)
             {
-                if (event.key.keysym.sym == SDLK_UP)
+                auto matches_key = [&](SDL_Keycode key, int mapping) {
+                    if (mapping == 0)
+                        return false;
+                    return key == static_cast<SDL_Keycode>(mapping);
+                };
+
+                SDL_Keycode key = event.key.keysym.sym;
+                if (matches_key(key, active_preferences.hotkey_menu_up))
                     keyboard_state.pressed_up = true;
-                else if (event.key.keysym.sym == SDLK_DOWN)
+                else if (matches_key(key, active_preferences.hotkey_menu_down))
                     keyboard_state.pressed_down = true;
-                else if (event.key.keysym.sym == SDLK_RETURN || event.key.keysym.sym == SDLK_SPACE)
+                else if (matches_key(key, active_preferences.hotkey_menu_confirm))
                 {
-                    if (manual_context.visible)
+                    if (clear_cloud_context.visible)
+                    {
+                        confirm_clear_cloud_prompt();
+                        clear_cloud_click_in_progress = false;
+                    }
+                    else if (manual_context.visible)
                     {
                         dismiss_manual_overlay();
                         manual_click_in_progress = false;
@@ -501,9 +617,11 @@ int main()
                         activate_requested = true;
                     tutorial_click_in_progress = false;
                 }
-                else if (event.key.keysym.sym == SDLK_ESCAPE)
+                else if (matches_key(key, active_preferences.hotkey_menu_cancel))
                 {
-                    if (!dismiss_manual_overlay() && !dismiss_changelog_overlay())
+                    if (clear_cloud_context.visible)
+                        close_clear_cloud_prompt();
+                    else if (!dismiss_manual_overlay() && !dismiss_changelog_overlay())
                         running = false;
                 }
             }
@@ -521,7 +639,17 @@ int main()
         menu.handle_mouse_input(mouse_state);
         menu.handle_keyboard_input(keyboard_state);
 
+        e_ft_input_device active_device = menu.get_active_device();
+        if (active_device != FT_INPUT_DEVICE_NONE
+            && active_device != static_cast<e_ft_input_device>(active_preferences.last_menu_input_device))
+        {
+            active_preferences.last_menu_input_device = static_cast<int>(active_device);
+        }
+
         auto process_menu_activation = [&](const ft_menu_item &item) {
+            if (clear_cloud_context.visible)
+                return;
+
             if (item.identifier == "new_game")
             {
                 bool      creation_quit = false;
@@ -607,6 +735,7 @@ int main()
                 {
                     active_profile_name = selected_profile;
                     apply_profile_preferences(window, active_profile_name);
+                    refresh_fonts();
                     if (!player_profile_load_or_create(active_preferences, active_profile_name))
                     {
                         active_preferences = PlayerProfilePreferences();
@@ -632,6 +761,22 @@ int main()
 
                 if (saved)
                     apply_profile_preferences(window, active_profile_name);
+                if (saved)
+                    refresh_fonts();
+                return;
+            }
+
+            if (item.identifier == "clear_cloud")
+            {
+                if (connectivity_status.state != MAIN_MENU_CONNECTIVITY_ONLINE)
+                {
+                    alert_banner.visible = true;
+                    alert_banner.is_error = true;
+                    alert_banner.message
+                        = ft_string("Cloud data can only be cleared while online. Reconnect and try again.");
+                    return;
+                }
+                open_clear_cloud_prompt();
                 return;
             }
 
@@ -679,11 +824,11 @@ int main()
             perform_connectivity_check(current_time_ms);
 
         render_main_menu(*renderer, menu, title_font, menu_font, window_width, window_height, active_profile_name,
-            &tutorial_context, &manual_context, &changelog_context, &connectivity_status, &alert_banner);
+            &tutorial_context, &manual_context, &changelog_context, &clear_cloud_context, &connectivity_status, &alert_banner);
     }
 
     if (window != ft_nullptr && !active_profile_name.empty())
-        save_profile_preferences(window, active_profile_name);
+        save_profile_preferences(window, active_preferences);
 
     destroy_renderer(renderer);
     destroy_window(window);

@@ -62,6 +62,7 @@ public:
     const ft_menu_item           *get_selected_item() const;
     const ft_menu_item           *get_hovered_item() const;
     e_ft_input_device             get_active_device() const noexcept;
+    void                          set_active_device(e_ft_input_device device) noexcept;
     void                          set_selected_index(int index);
     const ft_rect                &get_viewport_bounds() const noexcept;
     int                           get_scroll_offset() const noexcept;

@@ -113,6 +113,21 @@ namespace
         return PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT;
     }
 
+    bool toggle_accessibility_preset(bool enabled) noexcept
+    {
+        return !enabled;
+    }
+
+    ft_string format_accessibility_preset_label(bool enabled)
+    {
+        ft_string label("Accessibility Preset: ");
+        if (enabled)
+            label.append("On");
+        else
+            label.append("Off");
+        return label;
+    }
+
     ft_string format_ui_scale_label(unsigned int value)
     {
         ft_string label("UI Scale: ");
@@ -176,6 +191,10 @@ namespace
             return false;
         if (lhs.menu_tutorial_seen != rhs.menu_tutorial_seen)
             return false;
+        if (lhs.accessibility_preset_enabled != rhs.accessibility_preset_enabled)
+            return false;
+        if (lhs.last_menu_input_device != rhs.last_menu_input_device)
+            return false;
         return true;
     }
 
@@ -186,7 +205,7 @@ namespace
         const int      spacing = 18;
 
         ft_vector<ft_menu_item> items;
-        items.reserve(7U);
+        items.reserve(8U);
 
         ft_menu_item ui_scale_item(ft_string("setting:ui_scale"), format_ui_scale_label(preferences.ui_scale_percent), base_rect);
         items.push_back(ui_scale_item);
@@ -196,9 +215,6 @@ namespace
         ft_menu_item combat_item(
             ft_string("setting:combat_speed"), format_combat_speed_label(preferences.combat_speed_percent), combat_rect);
         items.push_back(combat_item);
-
-        ft_rect anchor_rect = base_rect;
-        anchor_rect.top += 4 * (base_rect.height + spacing);
 
         ft_rect music_rect = base_rect;
         music_rect.top += 2 * (base_rect.height + spacing);
@@ -212,18 +228,27 @@ namespace
             ft_string("setting:effects_volume"), format_effects_volume_label(preferences.effects_volume_percent), effects_rect);
         items.push_back(effects_item);
 
+        ft_rect accessibility_rect = base_rect;
+        accessibility_rect.top += 4 * (base_rect.height + spacing);
+        ft_menu_item accessibility_item(ft_string("setting:accessibility_preset"),
+            format_accessibility_preset_label(preferences.accessibility_preset_enabled), accessibility_rect);
+        items.push_back(accessibility_item);
+
+        ft_rect anchor_rect = base_rect;
+        anchor_rect.top += 5 * (base_rect.height + spacing);
+
         ft_menu_item anchor_item(ft_string("setting:lore_anchor"), format_lore_anchor_label(preferences.lore_panel_anchor),
             anchor_rect);
         items.push_back(anchor_item);
 
         ft_rect save_rect = base_rect;
-        save_rect.top += 5 * (base_rect.height + spacing);
+        save_rect.top += 6 * (base_rect.height + spacing);
         ft_menu_item save_item(ft_string("action:save"), ft_string("Save Changes"), save_rect);
         save_item.enabled = allow_save;
         items.push_back(save_item);
 
         ft_rect cancel_rect = base_rect;
-        cancel_rect.top += 6 * (base_rect.height + spacing);
+        cancel_rect.top += 7 * (base_rect.height + spacing);
         ft_menu_item cancel_item(ft_string("action:cancel"), ft_string("Cancel"), cancel_rect);
         items.push_back(cancel_item);
 
@@ -475,6 +500,12 @@ namespace
                 working_preferences.effects_volume_percent = decrement_volume(working_preferences.effects_volume_percent);
             adjusted = true;
         }
+        else if (selected_item->identifier == "setting:accessibility_preset")
+        {
+            working_preferences.accessibility_preset_enabled
+                = toggle_accessibility_preset(working_preferences.accessibility_preset_enabled);
+            adjusted = true;
+        }
         else if (selected_item->identifier == "setting:lore_anchor")
         {
             working_preferences.lore_panel_anchor = toggle_lore_anchor(working_preferences.lore_panel_anchor);
@@ -504,6 +535,12 @@ namespace
         if (item.identifier == "setting:effects_volume")
         {
             working_preferences.effects_volume_percent = increment_volume(working_preferences.effects_volume_percent);
+            return true;
+        }
+        if (item.identifier == "setting:accessibility_preset")
+        {
+            working_preferences.accessibility_preset_enabled
+                = toggle_accessibility_preset(working_preferences.accessibility_preset_enabled);
             return true;
         }
         if (item.identifier == "setting:lore_anchor")
@@ -815,5 +852,15 @@ namespace settings_flow_testing
     ft_string format_lore_anchor_option(unsigned int anchor)
     {
         return ::format_lore_anchor_label(anchor);
+    }
+
+    bool toggle_accessibility_preset(bool enabled) noexcept
+    {
+        return ::toggle_accessibility_preset(enabled);
+    }
+
+    ft_string format_accessibility_preset_option(bool enabled)
+    {
+        return ::format_accessibility_preset_label(enabled);
     }
 }

@@ -108,11 +108,13 @@ SDL_Color main_menu_resolve_connectivity_color(const MainMenuConnectivityStatus 
 bool main_menu_append_connectivity_failure_log(const ft_string &host, int status_code, long timestamp_ms) noexcept;
 ft_string main_menu_resolve_build_label();
 bool      main_menu_can_launch_campaign(const ft_string &save_path) noexcept;
+bool      main_menu_preload_commander_portrait(const ft_string &commander_name) noexcept;
 
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
     int window_width, int window_height, const ft_string &active_profile_name, const MainMenuTutorialContext *tutorial,
     const MainMenuOverlayContext *manual, const MainMenuOverlayContext *changelog,
-    const MainMenuConnectivityStatus *connectivity, const MainMenuAlertBanner *alert);
+    const MainMenuOverlayContext *cloud_confirmation, const MainMenuConnectivityStatus *connectivity,
+    const MainMenuAlertBanner *alert);
 
 const ft_vector<ft_string> &get_main_menu_tutorial_tips();
 const ft_vector<ft_string> &get_main_menu_manual_lines();
@@ -160,7 +162,7 @@ namespace profile_preferences_testing
 namespace main_menu_testing
 {
     ft_string resolve_active_description(const ft_ui_menu &menu);
-    ft_string resolve_navigation_hint(const ft_ui_menu &menu);
+    ft_string resolve_navigation_hint(const ft_ui_menu &menu, const PlayerProfilePreferences *preferences = ft_nullptr);
     ft_vector<ft_string> collect_tutorial_tips();
     ft_vector<ft_string> collect_manual_lines();
     ft_string resolve_connectivity_label(const MainMenuConnectivityStatus &status);
@@ -172,6 +174,12 @@ namespace main_menu_testing
                 const ft_string &log_path);
     ft_string resolve_build_label();
     ft_vector<ft_string> split_patch_note_lines(const ft_string &body);
+    void      reset_commander_portrait_cache();
+    bool      commander_portrait_attempted(const ft_string &commander_name);
+    bool      commander_portrait_loaded(const ft_string &commander_name);
+    size_t    commander_portrait_cached_size(const ft_string &commander_name);
+    ft_string resolve_cached_portrait_path(const ft_string &commander_name);
+    ft_string resolve_commander_portrait_filename(const ft_string &commander_name);
 }
 
 namespace settings_flow_testing
@@ -194,6 +202,8 @@ namespace settings_flow_testing
     ft_string    format_music_volume_option(unsigned int value);
     ft_string    format_effects_volume_option(unsigned int value);
     ft_string    format_lore_anchor_option(unsigned int anchor);
+    bool         toggle_accessibility_preset(bool enabled) noexcept;
+    ft_string    format_accessibility_preset_option(bool enabled);
 }
 
 namespace load_game_flow_testing

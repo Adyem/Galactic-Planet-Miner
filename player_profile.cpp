@@ -50,6 +50,17 @@ namespace
         return PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT;
     }
 
+    int normalize_menu_input_device(unsigned int device) noexcept
+    {
+        if (device == static_cast<unsigned int>(PLAYER_PROFILE_INPUT_DEVICE_MOUSE))
+            return PLAYER_PROFILE_INPUT_DEVICE_MOUSE;
+        if (device == static_cast<unsigned int>(PLAYER_PROFILE_INPUT_DEVICE_GAMEPAD))
+            return PLAYER_PROFILE_INPUT_DEVICE_GAMEPAD;
+        if (device == static_cast<unsigned int>(PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD))
+            return PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD;
+        return PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD;
+    }
+
     void log_profile_errno(const char *stage, const ft_string *path = ft_nullptr, const char *detail = ft_nullptr) noexcept
     {
 #if DEBUG
@@ -468,6 +479,62 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
         return false;
     }
 
+    ft_string accessibility_value(preferences.accessibility_preset_enabled ? "true" : "false");
+    if (!add_string(document, group, "accessibility_preset_enabled", accessibility_value))
+    {
+        log_profile_document_error("Adding accessibility preset flag", document, path);
+        return false;
+    }
+
+    if (!add_int(document, group, "hotkey_menu_up", preferences.hotkey_menu_up))
+    {
+        log_profile_document_error("Adding menu hotkey (up)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_down", preferences.hotkey_menu_down))
+    {
+        log_profile_document_error("Adding menu hotkey (down)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_left", preferences.hotkey_menu_left))
+    {
+        log_profile_document_error("Adding menu hotkey (left)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_right", preferences.hotkey_menu_right))
+    {
+        log_profile_document_error("Adding menu hotkey (right)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_confirm", preferences.hotkey_menu_confirm))
+    {
+        log_profile_document_error("Adding menu hotkey (confirm)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_cancel", preferences.hotkey_menu_cancel))
+    {
+        log_profile_document_error("Adding menu hotkey (cancel)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_delete", preferences.hotkey_menu_delete))
+    {
+        log_profile_document_error("Adding menu hotkey (delete)", document, path);
+        return false;
+    }
+    if (!add_int(document, group, "hotkey_menu_rename", preferences.hotkey_menu_rename))
+    {
+        log_profile_document_error("Adding menu hotkey (rename)", document, path);
+        return false;
+    }
+
+    int stored_device
+        = normalize_menu_input_device(static_cast<unsigned int>(preferences.last_menu_input_device));
+    if (!add_int(document, group, "last_menu_input_device", stored_device))
+    {
+        log_profile_document_error("Adding last input device", document, path);
+        return false;
+    }
+
     if (document.write_to_file(path.c_str()) != 0)
     {
         log_profile_document_error("Writing profile", document, path);
@@ -532,12 +599,31 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     unsigned int parsed_effects_volume = out_preferences.effects_volume_percent;
     unsigned int parsed_anchor = out_preferences.lore_panel_anchor;
     bool         parsed_tutorial_seen = out_preferences.menu_tutorial_seen;
+    bool         parsed_accessibility_enabled = out_preferences.accessibility_preset_enabled;
+    unsigned int parsed_menu_up = static_cast<unsigned int>(out_preferences.hotkey_menu_up);
+    unsigned int parsed_menu_down = static_cast<unsigned int>(out_preferences.hotkey_menu_down);
+    unsigned int parsed_menu_left = static_cast<unsigned int>(out_preferences.hotkey_menu_left);
+    unsigned int parsed_menu_right = static_cast<unsigned int>(out_preferences.hotkey_menu_right);
+    unsigned int parsed_menu_confirm = static_cast<unsigned int>(out_preferences.hotkey_menu_confirm);
+    unsigned int parsed_menu_cancel = static_cast<unsigned int>(out_preferences.hotkey_menu_cancel);
+    unsigned int parsed_menu_delete = static_cast<unsigned int>(out_preferences.hotkey_menu_delete);
+    unsigned int parsed_menu_rename = static_cast<unsigned int>(out_preferences.hotkey_menu_rename);
+    unsigned int parsed_input_device = static_cast<unsigned int>(out_preferences.last_menu_input_device);
 
     read_int(document, group, "ui_scale_percent", parsed_ui_scale);
     read_int(document, group, "combat_speed_percent", parsed_combat_speed);
     read_int(document, group, "music_volume_percent", parsed_music_volume);
     read_int(document, group, "effects_volume_percent", parsed_effects_volume);
     read_int(document, group, "lore_panel_anchor", parsed_anchor);
+    read_int(document, group, "hotkey_menu_up", parsed_menu_up);
+    read_int(document, group, "hotkey_menu_down", parsed_menu_down);
+    read_int(document, group, "hotkey_menu_left", parsed_menu_left);
+    read_int(document, group, "hotkey_menu_right", parsed_menu_right);
+    read_int(document, group, "hotkey_menu_confirm", parsed_menu_confirm);
+    read_int(document, group, "hotkey_menu_cancel", parsed_menu_cancel);
+    read_int(document, group, "hotkey_menu_delete", parsed_menu_delete);
+    read_int(document, group, "hotkey_menu_rename", parsed_menu_rename);
+    read_int(document, group, "last_menu_input_device", parsed_input_device);
 
     if (parsed_ui_scale == 0U)
         parsed_ui_scale = 100U;
@@ -551,6 +637,23 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     out_preferences.effects_volume_percent = clamp_unsigned(
         parsed_effects_volume, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
     out_preferences.lore_panel_anchor = normalize_lore_panel_anchor(parsed_anchor);
+    out_preferences.hotkey_menu_up
+        = parsed_menu_up == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP : static_cast<int>(parsed_menu_up);
+    out_preferences.hotkey_menu_down
+        = parsed_menu_down == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN : static_cast<int>(parsed_menu_down);
+    out_preferences.hotkey_menu_left
+        = parsed_menu_left == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_LEFT : static_cast<int>(parsed_menu_left);
+    out_preferences.hotkey_menu_right
+        = parsed_menu_right == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_RIGHT : static_cast<int>(parsed_menu_right);
+    out_preferences.hotkey_menu_confirm
+        = parsed_menu_confirm == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CONFIRM : static_cast<int>(parsed_menu_confirm);
+    out_preferences.hotkey_menu_cancel
+        = parsed_menu_cancel == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CANCEL : static_cast<int>(parsed_menu_cancel);
+    out_preferences.hotkey_menu_delete
+        = parsed_menu_delete == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DELETE : static_cast<int>(parsed_menu_delete);
+    out_preferences.hotkey_menu_rename
+        = parsed_menu_rename == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_RENAME : static_cast<int>(parsed_menu_rename);
+    out_preferences.last_menu_input_device = normalize_menu_input_device(parsed_input_device);
 
     json_item *tutorial_item = document.find_item(group, "menu_tutorial_seen");
     if (tutorial_item != ft_nullptr && tutorial_item->value != ft_nullptr)
@@ -566,6 +669,21 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
             parsed_tutorial_seen = false;
     }
     out_preferences.menu_tutorial_seen = parsed_tutorial_seen;
+
+    json_item *accessibility_item = document.find_item(group, "accessibility_preset_enabled");
+    if (accessibility_item != ft_nullptr && accessibility_item->value != ft_nullptr)
+    {
+        ft_string normalized(accessibility_item->value);
+        ft_to_lower(normalized.print());
+        const char *normalized_value = normalized.c_str();
+        if (ft_strcmp(normalized_value, "true") == 0 || ft_strcmp(normalized_value, "1") == 0
+            || ft_strcmp(normalized_value, "yes") == 0 || ft_strcmp(normalized_value, "on") == 0)
+            parsed_accessibility_enabled = true;
+        else if (ft_strcmp(normalized_value, "false") == 0 || ft_strcmp(normalized_value, "0") == 0
+            || ft_strcmp(normalized_value, "no") == 0 || ft_strcmp(normalized_value, "off") == 0)
+            parsed_accessibility_enabled = false;
+    }
+    out_preferences.accessibility_preset_enabled = parsed_accessibility_enabled;
     return true;
 }
 

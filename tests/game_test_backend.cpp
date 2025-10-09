@@ -215,6 +215,19 @@ int verify_backend_patch_notes_fetch()
     return 1;
 }
 
+int verify_backend_clear_cloud_data()
+{
+    ft_string response_body;
+    int       status_code = 0;
+
+    FT_ASSERT(!backend_client_clear_cloud_data(
+        ft_string("127.0.0.1:65535"), ft_string("/cloud-data/clear"), response_body, status_code));
+    FT_ASSERT(status_code != 0);
+    FT_ASSERT(!response_body.empty());
+
+    return 1;
+}
+
 int verify_backend_host_parsing()
 {
     BackendClient numeric(ft_string("http://127.0.0.1:18090"), ft_string("/"));

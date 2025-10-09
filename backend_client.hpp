@@ -25,5 +25,7 @@ public:
 bool backend_client_ping(const ft_string &host, const ft_string &path, int &out_status_code) noexcept;
 bool backend_client_fetch_patch_notes(const ft_string &host, const ft_string &path, ft_string &out_notes,
     int &out_status_code) noexcept;
+bool backend_client_clear_cloud_data(const ft_string &host, const ft_string &path, ft_string &out_body,
+    int &out_status_code) noexcept;
 
 #endif
