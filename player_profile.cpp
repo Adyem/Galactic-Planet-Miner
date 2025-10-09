@@ -465,6 +465,22 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
         return false;
     }
 
+    unsigned int stored_brightness = clamp_unsigned(preferences.brightness_percent, PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT,
+        PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT);
+    if (!add_int(document, group, "brightness_percent", static_cast<int>(stored_brightness)))
+    {
+        log_profile_document_error("Adding brightness", document, path);
+        return false;
+    }
+
+    unsigned int stored_contrast = clamp_unsigned(preferences.contrast_percent, PLAYER_PROFILE_CONTRAST_MIN_PERCENT,
+        PLAYER_PROFILE_CONTRAST_MAX_PERCENT);
+    if (!add_int(document, group, "contrast_percent", static_cast<int>(stored_contrast)))
+    {
+        log_profile_document_error("Adding contrast", document, path);
+        return false;
+    }
+
     unsigned int stored_anchor = normalize_lore_panel_anchor(preferences.lore_panel_anchor);
     if (!add_int(document, group, "lore_panel_anchor", static_cast<int>(stored_anchor)))
     {
@@ -483,6 +499,13 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
     if (!add_string(document, group, "accessibility_preset_enabled", accessibility_value))
     {
         log_profile_document_error("Adding accessibility preset flag", document, path);
+        return false;
+    }
+
+    ft_string colorblind_value(preferences.colorblind_palette_enabled ? "true" : "false");
+    if (!add_string(document, group, "colorblind_palette_enabled", colorblind_value))
+    {
+        log_profile_document_error("Adding colorblind palette flag", document, path);
         return false;
     }
 
@@ -600,6 +623,9 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     unsigned int parsed_anchor = out_preferences.lore_panel_anchor;
     bool         parsed_tutorial_seen = out_preferences.menu_tutorial_seen;
     bool         parsed_accessibility_enabled = out_preferences.accessibility_preset_enabled;
+    bool         parsed_colorblind_enabled = out_preferences.colorblind_palette_enabled;
+    unsigned int parsed_brightness = out_preferences.brightness_percent;
+    unsigned int parsed_contrast = out_preferences.contrast_percent;
     unsigned int parsed_menu_up = static_cast<unsigned int>(out_preferences.hotkey_menu_up);
     unsigned int parsed_menu_down = static_cast<unsigned int>(out_preferences.hotkey_menu_down);
     unsigned int parsed_menu_left = static_cast<unsigned int>(out_preferences.hotkey_menu_left);
@@ -614,6 +640,8 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     read_int(document, group, "combat_speed_percent", parsed_combat_speed);
     read_int(document, group, "music_volume_percent", parsed_music_volume);
     read_int(document, group, "effects_volume_percent", parsed_effects_volume);
+    read_int(document, group, "brightness_percent", parsed_brightness);
+    read_int(document, group, "contrast_percent", parsed_contrast);
     read_int(document, group, "lore_panel_anchor", parsed_anchor);
     read_int(document, group, "hotkey_menu_up", parsed_menu_up);
     read_int(document, group, "hotkey_menu_down", parsed_menu_down);
@@ -636,6 +664,10 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
         parsed_music_volume, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
     out_preferences.effects_volume_percent = clamp_unsigned(
         parsed_effects_volume, PLAYER_PROFILE_VOLUME_MIN_PERCENT, PLAYER_PROFILE_VOLUME_MAX_PERCENT);
+    out_preferences.brightness_percent = clamp_unsigned(
+        parsed_brightness, PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT, PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT);
+    out_preferences.contrast_percent = clamp_unsigned(
+        parsed_contrast, PLAYER_PROFILE_CONTRAST_MIN_PERCENT, PLAYER_PROFILE_CONTRAST_MAX_PERCENT);
     out_preferences.lore_panel_anchor = normalize_lore_panel_anchor(parsed_anchor);
     out_preferences.hotkey_menu_up
         = parsed_menu_up == 0U ? PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP : static_cast<int>(parsed_menu_up);
@@ -684,6 +716,21 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
             parsed_accessibility_enabled = false;
     }
     out_preferences.accessibility_preset_enabled = parsed_accessibility_enabled;
+
+    json_item *colorblind_item = document.find_item(group, "colorblind_palette_enabled");
+    if (colorblind_item != ft_nullptr && colorblind_item->value != ft_nullptr)
+    {
+        ft_string normalized(colorblind_item->value);
+        ft_to_lower(normalized.print());
+        const char *normalized_value = normalized.c_str();
+        if (ft_strcmp(normalized_value, "true") == 0 || ft_strcmp(normalized_value, "1") == 0
+            || ft_strcmp(normalized_value, "yes") == 0 || ft_strcmp(normalized_value, "on") == 0)
+            parsed_colorblind_enabled = true;
+        else if (ft_strcmp(normalized_value, "false") == 0 || ft_strcmp(normalized_value, "0") == 0
+            || ft_strcmp(normalized_value, "no") == 0 || ft_strcmp(normalized_value, "off") == 0)
+            parsed_colorblind_enabled = false;
+    }
+    out_preferences.colorblind_palette_enabled = parsed_colorblind_enabled;
     return true;
 }
 

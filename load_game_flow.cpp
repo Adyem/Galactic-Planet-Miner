@@ -1,8 +1,10 @@
 #include "main_menu_system.hpp"
 
 #include "app_constants.hpp"
+#include "game.hpp"
 #include "player_profile.hpp"
 #include "ui_input.hpp"
+#include "menu_localization.hpp"
 
 #include "libft/JSon/document.hpp"
 #include "libft/JSon/json.hpp"
@@ -24,6 +26,8 @@ namespace
         ft_string metadata_label;
         bool      metadata_available;
         bool      metadata_error;
+        bool      difficulty_known;
+        int       difficulty_value;
     };
 
     constexpr unsigned int kMaxSaveNameLength = 24U;
@@ -118,13 +122,15 @@ namespace
         return true;
     }
 
-    bool read_save_metadata(
-        const ft_string &file_path, bool &out_day_valid, int &out_day, bool &out_level_valid, int &out_level) noexcept
+    bool read_save_metadata(const ft_string &file_path, bool &out_day_valid, int &out_day, bool &out_level_valid,
+        int &out_level, bool &out_difficulty_valid, int &out_difficulty) noexcept
     {
         out_day_valid = false;
         out_level_valid = false;
+        out_difficulty_valid = false;
         out_day = 0;
         out_level = 0;
+        out_difficulty = 0;
 
         if (file_path.empty())
             return false;
@@ -146,6 +152,22 @@ namespace
                         parsed_day = 1;
                     out_day = parsed_day;
                     out_day_valid = true;
+                }
+            }
+
+            json_item *difficulty_item = document.find_item(campaign_group, "difficulty");
+            if (difficulty_item != ft_nullptr)
+            {
+                int parsed_difficulty = 0;
+                if (parse_int_value(difficulty_item->value, parsed_difficulty))
+                {
+                    if (parsed_difficulty == GAME_DIFFICULTY_EASY
+                        || parsed_difficulty == GAME_DIFFICULTY_STANDARD
+                        || parsed_difficulty == GAME_DIFFICULTY_HARD)
+                    {
+                        out_difficulty = parsed_difficulty;
+                        out_difficulty_valid = true;
+                    }
                 }
             }
         }
@@ -170,40 +192,101 @@ namespace
         return true;
     }
 
-    ft_string format_save_metadata_label(bool day_valid, int day, bool level_valid, int level)
+    ft_string format_difficulty_component(bool difficulty_valid, int difficulty)
     {
-        if (!day_valid && !level_valid)
-            return ft_string("Metadata unavailable");
+        if (!difficulty_valid)
+            return menu_localize("load_menu.metadata.difficulty_unknown", "Difficulty ?");
 
-        ft_vector<ft_string> parts;
-        parts.reserve(2U);
+        const char *difficulty_key = ft_nullptr;
+        const char *difficulty_fallback = ft_nullptr;
+        switch (difficulty)
+        {
+        case GAME_DIFFICULTY_EASY:
+            difficulty_key = "load_menu.metadata.difficulty.easy";
+            difficulty_fallback = "Easy";
+            break;
+        case GAME_DIFFICULTY_STANDARD:
+            difficulty_key = "load_menu.metadata.difficulty.standard";
+            difficulty_fallback = "Standard";
+            break;
+        case GAME_DIFFICULTY_HARD:
+            difficulty_key = "load_menu.metadata.difficulty.hard";
+            difficulty_fallback = "Hard";
+            break;
+        default:
+            break;
+        }
 
+        if (difficulty_key == ft_nullptr || difficulty_fallback == ft_nullptr)
+            return menu_localize("load_menu.metadata.difficulty_unknown", "Difficulty ?");
+
+        ft_string difficulty_label = menu_localize(difficulty_key, difficulty_fallback);
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement replacement;
+        replacement.key = ft_string("difficulty");
+        replacement.value = difficulty_label;
+        replacements.push_back(replacement);
+        return menu_localize_format(
+            "load_menu.metadata.difficulty_known", "Difficulty: {{difficulty}}", replacements);
+    }
+
+    ft_string format_save_metadata_label(
+        bool day_valid, int day, bool level_valid, int level, bool difficulty_valid, int difficulty)
+    {
+        if (!day_valid && !level_valid && !difficulty_valid)
+            return menu_localize("load_menu.metadata.unavailable", "Metadata unavailable");
+
+        ft_string day_label;
         if (day_valid)
         {
-            ft_string day_label("Day ");
-            day_label.append(ft_to_string(day));
-            parts.push_back(day_label);
+            ft_vector<StringTableReplacement> replacements;
+            replacements.reserve(1U);
+            StringTableReplacement replacement;
+            replacement.key = ft_string("value");
+            replacement.value = ft_to_string(day);
+            replacements.push_back(replacement);
+            day_label = menu_localize_format("load_menu.metadata.day_known", "Day {{value}}", replacements);
         }
         else
-            parts.push_back(ft_string("Day ?"));
+            day_label = menu_localize("load_menu.metadata.day_unknown", "Day ?");
 
+        ft_string level_label;
         if (level_valid)
         {
-            ft_string level_label("Level ");
-            level_label.append(ft_to_string(level));
-            parts.push_back(level_label);
+            ft_vector<StringTableReplacement> replacements;
+            replacements.reserve(1U);
+            StringTableReplacement replacement;
+            replacement.key = ft_string("value");
+            replacement.value = ft_to_string(level);
+            replacements.push_back(replacement);
+            level_label = menu_localize_format("load_menu.metadata.level_known", "Level {{value}}", replacements);
         }
         else
-            parts.push_back(ft_string("Level ?"));
+            level_label = menu_localize("load_menu.metadata.level_unknown", "Level ?");
 
-        ft_string combined;
-        for (size_t index = 0; index < parts.size(); ++index)
-        {
-            if (index > 0U)
-                combined.append(" • ");
-            combined.append(parts[index]);
-        }
-        return combined;
+        ft_string difficulty_label = format_difficulty_component(difficulty_valid, difficulty);
+
+        ft_vector<StringTableReplacement> combined_replacements;
+        combined_replacements.reserve(3U);
+
+        StringTableReplacement day_replacement;
+        day_replacement.key = ft_string("day");
+        day_replacement.value = day_label;
+        combined_replacements.push_back(day_replacement);
+
+        StringTableReplacement level_replacement;
+        level_replacement.key = ft_string("level");
+        level_replacement.value = level_label;
+        combined_replacements.push_back(level_replacement);
+
+        StringTableReplacement difficulty_replacement;
+        difficulty_replacement.key = ft_string("difficulty");
+        difficulty_replacement.value = difficulty_label;
+        combined_replacements.push_back(difficulty_replacement);
+
+        return menu_localize_format(
+            "load_menu.metadata.combined", "{{day}} • {{level}} • {{difficulty}}", combined_replacements);
     }
 
     ft_string build_save_file_path(const ft_string &commander_name, const ft_string &slot_name)
@@ -227,25 +310,26 @@ namespace
 
         if (commander_name.empty())
         {
-            out_error = ft_string("Commander profile missing.");
+            out_error = menu_localize("load_menu.error.no_commander", "Commander profile missing.");
             return false;
         }
 
         if (old_name.empty())
         {
-            out_error = ft_string("Original save name missing.");
+            out_error = menu_localize("load_menu.error.no_original_name", "Original save name missing.");
             return false;
         }
 
         if (!save_name_is_valid(new_name))
         {
-            out_error = ft_string("Please enter a new save name.");
+            out_error = menu_localize("load_menu.error.name_required", "Please enter a new save name.");
             return false;
         }
 
         if (new_name.size() > static_cast<size_t>(kMaxSaveNameLength))
         {
-            out_error = ft_string("Save names are limited to 24 characters.");
+            out_error = menu_localize(
+                "load_menu.error.name_length", "Save names are limited to 24 characters.");
             return false;
         }
 
@@ -253,7 +337,7 @@ namespace
         {
             if (!is_save_character_allowed(new_name[index]))
             {
-                out_error = ft_string("Use letters and numbers only.");
+                out_error = menu_localize("load_menu.error.name_charset", "Use letters and numbers only.");
                 return false;
             }
         }
@@ -261,7 +345,8 @@ namespace
         ft_string source_path = build_save_file_path(commander_name, old_name);
         if (source_path.empty())
         {
-            out_error = ft_string("Unable to resolve existing save location.");
+            out_error
+                = menu_localize("load_menu.error.resolve_existing", "Unable to resolve existing save location.");
             return false;
         }
 
@@ -269,34 +354,37 @@ namespace
         if (source_exists <= 0)
         {
             if (source_exists < 0)
-                out_error = ft_string("Unable to verify existing save file.");
+                out_error
+                    = menu_localize("load_menu.error.verify_existing", "Unable to verify existing save file.");
             else
-                out_error = ft_string("Original save file not found.");
+                out_error = menu_localize("load_menu.error.missing_original", "Original save file not found.");
             return false;
         }
 
         ft_string destination_path = build_save_file_path(commander_name, new_name);
         if (destination_path.empty())
         {
-            out_error = ft_string("Unable to resolve new save location.");
+            out_error
+                = menu_localize("load_menu.error.resolve_new", "Unable to resolve new save location.");
             return false;
         }
 
         int destination_exists = file_exists(destination_path.c_str());
         if (destination_exists < 0)
         {
-            out_error = ft_string("Unable to check for conflicting saves.");
+            out_error
+                = menu_localize("load_menu.error.check_conflict", "Unable to check for conflicting saves.");
             return false;
         }
         if (destination_exists > 0)
         {
-            out_error = ft_string("A save with that name already exists.");
+            out_error = menu_localize("load_menu.error.conflict", "A save with that name already exists.");
             return false;
         }
 
         if (file_move(source_path.c_str(), destination_path.c_str()) != 0)
         {
-            out_error = ft_string("Failed to rename save file.");
+            out_error = menu_localize("load_menu.error.rename_failed", "Failed to rename save file.");
             return false;
         }
 
@@ -310,25 +398,25 @@ namespace
         ft_string file_path = build_save_file_path(commander_name, slot_name);
         if (file_path.empty())
         {
-            out_error = ft_string("Unable to resolve save location.");
+            out_error = menu_localize("load_menu.error.resolve_path", "Unable to resolve save location.");
             return false;
         }
 
         int exists_result = file_exists(file_path.c_str());
         if (exists_result < 0)
         {
-            out_error = ft_string("Unable to verify save file.");
+            out_error = menu_localize("load_menu.error.verify_path", "Unable to verify save file.");
             return false;
         }
         if (exists_result == 0)
         {
-            out_error = ft_string("Save file not found.");
+            out_error = menu_localize("load_menu.error.not_found", "Save file not found.");
             return false;
         }
 
         if (file_delete(file_path.c_str()) != 0)
         {
-            out_error = ft_string("Failed to delete save file.");
+            out_error = menu_localize("load_menu.error.delete_failed", "Failed to delete save file.");
             return false;
         }
 
@@ -384,38 +472,57 @@ namespace
             slot.identifier.append(label);
             slot.label = label;
             slot.file_path = file_path_join(save_directory.c_str(), entry->d_name);
+            slot.difficulty_known = false;
+            slot.difficulty_value = 0;
             bool metadata_day_valid = false;
             bool metadata_level_valid = false;
+            bool metadata_difficulty_valid = false;
             int  metadata_day = 0;
             int  metadata_level = 0;
-            bool metadata_loaded
-                = read_save_metadata(slot.file_path, metadata_day_valid, metadata_day, metadata_level_valid, metadata_level);
+            int  metadata_difficulty = 0;
+            bool metadata_loaded = read_save_metadata(slot.file_path, metadata_day_valid, metadata_day, metadata_level_valid,
+                metadata_level, metadata_difficulty_valid, metadata_difficulty);
             if (metadata_loaded)
             {
-                if (metadata_day_valid || metadata_level_valid)
+                slot.difficulty_known = metadata_difficulty_valid;
+                slot.difficulty_value = metadata_difficulty;
+                if (metadata_day_valid || metadata_level_valid || metadata_difficulty_valid)
                 {
-                    slot.metadata_label
-                        = format_save_metadata_label(metadata_day_valid, metadata_day, metadata_level_valid, metadata_level);
+                    slot.metadata_label = format_save_metadata_label(
+                        metadata_day_valid, metadata_day, metadata_level_valid, metadata_level, metadata_difficulty_valid,
+                        metadata_difficulty);
                     slot.metadata_available = true;
                 }
                 else
                 {
-                    slot.metadata_label = ft_string("Metadata unavailable");
+                    slot.metadata_label
+                        = menu_localize("load_menu.metadata.unavailable", "Metadata unavailable");
                     slot.metadata_available = false;
+                    slot.difficulty_known = false;
+                    slot.difficulty_value = 0;
                 }
                 slot.metadata_error = false;
             }
             else
             {
-                slot.metadata_label = ft_string("Unable to read metadata");
+                slot.metadata_label
+                    = menu_localize("load_menu.metadata.unreadable", "Unable to read metadata");
                 slot.metadata_available = false;
                 slot.metadata_error = true;
+                slot.difficulty_known = false;
+                slot.difficulty_value = 0;
                 if (out_errors != ft_nullptr)
                 {
-                    ft_string error_message("Save \"");
-                    error_message.append(label);
-                    error_message.append("\" could not be read (metadata parsing failed).");
-                    out_errors->push_back(error_message);
+                    ft_vector<StringTableReplacement> replacements;
+                    replacements.reserve(1U);
+                    StringTableReplacement replacement;
+                    replacement.key = ft_string("slot");
+                    replacement.value = label;
+                    replacements.push_back(replacement);
+                    out_errors->push_back(menu_localize_format(
+                        "load_menu.errors.metadata_parse",
+                        "Save \"{{slot}}\" could not be read (metadata parsing failed).",
+                        replacements));
                 }
             }
             out_slots.push_back(slot);
@@ -456,7 +563,8 @@ namespace
 
         ft_rect cancel_rect = base_rect;
         cancel_rect.top += static_cast<int>(slot_count) * (base_rect.height + spacing);
-        ft_menu_item cancel_item(ft_string("action:cancel"), ft_string("Cancel"), cancel_rect);
+        ft_menu_item cancel_item(ft_string("action:cancel"),
+            menu_localize("load_menu.menu.cancel", "Cancel"), cancel_rect);
         items.push_back(cancel_item);
 
         menu.set_items(items);
@@ -487,7 +595,7 @@ namespace
 
         if (title_font != ft_nullptr)
         {
-            ft_string heading("Load Campaign");
+            ft_string heading = menu_localize("load_menu.menu.heading", "Load Campaign");
             SDL_Color title_color = {220, 220, 245, 255};
             SDL_Rect  title_rect;
             SDL_Texture *title_texture = create_text_texture(renderer, *title_font, heading, title_color, title_rect);
@@ -502,13 +610,18 @@ namespace
 
         if (menu_font != ft_nullptr)
         {
-            ft_string info_text(
+            ft_string info_text = menu_localize("load_menu.menu.instructions",
                 "Select a save to prepare for campaign resume. Enter loads; Delete removes; R renames; Esc cancels.");
             if (!commander_name.empty())
             {
-                info_text.append(" Commander: ");
-                info_text.append(commander_name);
-                info_text.append(".");
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(1U);
+                StringTableReplacement replacement;
+                replacement.key = ft_string("commander");
+                replacement.value = commander_name;
+                replacements.push_back(replacement);
+                info_text.append(menu_localize_format("load_menu.menu.instructions_commander",
+                    " Commander: {{commander}}.", replacements));
             }
             SDL_Color info_color = {170, 180, 210, 255};
             SDL_Rect  info_rect;
@@ -776,11 +889,13 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
     bool collected = collect_save_slots(commander_name, slots);
     if (!collected)
     {
-        status_message = ft_string("Unable to read save directory for this commander.");
+        status_message
+            = menu_localize("load_menu.status.read_directory_failed",
+                "Unable to read save directory for this commander.");
         status_is_error = true;
     }
     else if (slots.empty())
-        status_message = ft_string("No campaign saves found for this commander.");
+        status_message = menu_localize("load_menu.status.no_saves", "No campaign saves found for this commander.");
 
     ft_ui_menu menu;
     rebuild_load_menu(menu, slots, !slots.empty());
@@ -806,9 +921,14 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
         delete_confirmation_active = true;
         delete_confirmation_identifier = slot.identifier;
         delete_confirmation_label = slot.label;
-        status_message = ft_string("Press Delete again to remove \"");
-        status_message.append(slot.label);
-        status_message.append("\". Esc cancels.");
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement replacement;
+        replacement.key = ft_string("slot");
+        replacement.value = slot.label;
+        replacements.push_back(replacement);
+        status_message = menu_localize_format("load_menu.status.delete_confirm",
+            "Press Delete again to remove \"{{slot}}\". Esc cancels.", replacements);
         status_is_error = true;
     };
 
@@ -824,11 +944,18 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
     auto update_rename_status = [&]() {
         if (!rename_active)
             return;
-        status_message = ft_string("Renaming \"");
-        status_message.append(rename_original_label);
-        status_message.append("\" to \"");
-        status_message.append(rename_input);
-        status_message.append("\". Press Enter to confirm; Esc cancels.");
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(2U);
+        StringTableReplacement original_replacement;
+        original_replacement.key = ft_string("from");
+        original_replacement.value = rename_original_label;
+        replacements.push_back(original_replacement);
+        StringTableReplacement input_replacement;
+        input_replacement.key = ft_string("to");
+        input_replacement.value = rename_input;
+        replacements.push_back(input_replacement);
+        status_message = menu_localize_format("load_menu.status.rename_progress",
+            "Renaming \"{{from}}\" to \"{{to}}\". Press Enter to confirm; Esc cancels.", replacements);
         status_is_error = false;
     };
 
@@ -917,7 +1044,8 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                     if (delete_confirmation_active)
                     {
                         clear_delete_confirmation();
-                        status_message = ft_string("Deletion canceled.");
+                        status_message
+                            = menu_localize("load_menu.status.delete_canceled", "Deletion canceled.");
                         status_is_error = false;
                     }
                     else
@@ -965,18 +1093,30 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                         }
                         else if (rejected_for_length)
                         {
-                            status_message = ft_string("Save names are limited to 24 characters.");
-                            status_message.append(" Current name: \"");
-                            status_message.append(rename_input);
-                            status_message.append("\".");
+                            ft_vector<StringTableReplacement> replacements;
+                            replacements.reserve(1U);
+                            StringTableReplacement replacement;
+                            replacement.key = ft_string("name");
+                            replacement.value = rename_input;
+                            replacements.push_back(replacement);
+                            status_message = menu_localize(
+                                "load_menu.error.name_length", "Save names are limited to 24 characters.");
+                            status_message.append(menu_localize_format(
+                                "load_menu.status.current_name", " Current name: \"{{name}}\".", replacements));
                             status_is_error = true;
                         }
                         else if (rejected_for_invalid)
                         {
-                            status_message = ft_string("Use letters and numbers only.");
-                            status_message.append(" Current name: \"");
-                            status_message.append(rename_input);
-                            status_message.append("\".");
+                            ft_vector<StringTableReplacement> replacements;
+                            replacements.reserve(1U);
+                            StringTableReplacement replacement;
+                            replacement.key = ft_string("name");
+                            replacement.value = rename_input;
+                            replacements.push_back(replacement);
+                            status_message = menu_localize(
+                                "load_menu.error.name_charset", "Use letters and numbers only.");
+                            status_message.append(menu_localize_format(
+                                "load_menu.status.current_name", " Current name: \"{{name}}\".", replacements));
                             status_is_error = true;
                         }
                     }
@@ -988,7 +1128,7 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             break;
 
         if (rename_cancel_requested)
-            cancel_rename(ft_string("Rename canceled."), false);
+            cancel_rename(menu_localize("load_menu.status.rename_canceled", "Rename canceled."), false);
 
         if (!mouse_state.moved)
         {
@@ -1006,14 +1146,14 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
         if (delete_confirmation_active && current_selected_index != previous_selected_index)
         {
             clear_delete_confirmation();
-            status_message = ft_string("Deletion canceled.");
+            status_message = menu_localize("load_menu.status.delete_canceled", "Deletion canceled.");
             status_is_error = false;
         }
         if (delete_confirmation_active && (current_selected_index < 0
                                               || current_selected_index >= static_cast<int>(slots.size())))
         {
             clear_delete_confirmation();
-            status_message = ft_string("Deletion canceled.");
+            status_message = menu_localize("load_menu.status.delete_canceled", "Deletion canceled.");
             status_is_error = false;
         }
 
@@ -1038,7 +1178,7 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
         if (rename_active)
         {
             if (selected_slot == ft_nullptr || selected_identifier != rename_identifier)
-                cancel_rename(ft_string("Rename canceled."), false);
+                cancel_rename(menu_localize("load_menu.status.rename_canceled", "Rename canceled."), false);
         }
 
         if (rename_requested)
@@ -1047,7 +1187,8 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                 begin_rename(*selected_slot);
             else if (!slots.empty())
             {
-                status_message = ft_string("Select a save before pressing R to rename.");
+                status_message = menu_localize(
+                    "load_menu.status.rename_select", "Select a save before pressing R to rename.");
                 status_is_error = true;
             }
         }
@@ -1063,7 +1204,7 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             skip_menu_activation = true;
             if (rename_input == rename_original_label)
             {
-                cancel_rename(ft_string("Save name unchanged."), false);
+                cancel_rename(menu_localize("load_menu.status.rename_unchanged", "Save name unchanged."), false);
             }
             else
             {
@@ -1080,7 +1221,9 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                     bool refreshed = collect_save_slots(commander_name, slots);
                     if (!refreshed)
                     {
-                        status_message = ft_string("Unable to refresh save directory after rename.");
+                        status_message = menu_localize(
+                            "load_menu.status.refresh_failed_rename",
+                            "Unable to refresh save directory after rename.");
                         status_is_error = true;
                         slots.clear();
                         rebuild_load_menu(menu, slots, false);
@@ -1090,16 +1233,27 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                         rebuild_load_menu(menu, slots, !slots.empty());
                         if (slots.empty())
                         {
-                            status_message = ft_string("No campaign saves found for this commander.");
+                            status_message
+                                = menu_localize("load_menu.status.no_saves",
+                                    "No campaign saves found for this commander.");
                             status_is_error = false;
                         }
                         else
                         {
-                            status_message = ft_string("Renamed save \"");
-                            status_message.append(previous_label);
-                            status_message.append("\" to \"");
-                            status_message.append(new_label);
-                            status_message.append("\".");
+                            ft_vector<StringTableReplacement> replacements;
+                            replacements.reserve(2U);
+                            StringTableReplacement from_replacement;
+                            from_replacement.key = ft_string("from");
+                            from_replacement.value = previous_label;
+                            replacements.push_back(from_replacement);
+                            StringTableReplacement to_replacement;
+                            to_replacement.key = ft_string("to");
+                            to_replacement.value = new_label;
+                            replacements.push_back(to_replacement);
+                            status_message = menu_localize_format(
+                                "load_menu.status.rename_success",
+                                "Renamed save \"{{from}}\" to \"{{to}}\".",
+                                replacements);
                             status_is_error = false;
 
                             for (size_t index = 0; index < slots.size(); ++index)
@@ -1116,12 +1270,18 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                 else
                 {
                     if (rename_error.empty())
-                        status_message = ft_string("Failed to rename save file.");
+                        status_message
+                            = menu_localize("load_menu.error.rename_failed", "Failed to rename save file.");
                     else
                         status_message = rename_error;
-                    status_message.append(" Current name: \"");
-                    status_message.append(rename_input);
-                    status_message.append("\".");
+                    ft_vector<StringTableReplacement> replacements;
+                    replacements.reserve(1U);
+                    StringTableReplacement replacement;
+                    replacement.key = ft_string("name");
+                    replacement.value = rename_input;
+                    replacements.push_back(replacement);
+                    status_message.append(menu_localize_format(
+                        "load_menu.status.current_name", " Current name: \"{{name}}\".", replacements));
                     status_is_error = true;
                 }
             }
@@ -1143,7 +1303,8 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             {
                 if (!slots.empty())
                 {
-                    status_message = ft_string("Select a save before pressing Delete.");
+                    status_message = menu_localize(
+                        "load_menu.status.delete_select", "Select a save before pressing Delete.");
                     status_is_error = true;
                 }
                 clear_delete_confirmation();
@@ -1164,16 +1325,21 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             bool deleted = delete_save_slot(commander_name, delete_confirmation_label, delete_error);
             if (deleted)
             {
-                ft_string message("Deleted save \"");
-                message.append(delete_confirmation_label);
-                message.append("\".");
-                status_message = message;
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(1U);
+                StringTableReplacement replacement;
+                replacement.key = ft_string("slot");
+                replacement.value = delete_confirmation_label;
+                replacements.push_back(replacement);
+                status_message = menu_localize_format(
+                    "load_menu.status.delete_success", "Deleted save \"{{slot}}\".", replacements);
                 status_is_error = false;
             }
             else
             {
                 if (delete_error.empty())
-                    status_message = ft_string("Failed to delete save file.");
+                    status_message
+                        = menu_localize("load_menu.error.delete_failed", "Failed to delete save file.");
                 else
                     status_message = delete_error;
                 status_is_error = true;
@@ -1184,7 +1350,9 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             bool refreshed = collect_save_slots(commander_name, slots);
             if (!refreshed)
             {
-                status_message = ft_string("Unable to refresh save directory after deletion.");
+                status_message = menu_localize(
+                    "load_menu.status.refresh_failed_delete",
+                    "Unable to refresh save directory after deletion.");
                 status_is_error = true;
                 slots.clear();
             }
@@ -1192,7 +1360,8 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             rebuild_load_menu(menu, slots, !slots.empty());
             if (slots.empty() && refreshed)
             {
-                status_message = ft_string("No campaign saves found for this commander.");
+                status_message = menu_localize(
+                    "load_menu.status.no_saves", "No campaign saves found for this commander.");
                 status_is_error = false;
             }
 

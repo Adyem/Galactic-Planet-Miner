@@ -2,6 +2,7 @@
 
 #include "app_constants.hpp"
 #include "build_info.hpp"
+#include "menu_localization.hpp"
 
 #include "libft/File/file_utils.hpp"
 #include "libft/Time/time.hpp"
@@ -9,6 +10,203 @@
 
 namespace
 {
+#if GALACTIC_HAVE_SDL2
+    unsigned int clamp_percent(unsigned int value, unsigned int min_value, unsigned int max_value) noexcept
+    {
+        if (value < min_value)
+            return min_value;
+        if (value > max_value)
+            return max_value;
+        return value;
+    }
+
+    unsigned char apply_component_levels(unsigned char component, unsigned int brightness_percent,
+        unsigned int contrast_percent) noexcept
+    {
+        long value = static_cast<long>(component);
+        long centered = value - 128L;
+        long contrasted = (centered * static_cast<long>(contrast_percent) + 50L) / 100L + 128L;
+        if (contrasted < 0L)
+            contrasted = 0L;
+        else if (contrasted > 255L)
+            contrasted = 255L;
+
+        long brightened = (contrasted * static_cast<long>(brightness_percent) + 50L) / 100L;
+        if (brightened < 0L)
+            brightened = 0L;
+        else if (brightened > 255L)
+            brightened = 255L;
+
+        return static_cast<unsigned char>(brightened);
+    }
+
+    void apply_levels(SDL_Color &color, unsigned int brightness_percent, unsigned int contrast_percent) noexcept
+    {
+        color.r = apply_component_levels(color.r, brightness_percent, contrast_percent);
+        color.g = apply_component_levels(color.g, brightness_percent, contrast_percent);
+        color.b = apply_component_levels(color.b, brightness_percent, contrast_percent);
+    }
+
+    struct MainMenuPalette
+    {
+        SDL_Color background;
+        SDL_Color title;
+        SDL_Color profile;
+        SDL_Color button_idle;
+        SDL_Color button_hover;
+        SDL_Color button_selected;
+        SDL_Color button_disabled;
+        SDL_Color button_disabled_hover;
+        SDL_Color button_border_enabled;
+        SDL_Color button_border_disabled;
+        SDL_Color button_text_enabled;
+        SDL_Color button_text_disabled;
+        SDL_Color description;
+        SDL_Color hint;
+        SDL_Color build;
+        SDL_Color alert_text_error;
+        SDL_Color alert_text_info;
+        SDL_Color alert_background_error;
+        SDL_Color alert_border_error;
+        SDL_Color alert_background_info;
+        SDL_Color alert_border_info;
+        SDL_Color overlay_heading;
+        SDL_Color overlay_line;
+        SDL_Color overlay_footer;
+        SDL_Color overlay_background;
+        SDL_Color overlay_border;
+        SDL_Color tutorial_title;
+        SDL_Color tutorial_primary;
+        SDL_Color tutorial_secondary;
+        SDL_Color tutorial_background;
+        SDL_Color tutorial_border;
+
+        MainMenuPalette() noexcept
+            : background(), title(), profile(), button_idle(), button_hover(), button_selected(), button_disabled(),
+              button_disabled_hover(), button_border_enabled(), button_border_disabled(), button_text_enabled(),
+              button_text_disabled(), description(), hint(), build(), alert_text_error(), alert_text_info(),
+              alert_background_error(), alert_border_error(), alert_background_info(), alert_border_info(),
+              overlay_heading(), overlay_line(), overlay_footer(), overlay_background(), overlay_border(), tutorial_title(),
+              tutorial_primary(), tutorial_secondary(), tutorial_background(), tutorial_border()
+        {}
+    };
+
+    void apply_levels(MainMenuPalette &palette, unsigned int brightness_percent, unsigned int contrast_percent) noexcept
+    {
+        apply_levels(palette.background, brightness_percent, contrast_percent);
+        apply_levels(palette.title, brightness_percent, contrast_percent);
+        apply_levels(palette.profile, brightness_percent, contrast_percent);
+        apply_levels(palette.button_idle, brightness_percent, contrast_percent);
+        apply_levels(palette.button_hover, brightness_percent, contrast_percent);
+        apply_levels(palette.button_selected, brightness_percent, contrast_percent);
+        apply_levels(palette.button_disabled, brightness_percent, contrast_percent);
+        apply_levels(palette.button_disabled_hover, brightness_percent, contrast_percent);
+        apply_levels(palette.button_border_enabled, brightness_percent, contrast_percent);
+        apply_levels(palette.button_border_disabled, brightness_percent, contrast_percent);
+        apply_levels(palette.button_text_enabled, brightness_percent, contrast_percent);
+        apply_levels(palette.button_text_disabled, brightness_percent, contrast_percent);
+        apply_levels(palette.description, brightness_percent, contrast_percent);
+        apply_levels(palette.hint, brightness_percent, contrast_percent);
+        apply_levels(palette.build, brightness_percent, contrast_percent);
+        apply_levels(palette.alert_text_error, brightness_percent, contrast_percent);
+        apply_levels(palette.alert_text_info, brightness_percent, contrast_percent);
+        apply_levels(palette.alert_background_error, brightness_percent, contrast_percent);
+        apply_levels(palette.alert_border_error, brightness_percent, contrast_percent);
+        apply_levels(palette.alert_background_info, brightness_percent, contrast_percent);
+        apply_levels(palette.alert_border_info, brightness_percent, contrast_percent);
+        apply_levels(palette.overlay_heading, brightness_percent, contrast_percent);
+        apply_levels(palette.overlay_line, brightness_percent, contrast_percent);
+        apply_levels(palette.overlay_footer, brightness_percent, contrast_percent);
+        apply_levels(palette.overlay_background, brightness_percent, contrast_percent);
+        apply_levels(palette.overlay_border, brightness_percent, contrast_percent);
+        apply_levels(palette.tutorial_title, brightness_percent, contrast_percent);
+        apply_levels(palette.tutorial_primary, brightness_percent, contrast_percent);
+        apply_levels(palette.tutorial_secondary, brightness_percent, contrast_percent);
+        apply_levels(palette.tutorial_background, brightness_percent, contrast_percent);
+        apply_levels(palette.tutorial_border, brightness_percent, contrast_percent);
+    }
+
+    MainMenuPalette resolve_main_menu_palette(
+        bool colorblind_enabled, unsigned int brightness_percent, unsigned int contrast_percent) noexcept
+    {
+        MainMenuPalette palette;
+        palette.background = {12, 16, 28, 255};
+        palette.title = {220, 220, 245, 255};
+        palette.profile = {200, 210, 230, 255};
+        palette.button_idle = {28, 36, 60, 255};
+        palette.button_hover = {56, 84, 140, 255};
+        palette.button_selected = {40, 64, 112, 255};
+        palette.button_disabled = {30, 34, 44, 255};
+        palette.button_disabled_hover = {42, 46, 60, 255};
+        palette.button_border_enabled = {90, 110, 160, 255};
+        palette.button_border_disabled = {70, 80, 120, 255};
+        palette.button_text_enabled = {255, 255, 255, 255};
+        palette.button_text_disabled = {188, 196, 210, 255};
+        palette.description = {210, 220, 240, 255};
+        palette.hint = {165, 176, 204, 255};
+        palette.build = {140, 150, 184, 255};
+        palette.alert_text_error = {255, 206, 206, 255};
+        palette.alert_text_info = {200, 230, 255, 255};
+        palette.alert_background_error = {84, 32, 32, 235};
+        palette.alert_border_error = {164, 80, 80, 255};
+        palette.alert_background_info = {26, 64, 88, 235};
+        palette.alert_border_info = {88, 138, 176, 255};
+        palette.overlay_heading = {236, 242, 255, 255};
+        palette.overlay_line = {208, 216, 236, 255};
+        palette.overlay_footer = {184, 196, 224, 255};
+        palette.overlay_background = {18, 24, 44, 238};
+        palette.overlay_border = {92, 112, 166, 255};
+        palette.tutorial_title = {234, 238, 250, 255};
+        palette.tutorial_primary = {210, 220, 240, 255};
+        palette.tutorial_secondary = {200, 208, 232, 255};
+        palette.tutorial_background = {18, 24, 44, 235};
+        palette.tutorial_border = {90, 110, 160, 255};
+
+        if (colorblind_enabled)
+        {
+            palette.background = {10, 20, 26, 255};
+            palette.title = {240, 246, 255, 255};
+            palette.profile = {212, 220, 240, 255};
+            palette.button_idle = {44, 62, 88, 255};
+            palette.button_hover = {104, 140, 204, 255};
+            palette.button_selected = {78, 118, 184, 255};
+            palette.button_disabled = {52, 60, 80, 255};
+            palette.button_disabled_hover = {74, 88, 112, 255};
+            palette.button_border_enabled = {134, 170, 228, 255};
+            palette.button_border_disabled = {102, 120, 168, 255};
+            palette.button_text_enabled = {255, 255, 255, 255};
+            palette.button_text_disabled = {216, 222, 234, 255};
+            palette.description = {216, 228, 248, 255};
+            palette.hint = {176, 192, 220, 255};
+            palette.build = {156, 170, 204, 255};
+            palette.alert_text_error = {255, 224, 200, 255};
+            palette.alert_text_info = {210, 242, 255, 255};
+            palette.alert_background_error = {112, 60, 30, 240};
+            palette.alert_border_error = {204, 128, 64, 255};
+            palette.alert_background_info = {26, 78, 104, 240};
+            palette.alert_border_info = {96, 160, 200, 255};
+            palette.overlay_heading = {240, 246, 255, 255};
+            palette.overlay_line = {212, 224, 244, 255};
+            palette.overlay_footer = {192, 206, 232, 255};
+            palette.overlay_background = {28, 44, 70, 238};
+            palette.overlay_border = {120, 156, 210, 255};
+            palette.tutorial_title = {240, 246, 255, 255};
+            palette.tutorial_primary = {214, 234, 248, 255};
+            palette.tutorial_secondary = {200, 218, 240, 255};
+            palette.tutorial_background = {28, 44, 70, 235};
+            palette.tutorial_border = {120, 156, 210, 255};
+        }
+
+        brightness_percent = clamp_percent(brightness_percent, PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT,
+            PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT);
+        contrast_percent = clamp_percent(contrast_percent, PLAYER_PROFILE_CONTRAST_MIN_PERCENT,
+            PLAYER_PROFILE_CONTRAST_MAX_PERCENT);
+        apply_levels(palette, brightness_percent, contrast_percent);
+
+        return palette;
+    }
+#endif
+
     struct commander_portrait_cache_entry
     {
         ft_string commander_key;
@@ -446,22 +644,36 @@ ft_vector<ft_menu_item> build_main_menu_items()
     struct menu_entry
     {
         const char *identifier;
-        const char *label;
-        const char *description;
+        const char *label_key;
+        const char *label_fallback;
+        const char *description_key;
+        const char *description_fallback;
         bool        enabled;
     };
 
     const menu_entry entries[] = {
-        {"new_game", "New Game", "Begin a fresh campaign for the active commander.", true},
-        {"resume", "Resume", "Jump back into your latest campaign save once one is available.", false},
-        {"load", "Load", "Review existing saves and prepare to resume a prior campaign.", true},
-        {"settings", "Settings", "Adjust gameplay, interface scale, and menu layout preferences for this commander.", true},
-        {"swap_profile", "Swap Profile", "Switch to a different commander profile.", true},
-        {"changelog", "Patch Notes", "Read the latest Galactic Planet Miner updates fetched from HQ.", true},
-        {"manual", "Encyclopedia", "Open the commander encyclopedia for controls, systems, and lore summaries.", true},
-        {"clear_cloud", "Clear Cloud Data",
+        {"new_game", "main_menu.items.new_game.label", "New Game",
+            "main_menu.items.new_game.description", "Begin a fresh campaign for the active commander.", true},
+        {"resume", "main_menu.items.resume.label", "Resume",
+            "main_menu.items.resume.description",
+            "Jump back into your latest campaign save once one is available.", false},
+        {"load", "main_menu.items.load.label", "Load",
+            "main_menu.items.load.description", "Review existing saves and prepare to resume a prior campaign.", true},
+        {"settings", "main_menu.items.settings.label", "Settings",
+            "main_menu.items.settings.description",
+            "Adjust gameplay, interface scale, and menu layout preferences for this commander.", true},
+        {"swap_profile", "main_menu.items.swap_profile.label", "Swap Profile",
+            "main_menu.items.swap_profile.description", "Switch to a different commander profile.", true},
+        {"changelog", "main_menu.items.changelog.label", "Patch Notes",
+            "main_menu.items.changelog.description", "Read the latest Galactic Planet Miner updates fetched from HQ.", true},
+        {"manual", "main_menu.items.manual.label", "Encyclopedia",
+            "main_menu.items.manual.description",
+            "Open the commander encyclopedia for controls, systems, and lore summaries.", true},
+        {"clear_cloud", "main_menu.items.clear_cloud.label", "Clear Cloud Data",
+            "main_menu.items.clear_cloud.description",
             "Remove backend-linked progress for this commander after confirming the action.", true},
-        {"exit", "Exit", "Close Galactic Planet Miner.", true},
+        {"exit", "main_menu.items.exit.label", "Exit",
+            "main_menu.items.exit.description", "Close Galactic Planet Miner.", true},
     };
 
     ft_vector<ft_menu_item> items;
@@ -473,9 +685,10 @@ ft_vector<ft_menu_item> build_main_menu_items()
         item_rect.top += static_cast<int>(index) * (base_rect.height + spacing);
 
         const menu_entry &entry = entries[index];
-        ft_menu_item      item(ft_string(entry.identifier), ft_string(entry.label), item_rect);
+        ft_string          label = menu_localize(entry.label_key, entry.label_fallback);
+        ft_menu_item       item(ft_string(entry.identifier), label, item_rect);
         item.enabled = entry.enabled;
-        item.description = ft_string(entry.description);
+        item.description = menu_localize(entry.description_key, entry.description_fallback);
         items.push_back(item);
     }
 
@@ -489,19 +702,22 @@ const ft_vector<ft_string> &get_main_menu_tutorial_tips()
 
     if (!initialized)
     {
-        const char *raw_tips[] = {
+        const char *tip_keys[] = {
+            "main_menu.tutorial.tips.0",
+            "main_menu.tutorial.tips.1",
+            "main_menu.tutorial.tips.2",
+            "main_menu.tutorial.tips.3",
+        };
+        const char *tip_fallbacks[] = {
             "Press Enter or click anywhere to dismiss these tips.",
             "Use Arrow Keys / D-Pad or the mouse to highlight menu entries.",
             "Choose New Game to start a fresh campaign for this commander.",
             "Swap Profile lets you switch between saved commanders.",
         };
-        const size_t tip_count = sizeof(raw_tips) / sizeof(raw_tips[0]);
+        const size_t tip_count = sizeof(tip_keys) / sizeof(tip_keys[0]);
         tips.reserve(tip_count);
         for (size_t index = 0; index < tip_count; ++index)
-        {
-            ft_string tip(raw_tips[index]);
-            tips.push_back(tip);
-        }
+            tips.push_back(menu_localize(tip_keys[index], tip_fallbacks[index]));
         initialized = true;
     }
 
@@ -515,17 +731,24 @@ const ft_vector<ft_string> &get_main_menu_manual_lines()
 
     if (!initialized)
     {
-        const char *raw_lines[] = {
+        const char *line_keys[] = {
+            "main_menu.manual.lines.0",
+            "main_menu.manual.lines.1",
+            "main_menu.manual.lines.2",
+            "main_menu.manual.lines.3",
+            "main_menu.manual.lines.4",
+        };
+        const char *line_fallbacks[] = {
             "Browse ship loadouts, building efficiencies, and resource yields.",
             "Review campaign objectives with quick strategy tips for each branch.",
             "Study combat controls, hotkeys, and fleet formation guidance.",
             "Access lore entries and encyclopedia cross-links without leaving the menu.",
             "Reconnect to the network if encyclopedia updates appear out of date.",
         };
-        const size_t line_count = sizeof(raw_lines) / sizeof(raw_lines[0]);
+        const size_t line_count = sizeof(line_keys) / sizeof(line_keys[0]);
         lines.reserve(line_count);
         for (size_t index = 0; index < line_count; ++index)
-            lines.push_back(ft_string(raw_lines[index]));
+            lines.push_back(menu_localize(line_keys[index], line_fallbacks[index]));
         initialized = true;
     }
 
@@ -559,19 +782,25 @@ void main_menu_apply_connectivity_result(MainMenuConnectivityStatus &status, boo
 ft_string main_menu_resolve_connectivity_label(const MainMenuConnectivityStatus &status)
 {
     if (status.state == MAIN_MENU_CONNECTIVITY_CHECKING)
-        return ft_string("Checking backend...");
+        return menu_localize("main_menu.connectivity.checking", "Checking backend...");
 
     ft_string label;
     if (status.state == MAIN_MENU_CONNECTIVITY_ONLINE)
-        label = ft_string("Backend Online");
+        label = menu_localize("main_menu.connectivity.online", "Backend Online");
     else
-        label = ft_string("Backend Offline");
+        label = menu_localize("main_menu.connectivity.offline", "Backend Offline");
 
     if (status.last_status_code != 0)
     {
-        label.append(" (HTTP ");
-        label.append(ft_to_string(status.last_status_code));
-        label.append(")");
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement code_placeholder;
+        code_placeholder.key = ft_string("code");
+        code_placeholder.value = ft_to_string(status.last_status_code);
+        replacements.push_back(code_placeholder);
+        ft_string suffix
+            = menu_localize_format("main_menu.connectivity.code_suffix", " (HTTP {{code}})", replacements);
+        label.append(suffix);
     }
 
     return label;
@@ -644,14 +873,14 @@ namespace
             return label;
         }
         if (key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CONFIRM)
-            return ft_string("Enter");
+            return menu_localize("main_menu.hotkeys.enter", "Enter");
         if (key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CANCEL)
-            return ft_string("Esc");
+            return menu_localize("main_menu.hotkeys.escape", "Esc");
         if (key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DELETE)
-            return ft_string("Backspace");
+            return menu_localize("main_menu.hotkeys.backspace", "Backspace");
         if (key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP || key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN
             || key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_LEFT || key_code == PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_RIGHT)
-            return ft_string("Arrow Keys");
+            return menu_localize("main_menu.hotkeys.arrows", "Arrow Keys");
         if (fallback_label != ft_nullptr)
             return ft_string(fallback_label);
         ft_string label;
@@ -668,15 +897,21 @@ namespace
 
         if (reference == ft_nullptr)
         {
-            ft_string hint("Use Arrow Keys / D-Pad to choose an option. Enter / A confirms. Esc / B exits.");
-            return hint;
+            return menu_localize(
+                "main_menu.navigation.general",
+                "Use Arrow Keys / D-Pad to choose an option. Enter / A confirms. Esc / B exits.");
         }
 
         if (!reference->enabled)
         {
-            ft_string hint(reference->label);
-            hint.append(" is not available yet. Esc / B: Back");
-            return hint;
+            ft_vector<StringTableReplacement> replacements;
+            replacements.reserve(1U);
+            StringTableReplacement item_placeholder;
+            item_placeholder.key = ft_string("item");
+            item_placeholder.value = reference->label;
+            replacements.push_back(item_placeholder);
+            return menu_localize_format("main_menu.navigation.disabled",
+                "{{item}} is not available yet. Esc / B: Back", replacements);
         }
 
         ft_string keyboard_confirm;
@@ -685,10 +920,13 @@ namespace
 
         if (preferences != ft_nullptr)
         {
-            keyboard_confirm = format_menu_hotkey_label(preferences->hotkey_menu_confirm, "Enter");
-            keyboard_cancel = format_menu_hotkey_label(preferences->hotkey_menu_cancel, "Esc");
-            ft_string nav_up = format_menu_hotkey_label(preferences->hotkey_menu_up, "Arrow Keys");
-            ft_string nav_down = format_menu_hotkey_label(preferences->hotkey_menu_down, "Arrow Keys");
+            ft_string fallback_confirm = menu_localize("main_menu.hotkeys.enter", "Enter");
+            ft_string fallback_cancel = menu_localize("main_menu.hotkeys.escape", "Esc");
+            ft_string fallback_nav = menu_localize("main_menu.hotkeys.arrows", "Arrow Keys");
+            keyboard_confirm = format_menu_hotkey_label(preferences->hotkey_menu_confirm, fallback_confirm.c_str());
+            keyboard_cancel = format_menu_hotkey_label(preferences->hotkey_menu_cancel, fallback_cancel.c_str());
+            ft_string nav_up = format_menu_hotkey_label(preferences->hotkey_menu_up, fallback_nav.c_str());
+            ft_string nav_down = format_menu_hotkey_label(preferences->hotkey_menu_down, fallback_nav.c_str());
             if (nav_up == nav_down)
                 navigation_label = nav_up;
             else
@@ -700,26 +938,36 @@ namespace
         }
         else
         {
-            keyboard_confirm = ft_string("Enter");
-            keyboard_cancel = ft_string("Esc");
-            navigation_label = ft_string("Arrow Keys");
+            keyboard_confirm = menu_localize("main_menu.hotkeys.enter", "Enter");
+            keyboard_cancel = menu_localize("main_menu.hotkeys.escape", "Esc");
+            navigation_label = menu_localize("main_menu.hotkeys.arrows", "Arrow Keys");
         }
 
-        ft_string hint;
-        hint.append(keyboard_confirm);
-        hint.append(" / A: Select ");
-        hint.append(reference->label);
-        hint.append("  |  ");
-        hint.append(navigation_label);
-        hint.append(" / D-Pad: Navigate  |  ");
-        hint.append(keyboard_cancel);
-        hint.append(" / B: Back");
-        return hint;
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(4U);
+        StringTableReplacement confirm_placeholder;
+        confirm_placeholder.key = ft_string("confirm");
+        confirm_placeholder.value = keyboard_confirm;
+        replacements.push_back(confirm_placeholder);
+        StringTableReplacement item_placeholder;
+        item_placeholder.key = ft_string("item");
+        item_placeholder.value = reference->label;
+        replacements.push_back(item_placeholder);
+        StringTableReplacement navigate_placeholder;
+        navigate_placeholder.key = ft_string("navigate");
+        navigate_placeholder.value = navigation_label;
+        replacements.push_back(navigate_placeholder);
+        StringTableReplacement cancel_placeholder;
+        cancel_placeholder.key = ft_string("cancel");
+        cancel_placeholder.value = keyboard_cancel;
+        replacements.push_back(cancel_placeholder);
+        return menu_localize_format("main_menu.navigation.active",
+            "{{confirm}} / A: Select {{item}}  |  {{navigate}} / D-Pad: Navigate  |  {{cancel}} / B: Back", replacements);
     }
 
 #if GALACTIC_HAVE_SDL2
     void render_menu_overlay(SDL_Renderer &renderer, TTF_Font *menu_font, int output_width, int output_height,
-        const MainMenuOverlayContext *overlay)
+        const MainMenuOverlayContext *overlay, const MainMenuPalette &palette)
     {
         if (overlay == ft_nullptr || !overlay->visible)
             return;
@@ -742,7 +990,7 @@ namespace
 
         if (!overlay->heading.empty())
         {
-            SDL_Color heading_color = {236, 242, 255, 255};
+            SDL_Color heading_color = palette.overlay_heading;
             heading_texture = create_text_texture(renderer, *menu_font, overlay->heading, heading_color, heading_rect);
             if (heading_texture != ft_nullptr)
             {
@@ -776,7 +1024,7 @@ namespace
             }
             else
             {
-                SDL_Color line_color = {208, 216, 236, 255};
+                SDL_Color line_color = palette.overlay_line;
                 line_texture = create_text_texture(renderer, *menu_font, lines[index], line_color, line_rect);
                 if (line_texture != ft_nullptr)
                 {
@@ -806,7 +1054,7 @@ namespace
 
         if (!overlay->footer.empty())
         {
-            SDL_Color footer_color = {184, 196, 224, 255};
+            SDL_Color footer_color = palette.overlay_footer;
             footer_texture = create_text_texture(renderer, *menu_font, overlay->footer, footer_color, footer_rect);
             if (footer_texture != ft_nullptr)
             {
@@ -839,9 +1087,11 @@ namespace
         if (overlay_rect.y < 48)
             overlay_rect.y = 48;
 
-        SDL_SetRenderDrawColor(&renderer, 18, 24, 44, 238);
+        SDL_SetRenderDrawColor(&renderer, palette.overlay_background.r, palette.overlay_background.g,
+            palette.overlay_background.b, palette.overlay_background.a);
         SDL_RenderFillRect(&renderer, &overlay_rect);
-        SDL_SetRenderDrawColor(&renderer, 92, 112, 166, 255);
+        SDL_SetRenderDrawColor(&renderer, palette.overlay_border.r, palette.overlay_border.g, palette.overlay_border.b,
+            palette.overlay_border.a);
         SDL_RenderDrawRect(&renderer, &overlay_rect);
 
         int text_x = overlay_rect.x + overlay_padding;
@@ -893,7 +1143,7 @@ namespace
     }
 
     void render_menu_tutorial_overlay(SDL_Renderer &renderer, TTF_Font *menu_font, int output_width,
-        const MainMenuTutorialContext *tutorial)
+        const MainMenuTutorialContext *tutorial, const MainMenuPalette &palette)
     {
         if (tutorial == ft_nullptr || !tutorial->visible)
             return;
@@ -911,12 +1161,13 @@ namespace
         int       overlay_height = overlay_padding * 2;
         int       max_content_width = 0;
 
-        SDL_Color title_color = {234, 238, 250, 255};
-        SDL_Color primary_tip_color = {210, 220, 240, 255};
-        SDL_Color bullet_tip_color = {200, 208, 232, 255};
+        SDL_Color title_color = palette.tutorial_title;
+        SDL_Color primary_tip_color = palette.tutorial_primary;
+        SDL_Color bullet_tip_color = palette.tutorial_secondary;
 
         SDL_Rect  title_rect;
-        SDL_Texture *title_texture = create_text_texture(renderer, *menu_font, ft_string("Menu Tips"), title_color, title_rect);
+        ft_string title_label = menu_localize("main_menu.overlay.tips_heading", "Menu Tips");
+        SDL_Texture *title_texture = create_text_texture(renderer, *menu_font, title_label, title_color, title_rect);
         if (title_texture != ft_nullptr)
         {
             overlay_height += title_rect.h;
@@ -976,9 +1227,11 @@ namespace
         overlay_rect.w = overlay_width;
         overlay_rect.h = overlay_height;
 
-        SDL_SetRenderDrawColor(&renderer, 18, 24, 44, 235);
+        SDL_SetRenderDrawColor(&renderer, palette.tutorial_background.r, palette.tutorial_background.g,
+            palette.tutorial_background.b, palette.tutorial_background.a);
         SDL_RenderFillRect(&renderer, &overlay_rect);
-        SDL_SetRenderDrawColor(&renderer, 90, 110, 160, 255);
+        SDL_SetRenderDrawColor(&renderer, palette.tutorial_border.r, palette.tutorial_border.g, palette.tutorial_border.b,
+            palette.tutorial_border.a);
         SDL_RenderDrawRect(&renderer, &overlay_rect);
 
         int text_x = overlay_rect.x + overlay_padding;
@@ -1012,13 +1265,27 @@ namespace
 }
 
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
-    int window_width, int window_height, const ft_string &active_profile_name, const MainMenuTutorialContext *tutorial,
+    int window_width, int window_height, const ft_string &active_profile_name, const PlayerProfilePreferences *preferences,
+    const MainMenuTutorialContext *tutorial,
     const MainMenuOverlayContext *manual, const MainMenuOverlayContext *changelog,
     const MainMenuOverlayContext *cloud_confirmation, const MainMenuConnectivityStatus *connectivity,
     const MainMenuAlertBanner *alert)
 {
 #if GALACTIC_HAVE_SDL2
-    SDL_SetRenderDrawColor(&renderer, 12, 16, 28, 255);
+    const bool use_colorblind_palette
+        = preferences != ft_nullptr && preferences->colorblind_palette_enabled;
+    unsigned int brightness_percent = 100U;
+    unsigned int contrast_percent = 100U;
+    if (preferences != ft_nullptr)
+    {
+        brightness_percent = preferences->brightness_percent;
+        contrast_percent = preferences->contrast_percent;
+    }
+    MainMenuPalette palette
+        = resolve_main_menu_palette(use_colorblind_palette, brightness_percent, contrast_percent);
+
+    SDL_SetRenderDrawColor(&renderer, palette.background.r, palette.background.g, palette.background.b,
+        palette.background.a);
     SDL_RenderClear(&renderer);
 
     int output_width = window_width;
@@ -1027,9 +1294,10 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
 
     if (title_font != ft_nullptr)
     {
-        SDL_Color title_color = {220, 220, 245, 255};
+        SDL_Color title_color = palette.title;
         SDL_Rect  title_rect;
-        SDL_Texture *title_texture = create_text_texture(renderer, *title_font, ft_string("Galactic Planet Miner"), title_color,
+        ft_string menu_title = menu_localize("main_menu.title", "Galactic Planet Miner");
+        SDL_Texture *title_texture = create_text_texture(renderer, *title_font, menu_title, title_color,
             title_rect);
         if (title_texture != ft_nullptr)
         {
@@ -1042,10 +1310,10 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
 
     if (menu_font != ft_nullptr && !active_profile_name.empty())
     {
-        ft_string profile_label("Profile: ");
+        ft_string profile_label = menu_localize("main_menu.profile_prefix", "Profile: ");
         profile_label.append(active_profile_name);
 
-        SDL_Color profile_color = {200, 210, 230, 255};
+        SDL_Color profile_color = palette.profile;
         SDL_Rect  profile_rect;
         SDL_Texture *profile_texture = create_text_texture(renderer, *menu_font, profile_label, profile_color, profile_rect);
         if (profile_texture != ft_nullptr)
@@ -1090,21 +1358,7 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
 
     if (alert != ft_nullptr && alert->visible && menu_font != ft_nullptr && !alert->message.empty())
     {
-        SDL_Color text_color;
-        if (alert->is_error)
-        {
-            text_color.r = 255;
-            text_color.g = 206;
-            text_color.b = 206;
-            text_color.a = 255;
-        }
-        else
-        {
-            text_color.r = 200;
-            text_color.g = 230;
-            text_color.b = 255;
-            text_color.a = 255;
-        }
+            SDL_Color text_color = alert->is_error ? palette.alert_text_error : palette.alert_text_info;
 
         SDL_Rect text_rect;
         SDL_Texture *text_texture = create_text_texture(renderer, *menu_font, alert->message, text_color, text_rect);
@@ -1124,30 +1378,9 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
             if (alert_rect.y < 120)
                 alert_rect.y = 120;
 
-            SDL_Color background_color;
-            SDL_Color border_color;
-            if (alert->is_error)
-            {
-                background_color.r = 84;
-                background_color.g = 32;
-                background_color.b = 32;
-                background_color.a = 235;
-                border_color.r = 164;
-                border_color.g = 80;
-                border_color.b = 80;
-                border_color.a = 255;
-            }
-            else
-            {
-                background_color.r = 26;
-                background_color.g = 64;
-                background_color.b = 88;
-                background_color.a = 235;
-                border_color.r = 88;
-                border_color.g = 138;
-                border_color.b = 176;
-                border_color.a = 255;
-            }
+            SDL_Color background_color
+                = alert->is_error ? palette.alert_background_error : palette.alert_background_info;
+            SDL_Color border_color = alert->is_error ? palette.alert_border_error : palette.alert_border_info;
 
             SDL_SetRenderDrawColor(&renderer, background_color.r, background_color.g, background_color.b, background_color.a);
             SDL_RenderFillRect(&renderer, &alert_rect);
@@ -1181,33 +1414,18 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
         const bool  is_selected = static_cast<int>(index) == selected_index;
         const bool  is_disabled = !item.enabled;
 
-        Uint8 r = 28;
-        Uint8 g = 36;
-        Uint8 b = 60;
-
+        SDL_Color fill_color = palette.button_idle;
         if (is_disabled)
         {
-            r = 30;
-            g = 34;
-            b = 44;
-            if (is_hovered)
-            {
-                r = 42;
-                g = 46;
-                b = 60;
-            }
+            fill_color = is_hovered ? palette.button_disabled_hover : palette.button_disabled;
         }
         else if (is_hovered)
         {
-            r = 56;
-            g = 84;
-            b = 140;
+            fill_color = palette.button_hover;
         }
         else if (is_selected)
         {
-            r = 40;
-            g = 64;
-            b = 112;
+            fill_color = palette.button_selected;
         }
 
         SDL_Rect button_rect;
@@ -1219,24 +1437,16 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
         if (clip_enabled && (button_rect.y + button_rect.h <= clip_rect.y || button_rect.y >= clip_bottom))
             continue;
 
-        SDL_SetRenderDrawColor(&renderer, r, g, b, 255);
+        SDL_SetRenderDrawColor(&renderer, fill_color.r, fill_color.g, fill_color.b, fill_color.a);
         SDL_RenderFillRect(&renderer, &button_rect);
 
-        const Uint8 border_r = is_disabled ? 70 : 90;
-        const Uint8 border_g = is_disabled ? 80 : 110;
-        const Uint8 border_b = is_disabled ? 120 : 160;
-        SDL_SetRenderDrawColor(&renderer, border_r, border_g, border_b, 255);
+        const SDL_Color border_color = is_disabled ? palette.button_border_disabled : palette.button_border_enabled;
+        SDL_SetRenderDrawColor(&renderer, border_color.r, border_color.g, border_color.b, border_color.a);
         SDL_RenderDrawRect(&renderer, &button_rect);
 
         if (menu_font != ft_nullptr)
         {
-            SDL_Color text_color = {255, 255, 255, 255};
-            if (is_disabled)
-            {
-                text_color.r = 188;
-                text_color.g = 196;
-                text_color.b = 210;
-            }
+            SDL_Color text_color = is_disabled ? palette.button_text_disabled : palette.button_text_enabled;
             SDL_Rect  text_rect;
             SDL_Texture *text_texture = create_text_texture(renderer, *menu_font, item.label, text_color, text_rect);
             if (text_texture != ft_nullptr)
@@ -1259,7 +1469,7 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
         const ft_string description = resolve_menu_description(menu);
         if (!description.empty())
         {
-            SDL_Color description_color = {210, 220, 240, 255};
+            SDL_Color description_color = palette.description;
             SDL_Rect  description_rect;
             SDL_Texture *description_texture = create_text_texture(renderer, *menu_font, description, description_color,
                 description_rect);
@@ -1277,10 +1487,10 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
 
     if (menu_font != ft_nullptr)
     {
-        const ft_string hint = resolve_menu_navigation_hint(menu, ft_nullptr);
+        const ft_string hint = resolve_menu_navigation_hint(menu, preferences);
         if (!hint.empty())
         {
-            SDL_Color hint_color = {165, 176, 204, 255};
+            SDL_Color hint_color = palette.hint;
             SDL_Rect  hint_rect;
             SDL_Texture *hint_texture = create_text_texture(renderer, *menu_font, hint, hint_color, hint_rect);
             if (hint_texture != ft_nullptr)
@@ -1299,7 +1509,7 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
         const ft_string build_label = main_menu_resolve_build_label();
         if (!build_label.empty())
         {
-            SDL_Color build_color = {140, 150, 184, 255};
+            SDL_Color build_color = palette.build;
             SDL_Rect  build_rect;
             SDL_Texture *build_texture = create_text_texture(renderer, *menu_font, build_label, build_color, build_rect);
             if (build_texture != ft_nullptr)
@@ -1312,10 +1522,10 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
         }
     }
 
-    render_menu_overlay(renderer, menu_font, output_width, output_height, manual);
-    render_menu_overlay(renderer, menu_font, output_width, output_height, changelog);
-    render_menu_overlay(renderer, menu_font, output_width, output_height, cloud_confirmation);
-    render_menu_tutorial_overlay(renderer, menu_font, output_width, tutorial);
+    render_menu_overlay(renderer, menu_font, output_width, output_height, manual, palette);
+    render_menu_overlay(renderer, menu_font, output_width, output_height, changelog, palette);
+    render_menu_overlay(renderer, menu_font, output_width, output_height, cloud_confirmation, palette);
+    render_menu_tutorial_overlay(renderer, menu_font, output_width, tutorial, palette);
 
     SDL_RenderPresent(&renderer);
 #else
@@ -1326,6 +1536,7 @@ void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *
     (void)window_width;
     (void)window_height;
     (void)active_profile_name;
+    (void)preferences;
     (void)tutorial;
     (void)manual;
     (void)changelog;

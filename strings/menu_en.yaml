@@ -1,0 +1,185 @@
+language: en
+strings:
+  main_menu:
+    title: "Galactic Planet Miner"
+    profile_prefix: "Profile: "
+    overlay:
+      tips_heading: "Menu Tips"
+      close: "Press Enter / Space or click to close."
+    items:
+      new_game:
+        label: "New Game"
+        description: "Begin a fresh campaign for the active commander."
+      resume:
+        label: "Resume"
+        description: "Jump back into your latest campaign save once one is available."
+      load:
+        label: "Load"
+        description: "Review existing saves and prepare to resume a prior campaign."
+      settings:
+        label: "Settings"
+        description: "Adjust gameplay, interface scale, and menu layout preferences for this commander."
+      swap_profile:
+        label: "Swap Profile"
+        description: "Switch to a different commander profile."
+      changelog:
+        label: "Patch Notes"
+        description: "Read the latest Galactic Planet Miner updates fetched from HQ."
+      manual:
+        label: "Encyclopedia"
+        description: "Open the commander encyclopedia for controls, systems, and lore summaries."
+      clear_cloud:
+        label: "Clear Cloud Data"
+        description: "Remove backend-linked progress for this commander after confirming the action."
+      exit:
+        label: "Exit"
+        description: "Close Galactic Planet Miner."
+    tutorial:
+      tips:
+        0: "Press Enter or click anywhere to dismiss these tips."
+        1: "Use Arrow Keys / D-Pad or the mouse to highlight menu entries."
+        2: "Choose New Game to start a fresh campaign for this commander."
+        3: "Swap Profile lets you switch between saved commanders."
+    manual:
+      lines:
+        0: "Browse ship loadouts, building efficiencies, and resource yields."
+        1: "Review campaign objectives with quick strategy tips for each branch."
+        2: "Study combat controls, hotkeys, and fleet formation guidance."
+        3: "Access lore entries and encyclopedia cross-links without leaving the menu."
+        4: "Reconnect to the network if encyclopedia updates appear out of date."
+      heading: "Galactic Encyclopedia"
+    connectivity:
+      checking: "Checking backend..."
+      online: "Backend Online"
+      offline: "Backend Offline"
+      code_suffix: " (HTTP {{code}})"
+    hotkeys:
+      enter: "Enter"
+      escape: "Esc"
+      backspace: "Backspace"
+      arrows: "Arrow Keys"
+    navigation:
+      general: "Use Arrow Keys / D-Pad to choose an option. Enter / A confirms. Esc / B exits."
+      disabled: "{{item}} is not available yet. Esc / B: Back"
+      active: "{{confirm}} / A: Select {{item}}  |  {{navigate}} / D-Pad: Navigate  |  {{cancel}} / B: Back"
+    alerts:
+      audit_failure: "Unable to inspect saves for this commander."
+      audit_additional: " ({{count}} more issue{{suffix}})"
+      launch_failure: "Unable to launch the selected save. It may have been moved or deleted."
+    resume:
+      active_description: "Jump back into \"{{slot}}\"{{metadata}} without opening the load menu."
+      metadata_unavailable: " Metadata details unavailable."
+      empty_description: "No healthy campaign saves found yet. Create or load a game to enable quick resume."
+    clear_cloud:
+      heading: "Clear Cloud Data?"
+      summary: "This will remove any cloud-synced progress for this commander."
+      local_remains: "Local saves on this device will remain intact."
+      footer: "Press Enter / A to confirm, Esc / B or click to cancel."
+      requires_online: "Cloud data can only be cleared while online. Reconnect and try again."
+      cleared_named: "Cleared cloud data for \"{{commander}}\"."
+      cleared_generic: "Cleared cloud data for this commander."
+      failure: "Failed to clear cloud data."
+      error_code: " (HTTP {{code}})"
+    changelog:
+      offline_heading: "Patch Notes Unavailable"
+      offline_required: "Patch notes require an online connection."
+      offline_status: "Last backend status: HTTP {{code}}"
+      offline_retry: "Reconnect to view the latest updates."
+      latest_heading: "Latest Patch Notes"
+      empty_backend: "No patch notes were returned by the backend."
+      unavailable_heading: "Patch Notes Unavailable"
+      fetch_failure: "Unable to fetch patch notes from the backend."
+      error_status: "HTTP status: {{code}}"
+      try_later: "Please try again later."
+      empty_fallback: "Patch notes are currently empty."
+  settings:
+    menu:
+      accessibility:
+        label: "Accessibility Preset: "
+      colorblind:
+        label: "Colorblind Palette: "
+      toggle:
+        on: "On"
+        off: "Off"
+      ui_scale: "UI Scale: {{value}}%"
+      combat_speed: "Combat Speed: {{value}}%"
+      music_volume: "Music Volume: {{value}}%"
+      effects_volume: "Effects Volume: {{value}}%"
+      brightness: "Brightness: {{value}}%"
+      contrast: "Contrast: {{value}}%"
+      lore_anchor: "Lore Panel Anchor: {{value}}"
+      anchor:
+        left: "Left"
+        right: "Right"
+      actions:
+        save: "Save Changes"
+        cancel: "Cancel"
+      title: "Commander Settings"
+      instructions: "Use Left/Right or Enter to adjust an option. Esc cancels. Save commits changes."
+      unsaved: "Unsaved changes"
+      status:
+        no_profile: "No active commander profile to save."
+        saved: "Settings saved."
+        save_failed: "Failed to save settings."
+  new_game:
+    title: "Create New Game"
+    placeholder: "Enter save name"
+    instructions: "Letters and numbers only. Press Enter to confirm."
+    status:
+      empty: "Please enter a save name."
+      length: "Save names are limited to 24 characters."
+      invalid: "Use letters and numbers only."
+  load_menu:
+    metadata:
+      difficulty_unknown: "Difficulty ?"
+      difficulty:
+        easy: "Easy"
+        standard: "Standard"
+        hard: "Hard"
+      difficulty_known: "Difficulty: {{difficulty}}"
+      unavailable: "Metadata unavailable"
+      day_known: "Day {{value}}"
+      day_unknown: "Day ?"
+      level_known: "Level {{value}}"
+      level_unknown: "Level ?"
+      combined: "{{day}} • {{level}} • {{difficulty}}"
+      unreadable: "Unable to read metadata"
+    errors:
+      metadata_parse: "Save \"{{slot}}\" could not be read (metadata parsing failed)."
+    error:
+      no_commander: "Commander profile missing."
+      no_original_name: "Original save name missing."
+      name_required: "Please enter a new save name."
+      name_length: "Save names are limited to 24 characters."
+      name_charset: "Use letters and numbers only."
+      resolve_existing: "Unable to resolve existing save location."
+      verify_existing: "Unable to verify existing save file."
+      missing_original: "Original save file not found."
+      resolve_new: "Unable to resolve new save location."
+      check_conflict: "Unable to check for conflicting saves."
+      conflict: "A save with that name already exists."
+      rename_failed: "Failed to rename save file."
+      resolve_path: "Unable to resolve save location."
+      verify_path: "Unable to verify save file."
+      not_found: "Save file not found."
+      delete_failed: "Failed to delete save file."
+    status:
+      read_directory_failed: "Unable to read save directory for this commander."
+      no_saves: "No campaign saves found for this commander."
+      delete_confirm: "Press Delete again to remove \"{{slot}}\". Esc cancels."
+      rename_progress: "Renaming \"{{from}}\" to \"{{to}}\". Press Enter to confirm; Esc cancels."
+      delete_canceled: "Deletion canceled."
+      current_name: " Current name: \"{{name}}\"."
+      rename_canceled: "Rename canceled."
+      rename_unchanged: "Save name unchanged."
+      rename_select: "Select a save before pressing R to rename."
+      refresh_failed_rename: "Unable to refresh save directory after rename."
+      rename_success: "Renamed save \"{{from}}\" to \"{{to}}\"."
+      delete_select: "Select a save before pressing Delete."
+      delete_success: "Deleted save \"{{slot}}\"."
+      refresh_failed_delete: "Unable to refresh save directory after deletion."
+    menu:
+      cancel: "Cancel"
+      heading: "Load Campaign"
+      instructions: "Select a save to prepare for campaign resume. Enter loads; Delete removes; R renames; Esc cancels."
+      instructions_commander: " Commander: {{commander}}."

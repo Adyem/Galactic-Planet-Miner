@@ -111,7 +111,8 @@ bool      main_menu_can_launch_campaign(const ft_string &save_path) noexcept;
 bool      main_menu_preload_commander_portrait(const ft_string &commander_name) noexcept;
 
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
-    int window_width, int window_height, const ft_string &active_profile_name, const MainMenuTutorialContext *tutorial,
+    int window_width, int window_height, const ft_string &active_profile_name, const PlayerProfilePreferences *preferences,
+    const MainMenuTutorialContext *tutorial,
     const MainMenuOverlayContext *manual, const MainMenuOverlayContext *changelog,
     const MainMenuOverlayContext *cloud_confirmation, const MainMenuConnectivityStatus *connectivity,
     const MainMenuAlertBanner *alert);
@@ -196,14 +197,24 @@ namespace settings_flow_testing
     unsigned int clamp_effects_volume(unsigned int value) noexcept;
     unsigned int increment_effects_volume(unsigned int value) noexcept;
     unsigned int decrement_effects_volume(unsigned int value) noexcept;
+    unsigned int clamp_brightness(unsigned int value) noexcept;
+    unsigned int increment_brightness(unsigned int value) noexcept;
+    unsigned int decrement_brightness(unsigned int value) noexcept;
+    unsigned int clamp_contrast(unsigned int value) noexcept;
+    unsigned int increment_contrast(unsigned int value) noexcept;
+    unsigned int decrement_contrast(unsigned int value) noexcept;
     unsigned int toggle_lore_anchor(unsigned int anchor) noexcept;
     ft_string    format_ui_scale_option(unsigned int value);
     ft_string    format_combat_speed_option(unsigned int value);
     ft_string    format_music_volume_option(unsigned int value);
     ft_string    format_effects_volume_option(unsigned int value);
+    ft_string    format_brightness_option(unsigned int value);
+    ft_string    format_contrast_option(unsigned int value);
     ft_string    format_lore_anchor_option(unsigned int anchor);
     bool         toggle_accessibility_preset(bool enabled) noexcept;
     ft_string    format_accessibility_preset_option(bool enabled);
+    bool         toggle_colorblind_palette(bool enabled) noexcept;
+    ft_string    format_colorblind_palette_option(bool enabled);
 }
 
 namespace load_game_flow_testing

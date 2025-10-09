@@ -1,6 +1,7 @@
 #include "main_menu_system.hpp"
 
 #include "app_constants.hpp"
+#include "menu_localization.hpp"
 #include "game_bootstrap.hpp"
 #include "player_profile.hpp"
 
@@ -70,26 +71,27 @@ namespace
         ft_string full_path = build_save_file_path(commander_name, save_name);
         if (full_path.empty())
         {
-            out_error = ft_string("Unable to resolve the save file location.");
+            out_error = menu_localize(
+                "new_game.error.resolve_location", "Unable to resolve the save file location.");
             return false;
         }
 
         int exists_result = file_exists(full_path.c_str());
         if (exists_result < 0)
         {
-            out_error = ft_string("Unable to check existing saves.");
+            out_error = menu_localize("new_game.error.check_existing", "Unable to check existing saves.");
             return false;
         }
 
         if (exists_result > 0)
         {
-            out_error = ft_string("A save with that name already exists.");
+            out_error = menu_localize("new_game.error.conflict", "A save with that name already exists.");
             return false;
         }
 
         if (!game_bootstrap_create_quicksave_with_commander(full_path.c_str(), commander_name))
         {
-            out_error = ft_string("Failed to create the save file.");
+            out_error = menu_localize("new_game.error.create_failure", "Failed to create the save file.");
             return false;
         }
 
@@ -112,8 +114,9 @@ namespace
         {
             SDL_Color title_color = {220, 220, 245, 255};
             SDL_Rect  title_rect;
-            SDL_Texture *title_texture = create_text_texture(renderer, *title_font, ft_string("Create New Game"), title_color,
-                title_rect);
+            ft_string title_text = menu_localize("new_game.title", "Create New Game");
+            SDL_Texture *title_texture
+                = create_text_texture(renderer, *title_font, title_text, title_color, title_rect);
             if (title_texture != ft_nullptr)
             {
                 title_rect.x = output_width / 2 - title_rect.w / 2;
@@ -141,7 +144,7 @@ namespace
             bool is_placeholder = save_name.empty();
             ft_string display_text;
             if (is_placeholder)
-                display_text = ft_string("Enter save name");
+                display_text = menu_localize("new_game.placeholder", "Enter save name");
             else
                 display_text = save_name;
 
@@ -183,7 +186,8 @@ namespace
                 SDL_RenderFillRect(&renderer, &caret_rect);
             }
 
-            ft_string instructions("Letters and numbers only. Press Enter to confirm.");
+            ft_string instructions = menu_localize(
+                "new_game.instructions", "Letters and numbers only. Press Enter to confirm.");
             SDL_Color instruction_color = {170, 180, 210, 255};
             SDL_Rect  instruction_rect;
             SDL_Texture *instruction_texture = create_text_texture(renderer, *menu_font, instructions, instruction_color,
@@ -314,7 +318,8 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
                 {
                     if (!save_name_is_valid(save_name))
                     {
-                        status_message = ft_string("Please enter a save name.");
+                        status_message = menu_localize(
+                            "new_game.status.empty", "Please enter a save name.");
                         status_is_error = true;
                     }
                     else
@@ -371,12 +376,14 @@ bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_
                     }
                     else if (rejected_for_length)
                     {
-                        status_message = ft_string("Save names are limited to 24 characters.");
+                        status_message = menu_localize(
+                            "new_game.status.length", "Save names are limited to 24 characters.");
                         status_is_error = true;
                     }
                     else if (rejected_for_invalid)
                     {
-                        status_message = ft_string("Use letters and numbers only.");
+                        status_message = menu_localize(
+                            "new_game.status.invalid", "Use letters and numbers only.");
                         status_is_error = true;
                     }
                 }
