@@ -1,5 +1,7 @@
 #include "game_bootstrap.hpp"
 
+#include "game.hpp"
+
 #include "libft/CMA/CMA.hpp"
 #include "libft/CPP_class/class_nullptr.hpp"
 #include "libft/CPP_class/class_ofstream.hpp"
@@ -185,6 +187,7 @@ bool game_bootstrap_initialize_with_commander(GameBootstrapData &out_data, const
         out_data.commander_name = ft_string("Commander");
     out_data.campaign_day = 1;
     out_data.commander_level = 1;
+    out_data.difficulty_setting = GAME_DIFFICULTY_STANDARD;
     bootstrap_populate_planet_defaults(out_data);
     bootstrap_populate_player_inventory(out_data);
     return true;
@@ -262,6 +265,13 @@ ft_string game_bootstrap_serialize(const GameBootstrapData &data) noexcept
     if (stored_campaign_day < 1)
         stored_campaign_day = 1;
     if (!bootstrap_add_item(document, campaign_group, "day", stored_campaign_day))
+        return bootstrap_abort(document);
+
+    int stored_difficulty = data.difficulty_setting;
+    if (stored_difficulty != GAME_DIFFICULTY_EASY && stored_difficulty != GAME_DIFFICULTY_STANDARD
+        && stored_difficulty != GAME_DIFFICULTY_HARD)
+        stored_difficulty = GAME_DIFFICULTY_STANDARD;
+    if (!bootstrap_add_item(document, campaign_group, "difficulty", stored_difficulty))
         return bootstrap_abort(document);
 
     char *serialized = document.write_to_string();

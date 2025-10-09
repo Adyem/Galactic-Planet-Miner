@@ -16,6 +16,10 @@ static const unsigned int PLAYER_PROFILE_COMBAT_SPEED_MIN_PERCENT = 50U;
 static const unsigned int PLAYER_PROFILE_COMBAT_SPEED_MAX_PERCENT = 200U;
 static const unsigned int PLAYER_PROFILE_VOLUME_MIN_PERCENT = 0U;
 static const unsigned int PLAYER_PROFILE_VOLUME_MAX_PERCENT = 100U;
+static const unsigned int PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT = 50U;
+static const unsigned int PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT = 150U;
+static const unsigned int PLAYER_PROFILE_CONTRAST_MIN_PERCENT = 50U;
+static const unsigned int PLAYER_PROFILE_CONTRAST_MAX_PERCENT = 150U;
 
 static const int PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP = 1073741906;    // SDLK_UP
 static const int PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN = 1073741905;  // SDLK_DOWN
@@ -39,8 +43,11 @@ struct PlayerProfilePreferences
     unsigned int combat_speed_percent;
     unsigned int music_volume_percent;
     unsigned int effects_volume_percent;
+    unsigned int brightness_percent;
+    unsigned int contrast_percent;
     unsigned int lore_panel_anchor;
     bool         menu_tutorial_seen;
+    bool         colorblind_palette_enabled;
     bool         accessibility_preset_enabled;
     int          hotkey_menu_up;
     int          hotkey_menu_down;
@@ -60,8 +67,11 @@ struct PlayerProfilePreferences
           combat_speed_percent(100U),
           music_volume_percent(100U),
           effects_volume_percent(100U),
+          brightness_percent(100U),
+          contrast_percent(100U),
           lore_panel_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT),
           menu_tutorial_seen(false),
+          colorblind_palette_enabled(false),
           accessibility_preset_enabled(false),
           hotkey_menu_up(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP),
           hotkey_menu_down(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN),

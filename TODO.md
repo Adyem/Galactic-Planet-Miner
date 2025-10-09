@@ -21,11 +21,11 @@
 - [x] Add a save-slot rename affordance inside the load dialog for better organization. *(Notes: rename prompt now uses the load dialog list, accepts alphanumeric names up to 24 characters, and refreshes the listing after renaming.)*
 - [x] Surface slot metadata (campaign day, commander level) alongside each save listing. *(Notes: depends on the save audit work so the metadata payload is already parsed when rendering rows.)*
 - [x] Include a "clear cloud data" action that wipes backend-linked progress after confirmation. *(Notes: accessible from the main menu with an online-only confirmation overlay that calls the backend wipe endpoint and surfaces success/failure alerts.)*
-- [ ] Persist per-slot difficulty modifiers and show them in both resume and load flows. *(Notes: hinges on the save metadata surfacing task and on extending the save schema.)*
+- [x] Persist per-slot difficulty modifiers and show them in both resume and load flows. *(Notes: hinges on the save metadata surfacing task and on extending the save schema.)*
 - [x] Add keyboard/gamepad navigation hints at the bottom of the menu. *(Notes: hints now reference the focused entry with controller/keyboard prompts and fall back to guidance when a feature is disabled.)*
-- [ ] Localize menu strings and tooltips using the existing string table loader. *(Notes: depends on capturing all menu text in a central catalog once tooltips are wired.)*
-- [ ] Provide a colorblind-safe palette toggle in accessibility settings. *(Notes: relies on the accessibility preset plumbing and requires palette overrides in the renderer.)*
-- [ ] Expose master brightness and contrast controls within settings. *(Notes: piggybacks on the settings dialog work and needs renderer hooks to adjust post-processing.)*
+- [x] Localize menu strings and tooltips using the existing string table loader. *(Notes: depends on capturing all menu text in a central catalog once tooltips are wired.)*
+- [x] Provide a colorblind-safe palette toggle in accessibility settings. *(Notes: toggle adds a teal/gold palette for menus, persists per profile, and re-skins both settings and main menu renderers.)*
+- [x] Expose master brightness and contrast controls within settings. *(Notes: settings now offer brightness and contrast sliders that persist per profile and adjust menu palettes.)*
 - [ ] Allow rebinding of controller layouts separately from keyboard bindings. *(Notes: extends the hotkey remap task after input device persistence is in place.)*
 - [ ] Add an autosave indicator icon when background saves are running. *(Notes: requires save-system error surfacing so the icon can differentiate success vs. failure states.)*
 - [ ] Implement a "sync status" panel that details latest backend convoy and leaderboard updates. *(Notes: depends on the connectivity indicator and backend ping logging to populate timestamps.)*

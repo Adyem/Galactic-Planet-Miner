@@ -25,6 +25,7 @@ SRC_COMMON  = \
     game_bootstrap.cpp \
     player_profile.cpp \
     font_util.cpp \
+    menu_localization.cpp \
     main_menu.cpp \
     quests.cpp \
     research.cpp \
@@ -43,7 +44,8 @@ SRC_COMMON  = \
     settings_flow.cpp \
     profile_entry_flow.cpp \
     profile_management_flow.cpp \
-    profile_preferences.cpp
+    profile_preferences.cpp \
+    string_table.cpp
 SRC_MAIN    = main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \

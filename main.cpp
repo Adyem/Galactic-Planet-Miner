@@ -1,5 +1,6 @@
 #include "app_constants.hpp"
 #include "backend_client.hpp"
+#include "menu_localization.hpp"
 #include "main_menu_system.hpp"
 #include "player_profile.hpp"
 #include "ui_input.hpp"
@@ -194,25 +195,39 @@ int main()
             if (resume_available && !resume_save_path.empty())
             {
                 menu_items[index].enabled = true;
-                ft_string description("Jump back into \"");
-                description.append(resume_slot_label);
-                description.append("\"");
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(2U);
+                StringTableReplacement slot_placeholder;
+                slot_placeholder.key = ft_string("slot");
+                slot_placeholder.value = resume_slot_label;
+                replacements.push_back(slot_placeholder);
+                StringTableReplacement metadata_placeholder;
+                metadata_placeholder.key = ft_string("metadata");
                 if (!resume_metadata_label.empty())
                 {
-                    description.append(" (");
-                    description.append(resume_metadata_label);
-                    description.append(")");
+                    ft_string metadata_value;
+                    metadata_value.append(" (");
+                    metadata_value.append(resume_metadata_label);
+                    metadata_value.append(")");
+                    metadata_placeholder.value = metadata_value;
                 }
-                description.append(" without opening the load menu.");
+                replacements.push_back(metadata_placeholder);
+                ft_string description = menu_localize_format("main_menu.resume.active_description",
+                    "Jump back into \"{{slot}}\"{{metadata}} without opening the load menu.", replacements);
                 if (!resume_metadata_known && resume_metadata_label.empty())
-                    description.append(" Metadata details unavailable.");
+                {
+                    ft_string metadata_hint = menu_localize(
+                        "main_menu.resume.metadata_unavailable", " Metadata details unavailable.");
+                    description.append(metadata_hint);
+                }
                 menu_items[index].description = description;
             }
             else
             {
                 menu_items[index].enabled = false;
-                menu_items[index].description
-                    = ft_string("No healthy campaign saves found yet. Create or load a game to enable quick resume.");
+                menu_items[index].description = menu_localize(
+                    "main_menu.resume.empty_description",
+                    "No healthy campaign saves found yet. Create or load a game to enable quick resume.");
             }
             break;
         }
@@ -249,7 +264,8 @@ int main()
         {
             alert_banner.visible = true;
             alert_banner.is_error = true;
-            alert_banner.message = ft_string("Unable to inspect saves for this commander.");
+            alert_banner.message
+                = menu_localize("main_menu.alerts.audit_failure", "Unable to inspect saves for this commander.");
             return;
         }
 
@@ -261,12 +277,20 @@ int main()
             const size_t additional = audit_errors.size() - 1U;
             if (additional > 0U)
             {
-                alert_banner.message.append(" (");
-                alert_banner.message.append(ft_to_string(static_cast<int>(additional)));
-                alert_banner.message.append(" more issue");
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(2U);
+                StringTableReplacement count_placeholder;
+                count_placeholder.key = ft_string("count");
+                count_placeholder.value = ft_to_string(static_cast<int>(additional));
+                replacements.push_back(count_placeholder);
+                StringTableReplacement suffix_placeholder;
+                suffix_placeholder.key = ft_string("suffix");
                 if (additional > 1U)
-                    alert_banner.message.append("s");
-                alert_banner.message.append(")");
+                    suffix_placeholder.value = ft_string("s");
+                replacements.push_back(suffix_placeholder);
+                ft_string extra = menu_localize_format("main_menu.alerts.audit_additional",
+                    " ({{count}} more issue{{suffix}})", replacements);
+                alert_banner.message.append(extra);
             }
         }
         else
@@ -324,7 +348,8 @@ int main()
         {
             alert_banner.visible = true;
             alert_banner.is_error = true;
-            alert_banner.message = ft_string("Unable to launch the selected save. It may have been moved or deleted.");
+            alert_banner.message = menu_localize("main_menu.alerts.launch_failure",
+                "Unable to launch the selected save. It may have been moved or deleted.");
             return false;
         }
 
@@ -372,12 +397,16 @@ int main()
         dismiss_changelog_overlay();
         dismiss_manual_overlay();
         clear_cloud_context.visible = true;
-        clear_cloud_context.heading = ft_string("Clear Cloud Data?");
+        clear_cloud_context.heading
+            = menu_localize("main_menu.clear_cloud.heading", "Clear Cloud Data?");
         clear_cloud_context.lines.clear();
-        clear_cloud_context.lines.push_back(
-            ft_string("This will remove any cloud-synced progress for this commander."));
-        clear_cloud_context.lines.push_back(ft_string("Local saves on this device will remain intact."));
-        clear_cloud_context.footer = ft_string("Press Enter / A to confirm, Esc / B or click to cancel.");
+        clear_cloud_context.lines.push_back(menu_localize(
+            "main_menu.clear_cloud.summary",
+            "This will remove any cloud-synced progress for this commander."));
+        clear_cloud_context.lines.push_back(menu_localize(
+            "main_menu.clear_cloud.local_remains", "Local saves on this device will remain intact."));
+        clear_cloud_context.footer = menu_localize(
+            "main_menu.clear_cloud.footer", "Press Enter / A to confirm, Esc / B or click to cancel.");
     };
 
     auto confirm_clear_cloud_prompt = [&]() -> bool {
@@ -390,8 +419,8 @@ int main()
         {
             alert_banner.visible = true;
             alert_banner.is_error = true;
-            alert_banner.message
-                = ft_string("Cloud data can only be cleared while online. Reconnect and try again.");
+            alert_banner.message = menu_localize("main_menu.clear_cloud.requires_online",
+                "Cloud data can only be cleared while online. Reconnect and try again.");
             return true;
         }
 
@@ -408,26 +437,40 @@ int main()
                 alert_banner.message = response_body;
             else
             {
-                alert_banner.message = ft_string("Cleared cloud data");
                 if (!active_profile_name.empty())
                 {
-                    alert_banner.message.append(" for \"");
-                    alert_banner.message.append(active_profile_name);
-                    alert_banner.message.append("\".");
+                    ft_vector<StringTableReplacement> replacements;
+                    replacements.reserve(1U);
+                    StringTableReplacement commander_placeholder;
+                    commander_placeholder.key = ft_string("commander");
+                    commander_placeholder.value = active_profile_name;
+                    replacements.push_back(commander_placeholder);
+                    alert_banner.message = menu_localize_format("main_menu.clear_cloud.cleared_named",
+                        "Cleared cloud data for \"{{commander}}\".", replacements);
                 }
                 else
-                    alert_banner.message.append(" for this commander.");
+                {
+                    alert_banner.message = menu_localize("main_menu.clear_cloud.cleared_generic",
+                        "Cleared cloud data for this commander.");
+                }
             }
         }
         else
         {
             alert_banner.is_error = true;
-            alert_banner.message = ft_string("Failed to clear cloud data.");
+            alert_banner.message = menu_localize(
+                "main_menu.clear_cloud.failure", "Failed to clear cloud data.");
             if (status_code != 0)
             {
-                alert_banner.message.append(" (HTTP ");
-                alert_banner.message.append(ft_to_string(status_code));
-                alert_banner.message.append(")");
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(1U);
+                StringTableReplacement code_placeholder;
+                code_placeholder.key = ft_string("code");
+                code_placeholder.value = ft_to_string(status_code);
+                replacements.push_back(code_placeholder);
+                ft_string suffix
+                    = menu_localize_format("main_menu.clear_cloud.error_code", " (HTTP {{code}})", replacements);
+                alert_banner.message.append(suffix);
             }
             if (!response_body.empty())
             {
@@ -445,19 +488,29 @@ int main()
         changelog_context.visible = false;
         changelog_context.heading = ft_string();
         changelog_context.lines.clear();
-        changelog_context.footer = ft_string("Press Enter / Space or click to close.");
+        changelog_context.footer
+            = menu_localize("main_menu.overlay.close", "Press Enter / Space or click to close.");
 
         if (connectivity_status.state != MAIN_MENU_CONNECTIVITY_ONLINE)
         {
-            changelog_context.heading = ft_string("Patch Notes Unavailable");
-            changelog_context.lines.push_back(ft_string("Patch notes require an online connection."));
+            changelog_context.heading
+                = menu_localize("main_menu.changelog.offline_heading", "Patch Notes Unavailable");
+            changelog_context.lines.push_back(menu_localize(
+                "main_menu.changelog.offline_required", "Patch notes require an online connection."));
             if (connectivity_status.last_status_code != 0)
             {
-                ft_string status_line("Last backend status: HTTP ");
-                status_line.append(ft_to_string(connectivity_status.last_status_code));
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(1U);
+                StringTableReplacement code_placeholder;
+                code_placeholder.key = ft_string("code");
+                code_placeholder.value = ft_to_string(connectivity_status.last_status_code);
+                replacements.push_back(code_placeholder);
+                ft_string status_line = menu_localize_format(
+                    "main_menu.changelog.offline_status", "Last backend status: HTTP {{code}}", replacements);
                 changelog_context.lines.push_back(status_line);
             }
-            changelog_context.lines.push_back(ft_string("Reconnect to view the latest updates."));
+            changelog_context.lines.push_back(menu_localize(
+                "main_menu.changelog.offline_retry", "Reconnect to view the latest updates."));
             changelog_context.visible = true;
             return;
         }
@@ -468,31 +521,43 @@ int main()
 
         if (success)
         {
-            changelog_context.heading = ft_string("Latest Patch Notes");
+            changelog_context.heading
+                = menu_localize("main_menu.changelog.latest_heading", "Latest Patch Notes");
             ft_vector<ft_string> note_lines = main_menu_split_patch_notes(notes_body);
             for (size_t index = 0; index < note_lines.size(); ++index)
                 changelog_context.lines.push_back(note_lines[index]);
             if (changelog_context.lines.empty())
-                changelog_context.lines.push_back(ft_string("No patch notes were returned by the backend."));
+                changelog_context.lines.push_back(menu_localize(
+                    "main_menu.changelog.empty_backend", "No patch notes were returned by the backend."));
         }
         else
         {
-            changelog_context.heading = ft_string("Patch Notes Unavailable");
-            changelog_context.lines.push_back(ft_string("Unable to fetch patch notes from the backend."));
+            changelog_context.heading
+                = menu_localize("main_menu.changelog.unavailable_heading", "Patch Notes Unavailable");
+            changelog_context.lines.push_back(menu_localize(
+                "main_menu.changelog.fetch_failure", "Unable to fetch patch notes from the backend."));
             if (status_code != 0)
             {
-                ft_string status_line("HTTP status: ");
-                status_line.append(ft_to_string(status_code));
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(1U);
+                StringTableReplacement code_placeholder;
+                code_placeholder.key = ft_string("code");
+                code_placeholder.value = ft_to_string(status_code);
+                replacements.push_back(code_placeholder);
+                ft_string status_line
+                    = menu_localize_format("main_menu.changelog.error_status", "HTTP status: {{code}}", replacements);
                 changelog_context.lines.push_back(status_line);
             }
             if (!notes_body.empty())
                 changelog_context.lines.push_back(notes_body);
             if (changelog_context.lines.size() == 1U)
-                changelog_context.lines.push_back(ft_string("Please try again later."));
+                changelog_context.lines.push_back(
+                    menu_localize("main_menu.changelog.try_later", "Please try again later."));
         }
 
         if (changelog_context.lines.empty())
-            changelog_context.lines.push_back(ft_string("Patch notes are currently empty."));
+            changelog_context.lines.push_back(
+                menu_localize("main_menu.changelog.empty_fallback", "Patch notes are currently empty."));
 
         changelog_context.visible = true;
     };
@@ -501,14 +566,16 @@ int main()
         dismiss_tutorial_overlay();
         dismiss_changelog_overlay();
         manual_context.visible = false;
-        manual_context.heading = ft_string("Galactic Encyclopedia");
+        manual_context.heading
+            = menu_localize("main_menu.manual.heading", "Galactic Encyclopedia");
         manual_context.lines.clear();
 
         const ft_vector<ft_string> &manual_lines = get_main_menu_manual_lines();
         for (size_t index = 0; index < manual_lines.size(); ++index)
             manual_context.lines.push_back(manual_lines[index]);
 
-        manual_context.footer = ft_string("Press Enter / Space or click to close.");
+        manual_context.footer
+            = menu_localize("main_menu.overlay.close", "Press Enter / Space or click to close.");
         manual_context.visible = true;
     };
 
@@ -772,10 +839,10 @@ int main()
                 {
                     alert_banner.visible = true;
                     alert_banner.is_error = true;
-                    alert_banner.message
-                        = ft_string("Cloud data can only be cleared while online. Reconnect and try again.");
-                    return;
-                }
+            alert_banner.message = menu_localize("main_menu.clear_cloud.requires_online",
+                "Cloud data can only be cleared while online. Reconnect and try again.");
+            return;
+        }
                 open_clear_cloud_prompt();
                 return;
             }
@@ -824,7 +891,8 @@ int main()
             perform_connectivity_check(current_time_ms);
 
         render_main_menu(*renderer, menu, title_font, menu_font, window_width, window_height, active_profile_name,
-            &tutorial_context, &manual_context, &changelog_context, &clear_cloud_context, &connectivity_status, &alert_banner);
+            &active_preferences, &tutorial_context, &manual_context, &changelog_context, &clear_cloud_context,
+            &connectivity_status, &alert_banner);
     }
 
     if (window != ft_nullptr && !active_profile_name.empty())

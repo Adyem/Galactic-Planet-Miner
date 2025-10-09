@@ -41,6 +41,7 @@ struct GameBootstrapData
     ft_vector<GameBootstrapResource> player_resources;
     int                          campaign_day;
     int                          commander_level;
+    int                          difficulty_setting;
 
     GameBootstrapData() noexcept
         : commander_name()
@@ -48,6 +49,7 @@ struct GameBootstrapData
         , player_resources()
         , campaign_day(1)
         , commander_level(1)
+        , difficulty_setting(2)
     {}
 };
 

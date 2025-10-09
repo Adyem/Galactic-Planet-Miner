@@ -1,6 +1,7 @@
 #include "main_menu_system.hpp"
 
 #include "app_constants.hpp"
+#include "menu_localization.hpp"
 #include "player_profile.hpp"
 #include "ui_input.hpp"
 
@@ -12,6 +13,8 @@ namespace
     const unsigned int kUiScaleStep = 5U;
     const unsigned int kCombatSpeedStep = 5U;
     const unsigned int kVolumeStep = 5U;
+    const unsigned int kBrightnessStep = 5U;
+    const unsigned int kContrastStep = 5U;
 
     unsigned int clamp_ui_scale(unsigned int value) noexcept
     {
@@ -37,6 +40,24 @@ namespace
             return PLAYER_PROFILE_VOLUME_MIN_PERCENT;
         if (value > PLAYER_PROFILE_VOLUME_MAX_PERCENT)
             return PLAYER_PROFILE_VOLUME_MAX_PERCENT;
+        return value;
+    }
+
+    unsigned int clamp_brightness(unsigned int value) noexcept
+    {
+        if (value < PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT)
+            return PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT;
+        if (value > PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT)
+            return PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT;
+        return value;
+    }
+
+    unsigned int clamp_contrast(unsigned int value) noexcept
+    {
+        if (value < PLAYER_PROFILE_CONTRAST_MIN_PERCENT)
+            return PLAYER_PROFILE_CONTRAST_MIN_PERCENT;
+        if (value > PLAYER_PROFILE_CONTRAST_MAX_PERCENT)
+            return PLAYER_PROFILE_CONTRAST_MAX_PERCENT;
         return value;
     }
 
@@ -106,6 +127,50 @@ namespace
         return clamp_volume(candidate);
     }
 
+    unsigned int increment_brightness(unsigned int value) noexcept
+    {
+        if (value >= PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT)
+            return PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT;
+        unsigned int candidate = value + kBrightnessStep;
+        if (candidate < value)
+            return PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT;
+        return clamp_brightness(candidate);
+    }
+
+    unsigned int decrement_brightness(unsigned int value) noexcept
+    {
+        if (value <= PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT)
+            return PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT;
+        if (value <= kBrightnessStep)
+            return PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT;
+        unsigned int candidate = value - kBrightnessStep;
+        if (candidate > value)
+            return PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT;
+        return clamp_brightness(candidate);
+    }
+
+    unsigned int increment_contrast(unsigned int value) noexcept
+    {
+        if (value >= PLAYER_PROFILE_CONTRAST_MAX_PERCENT)
+            return PLAYER_PROFILE_CONTRAST_MAX_PERCENT;
+        unsigned int candidate = value + kContrastStep;
+        if (candidate < value)
+            return PLAYER_PROFILE_CONTRAST_MAX_PERCENT;
+        return clamp_contrast(candidate);
+    }
+
+    unsigned int decrement_contrast(unsigned int value) noexcept
+    {
+        if (value <= PLAYER_PROFILE_CONTRAST_MIN_PERCENT)
+            return PLAYER_PROFILE_CONTRAST_MIN_PERCENT;
+        if (value <= kContrastStep)
+            return PLAYER_PROFILE_CONTRAST_MIN_PERCENT;
+        unsigned int candidate = value - kContrastStep;
+        if (candidate > value)
+            return PLAYER_PROFILE_CONTRAST_MIN_PERCENT;
+        return clamp_contrast(candidate);
+    }
+
     unsigned int toggle_lore_anchor(unsigned int anchor) noexcept
     {
         if (anchor == PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT)
@@ -120,54 +185,231 @@ namespace
 
     ft_string format_accessibility_preset_label(bool enabled)
     {
-        ft_string label("Accessibility Preset: ");
-        if (enabled)
-            label.append("On");
-        else
-            label.append("Off");
-        return label;
+        ft_string prefix
+            = menu_localize("settings.menu.accessibility.label", "Accessibility Preset: ");
+        const char *state_key = enabled ? "settings.menu.toggle.on" : "settings.menu.toggle.off";
+        const char *fallback = enabled ? "On" : "Off";
+        ft_string state = menu_localize(state_key, fallback);
+        prefix.append(state);
+        return prefix;
     }
+
+    bool toggle_colorblind_palette(bool enabled) noexcept
+    {
+        return !enabled;
+    }
+
+    ft_string format_colorblind_palette_label(bool enabled)
+    {
+        ft_string prefix
+            = menu_localize("settings.menu.colorblind.label", "Colorblind Palette: ");
+        const char *state_key = enabled ? "settings.menu.toggle.on" : "settings.menu.toggle.off";
+        const char *fallback = enabled ? "On" : "Off";
+        ft_string state = menu_localize(state_key, fallback);
+        prefix.append(state);
+        return prefix;
+    }
+
+#if GALACTIC_HAVE_SDL2
+    unsigned char apply_component_levels(unsigned char component, unsigned int brightness_percent,
+        unsigned int contrast_percent) noexcept
+    {
+        long value = static_cast<long>(component);
+        long centered = value - 128L;
+        long contrasted = (centered * static_cast<long>(contrast_percent) + 50L) / 100L + 128L;
+        if (contrasted < 0L)
+            contrasted = 0L;
+        else if (contrasted > 255L)
+            contrasted = 255L;
+
+        long brightened = (contrasted * static_cast<long>(brightness_percent) + 50L) / 100L;
+        if (brightened < 0L)
+            brightened = 0L;
+        else if (brightened > 255L)
+            brightened = 255L;
+
+        return static_cast<unsigned char>(brightened);
+    }
+
+    void apply_levels(SDL_Color &color, unsigned int brightness_percent, unsigned int contrast_percent) noexcept
+    {
+        color.r = apply_component_levels(color.r, brightness_percent, contrast_percent);
+        color.g = apply_component_levels(color.g, brightness_percent, contrast_percent);
+        color.b = apply_component_levels(color.b, brightness_percent, contrast_percent);
+    }
+
+    struct SettingsPalette
+    {
+        SDL_Color background;
+        SDL_Color title;
+        SDL_Color info;
+        SDL_Color button_idle;
+        SDL_Color button_hover;
+        SDL_Color button_selected;
+        SDL_Color button_disabled;
+        SDL_Color button_disabled_hover;
+        SDL_Color border_enabled;
+        SDL_Color border_disabled;
+        SDL_Color text_enabled;
+        SDL_Color text_disabled;
+        SDL_Color unsaved;
+        SDL_Color status_ok;
+        SDL_Color status_error;
+
+        SettingsPalette() noexcept
+            : background(), title(), info(), button_idle(), button_hover(), button_selected(), button_disabled(),
+              button_disabled_hover(), border_enabled(), border_disabled(), text_enabled(), text_disabled(), unsaved(),
+              status_ok(), status_error()
+        {}
+    };
+
+    void apply_levels(SettingsPalette &palette, unsigned int brightness_percent, unsigned int contrast_percent) noexcept
+    {
+        apply_levels(palette.background, brightness_percent, contrast_percent);
+        apply_levels(palette.title, brightness_percent, contrast_percent);
+        apply_levels(palette.info, brightness_percent, contrast_percent);
+        apply_levels(palette.button_idle, brightness_percent, contrast_percent);
+        apply_levels(palette.button_hover, brightness_percent, contrast_percent);
+        apply_levels(palette.button_selected, brightness_percent, contrast_percent);
+        apply_levels(palette.button_disabled, brightness_percent, contrast_percent);
+        apply_levels(palette.button_disabled_hover, brightness_percent, contrast_percent);
+        apply_levels(palette.border_enabled, brightness_percent, contrast_percent);
+        apply_levels(palette.border_disabled, brightness_percent, contrast_percent);
+        apply_levels(palette.text_enabled, brightness_percent, contrast_percent);
+        apply_levels(palette.text_disabled, brightness_percent, contrast_percent);
+        apply_levels(palette.unsaved, brightness_percent, contrast_percent);
+        apply_levels(palette.status_ok, brightness_percent, contrast_percent);
+        apply_levels(palette.status_error, brightness_percent, contrast_percent);
+    }
+
+    SettingsPalette resolve_settings_palette(
+        bool colorblind_enabled, unsigned int brightness_percent, unsigned int contrast_percent) noexcept
+    {
+        SettingsPalette palette;
+        palette.background = {12, 16, 28, 255};
+        palette.title = {220, 220, 245, 255};
+        palette.info = {170, 180, 210, 255};
+        palette.button_idle = {28, 36, 60, 255};
+        palette.button_hover = {56, 84, 140, 255};
+        palette.button_selected = {40, 64, 112, 255};
+        palette.button_disabled = {30, 34, 44, 255};
+        palette.button_disabled_hover = {42, 46, 60, 255};
+        palette.border_enabled = {90, 110, 160, 255};
+        palette.border_disabled = {70, 80, 120, 255};
+        palette.text_enabled = {255, 255, 255, 255};
+        palette.text_disabled = {188, 196, 210, 255};
+        palette.unsaved = {210, 200, 120, 255};
+        palette.status_ok = {180, 200, 220, 255};
+        palette.status_error = {220, 90, 90, 255};
+
+        if (colorblind_enabled)
+        {
+            palette.background = {10, 20, 26, 255};
+            palette.title = {238, 246, 255, 255};
+            palette.info = {198, 210, 232, 255};
+            palette.button_idle = {44, 62, 88, 255};
+            palette.button_hover = {96, 132, 196, 255};
+            palette.button_selected = {72, 112, 176, 255};
+            palette.button_disabled = {48, 54, 70, 255};
+            palette.button_disabled_hover = {70, 86, 112, 255};
+            palette.border_enabled = {130, 164, 220, 255};
+            palette.border_disabled = {96, 112, 156, 255};
+            palette.text_enabled = {255, 255, 255, 255};
+            palette.text_disabled = {210, 216, 230, 255};
+            palette.unsaved = {236, 196, 96, 255};
+            palette.status_ok = {96, 196, 196, 255};
+            palette.status_error = {232, 148, 88, 255};
+        }
+
+        brightness_percent = clamp_brightness(brightness_percent);
+        contrast_percent = clamp_contrast(contrast_percent);
+        apply_levels(palette, brightness_percent, contrast_percent);
+
+        return palette;
+    }
+#endif
 
     ft_string format_ui_scale_label(unsigned int value)
     {
-        ft_string label("UI Scale: ");
-        label.append(ft_to_string(static_cast<int>(value)));
-        label.append("%");
-        return label;
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = ft_to_string(static_cast<int>(value));
+        replacements.push_back(value_placeholder);
+        return menu_localize_format("settings.menu.ui_scale", "UI Scale: {{value}}%", replacements);
     }
 
     ft_string format_combat_speed_label(unsigned int value)
     {
-        ft_string label("Combat Speed: ");
-        label.append(ft_to_string(static_cast<int>(value)));
-        label.append("%");
-        return label;
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = ft_to_string(static_cast<int>(value));
+        replacements.push_back(value_placeholder);
+        return menu_localize_format("settings.menu.combat_speed", "Combat Speed: {{value}}%", replacements);
     }
 
     ft_string format_music_volume_label(unsigned int value)
     {
-        ft_string label("Music Volume: ");
-        label.append(ft_to_string(static_cast<int>(value)));
-        label.append("%");
-        return label;
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = ft_to_string(static_cast<int>(value));
+        replacements.push_back(value_placeholder);
+        return menu_localize_format("settings.menu.music_volume", "Music Volume: {{value}}%", replacements);
     }
 
     ft_string format_effects_volume_label(unsigned int value)
     {
-        ft_string label("Effects Volume: ");
-        label.append(ft_to_string(static_cast<int>(value)));
-        label.append("%");
-        return label;
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = ft_to_string(static_cast<int>(value));
+        replacements.push_back(value_placeholder);
+        return menu_localize_format("settings.menu.effects_volume", "Effects Volume: {{value}}%", replacements);
+    }
+
+    ft_string format_brightness_label(unsigned int value)
+    {
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = ft_to_string(static_cast<int>(value));
+        replacements.push_back(value_placeholder);
+        return menu_localize_format("settings.menu.brightness", "Brightness: {{value}}%", replacements);
+    }
+
+    ft_string format_contrast_label(unsigned int value)
+    {
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = ft_to_string(static_cast<int>(value));
+        replacements.push_back(value_placeholder);
+        return menu_localize_format("settings.menu.contrast", "Contrast: {{value}}%", replacements);
     }
 
     ft_string format_lore_anchor_label(unsigned int anchor)
     {
-        ft_string label("Lore Panel Anchor: ");
-        if (anchor == PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT)
-            label.append("Left");
-        else
-            label.append("Right");
-        return label;
+        const char *position_key = anchor == PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT
+            ? "settings.menu.anchor.left"
+            : "settings.menu.anchor.right";
+        const char *fallback = anchor == PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT ? "Left" : "Right";
+        ft_string anchor_label = menu_localize(position_key, fallback);
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = anchor_label;
+        replacements.push_back(value_placeholder);
+        return menu_localize_format(
+            "settings.menu.lore_anchor", "Lore Panel Anchor: {{value}}", replacements);
     }
 
 #if GALACTIC_HAVE_SDL2
@@ -183,6 +425,10 @@ namespace
             return false;
         if (lhs.effects_volume_percent != rhs.effects_volume_percent)
             return false;
+        if (lhs.brightness_percent != rhs.brightness_percent)
+            return false;
+        if (lhs.contrast_percent != rhs.contrast_percent)
+            return false;
         if (lhs.lore_panel_anchor != rhs.lore_panel_anchor)
             return false;
         if (lhs.window_width != rhs.window_width)
@@ -190,6 +436,8 @@ namespace
         if (lhs.window_height != rhs.window_height)
             return false;
         if (lhs.menu_tutorial_seen != rhs.menu_tutorial_seen)
+            return false;
+        if (lhs.colorblind_palette_enabled != rhs.colorblind_palette_enabled)
             return false;
         if (lhs.accessibility_preset_enabled != rhs.accessibility_preset_enabled)
             return false;
@@ -205,7 +453,7 @@ namespace
         const int      spacing = 18;
 
         ft_vector<ft_menu_item> items;
-        items.reserve(8U);
+        items.reserve(11U);
 
         ft_menu_item ui_scale_item(ft_string("setting:ui_scale"), format_ui_scale_label(preferences.ui_scale_percent), base_rect);
         items.push_back(ui_scale_item);
@@ -234,22 +482,42 @@ namespace
             format_accessibility_preset_label(preferences.accessibility_preset_enabled), accessibility_rect);
         items.push_back(accessibility_item);
 
+        ft_rect colorblind_rect = base_rect;
+        colorblind_rect.top += 5 * (base_rect.height + spacing);
+        ft_menu_item colorblind_item(ft_string("setting:colorblind_palette"),
+            format_colorblind_palette_label(preferences.colorblind_palette_enabled), colorblind_rect);
+        items.push_back(colorblind_item);
+
+        ft_rect brightness_rect = base_rect;
+        brightness_rect.top += 6 * (base_rect.height + spacing);
+        ft_menu_item brightness_item(ft_string("setting:brightness"),
+            format_brightness_label(preferences.brightness_percent), brightness_rect);
+        items.push_back(brightness_item);
+
+        ft_rect contrast_rect = base_rect;
+        contrast_rect.top += 7 * (base_rect.height + spacing);
+        ft_menu_item contrast_item(ft_string("setting:contrast"),
+            format_contrast_label(preferences.contrast_percent), contrast_rect);
+        items.push_back(contrast_item);
+
         ft_rect anchor_rect = base_rect;
-        anchor_rect.top += 5 * (base_rect.height + spacing);
+        anchor_rect.top += 8 * (base_rect.height + spacing);
 
         ft_menu_item anchor_item(ft_string("setting:lore_anchor"), format_lore_anchor_label(preferences.lore_panel_anchor),
             anchor_rect);
         items.push_back(anchor_item);
 
         ft_rect save_rect = base_rect;
-        save_rect.top += 6 * (base_rect.height + spacing);
-        ft_menu_item save_item(ft_string("action:save"), ft_string("Save Changes"), save_rect);
+        save_rect.top += 9 * (base_rect.height + spacing);
+        ft_menu_item save_item(
+            ft_string("action:save"), menu_localize("settings.menu.actions.save", "Save Changes"), save_rect);
         save_item.enabled = allow_save;
         items.push_back(save_item);
 
         ft_rect cancel_rect = base_rect;
-        cancel_rect.top += 7 * (base_rect.height + spacing);
-        ft_menu_item cancel_item(ft_string("action:cancel"), ft_string("Cancel"), cancel_rect);
+        cancel_rect.top += 10 * (base_rect.height + spacing);
+        ft_menu_item cancel_item(
+            ft_string("action:cancel"), menu_localize("settings.menu.actions.cancel", "Cancel"), cancel_rect);
         items.push_back(cancel_item);
 
         menu.set_items(items);
@@ -277,9 +545,13 @@ namespace
     }
 
     void render_settings_screen(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
-        const ft_string &status_message, bool status_is_error, bool has_unsaved_changes)
+        const ft_string &status_message, bool status_is_error, bool has_unsaved_changes, bool use_colorblind_palette,
+        unsigned int brightness_percent, unsigned int contrast_percent)
     {
-        SDL_SetRenderDrawColor(&renderer, 12, 16, 28, 255);
+        SettingsPalette palette = resolve_settings_palette(use_colorblind_palette, brightness_percent, contrast_percent);
+
+        SDL_SetRenderDrawColor(
+            &renderer, palette.background.r, palette.background.g, palette.background.b, palette.background.a);
         SDL_RenderClear(&renderer);
 
         int output_width = static_cast<int>(app_constants::kWindowWidth);
@@ -288,10 +560,11 @@ namespace
 
         if (title_font != ft_nullptr)
         {
-            SDL_Color title_color = {220, 220, 245, 255};
+            SDL_Color title_color = palette.title;
             SDL_Rect  title_rect;
+            ft_string title_text = menu_localize("settings.menu.title", "Commander Settings");
             SDL_Texture *title_texture
-                = create_text_texture(renderer, *title_font, ft_string("Commander Settings"), title_color, title_rect);
+                = create_text_texture(renderer, *title_font, title_text, title_color, title_rect);
             if (title_texture != ft_nullptr)
             {
                 title_rect.x = output_width / 2 - title_rect.w / 2;
@@ -303,9 +576,10 @@ namespace
 
         if (menu_font != ft_nullptr)
         {
-            SDL_Color info_color = {170, 180, 210, 255};
+            SDL_Color info_color = palette.info;
             SDL_Rect  info_rect;
-            ft_string info_text("Use Left/Right or Enter to adjust an option. Esc cancels. Save commits changes.");
+            ft_string info_text = menu_localize("settings.menu.instructions",
+                "Use Left/Right or Enter to adjust an option. Esc cancels. Save commits changes.");
             SDL_Texture *info_texture = create_text_texture(renderer, *menu_font, info_text, info_color, info_rect);
             if (info_texture != ft_nullptr)
             {
@@ -348,27 +622,18 @@ namespace
             const bool          is_selected = static_cast<int>(index) == selected_index;
             const bool          is_disabled = !item.enabled;
 
-            Uint8 r = 28;
-            Uint8 g = 36;
-            Uint8 b = 60;
-
+            SDL_Color fill_color = palette.button_idle;
             if (is_disabled)
             {
-                r = 30;
-                g = 34;
-                b = 44;
+                fill_color = is_hovered ? palette.button_disabled_hover : palette.button_disabled;
             }
             else if (is_hovered)
             {
-                r = 56;
-                g = 84;
-                b = 140;
+                fill_color = palette.button_hover;
             }
             else if (is_selected)
             {
-                r = 40;
-                g = 64;
-                b = 112;
+                fill_color = palette.button_selected;
             }
 
             SDL_Rect button_rect;
@@ -380,25 +645,17 @@ namespace
             if (clip_enabled && (button_rect.y + button_rect.h <= clip_rect.y || button_rect.y >= clip_bottom))
                 continue;
 
-            SDL_SetRenderDrawColor(&renderer, r, g, b, 255);
+            SDL_SetRenderDrawColor(&renderer, fill_color.r, fill_color.g, fill_color.b, fill_color.a);
             SDL_RenderFillRect(&renderer, &button_rect);
 
-            const Uint8 border_r = is_disabled ? 70 : 90;
-            const Uint8 border_g = is_disabled ? 80 : 110;
-            const Uint8 border_b = is_disabled ? 120 : 160;
-            SDL_SetRenderDrawColor(&renderer, border_r, border_g, border_b, 255);
+            const SDL_Color border_color = is_disabled ? palette.border_disabled : palette.border_enabled;
+            SDL_SetRenderDrawColor(&renderer, border_color.r, border_color.g, border_color.b, border_color.a);
             SDL_RenderDrawRect(&renderer, &button_rect);
 
             if (menu_font != ft_nullptr)
             {
-                SDL_Color text_color = {255, 255, 255, 255};
-                if (is_disabled)
-                {
-                    text_color.r = 188;
-                    text_color.g = 196;
-                    text_color.b = 210;
-                }
-                SDL_Rect text_rect;
+                SDL_Color text_color = is_disabled ? palette.text_disabled : palette.text_enabled;
+                SDL_Rect  text_rect;
                 SDL_Texture *text_texture = create_text_texture(renderer, *menu_font, item.label, text_color, text_rect);
                 if (text_texture != ft_nullptr)
                 {
@@ -415,10 +672,11 @@ namespace
 
         if (menu_font != ft_nullptr && has_unsaved_changes)
         {
-            SDL_Color dirty_color = {210, 200, 120, 255};
+            SDL_Color dirty_color = palette.unsaved;
             SDL_Rect  dirty_rect;
+            ft_string dirty_text = menu_localize("settings.menu.unsaved", "Unsaved changes");
             SDL_Texture *dirty_texture
-                = create_text_texture(renderer, *menu_font, ft_string("Unsaved changes"), dirty_color, dirty_rect);
+                = create_text_texture(renderer, *menu_font, dirty_text, dirty_color, dirty_rect);
             if (dirty_texture != ft_nullptr)
             {
                 dirty_rect.x = 80;
@@ -430,21 +688,7 @@ namespace
 
         if (menu_font != ft_nullptr && !status_message.empty())
         {
-            SDL_Color status_color;
-            if (status_is_error)
-            {
-                status_color.r = 220;
-                status_color.g = 90;
-                status_color.b = 90;
-                status_color.a = 255;
-            }
-            else
-            {
-                status_color.r = 180;
-                status_color.g = 200;
-                status_color.b = 220;
-                status_color.a = 255;
-            }
+            SDL_Color status_color = status_is_error ? palette.status_error : palette.status_ok;
 
             SDL_Rect status_rect;
             SDL_Texture *status_texture
@@ -500,10 +744,32 @@ namespace
                 working_preferences.effects_volume_percent = decrement_volume(working_preferences.effects_volume_percent);
             adjusted = true;
         }
+        else if (selected_item->identifier == "setting:brightness")
+        {
+            if (direction > 0)
+                working_preferences.brightness_percent = increment_brightness(working_preferences.brightness_percent);
+            else if (direction < 0)
+                working_preferences.brightness_percent = decrement_brightness(working_preferences.brightness_percent);
+            adjusted = true;
+        }
+        else if (selected_item->identifier == "setting:contrast")
+        {
+            if (direction > 0)
+                working_preferences.contrast_percent = increment_contrast(working_preferences.contrast_percent);
+            else if (direction < 0)
+                working_preferences.contrast_percent = decrement_contrast(working_preferences.contrast_percent);
+            adjusted = true;
+        }
         else if (selected_item->identifier == "setting:accessibility_preset")
         {
             working_preferences.accessibility_preset_enabled
                 = toggle_accessibility_preset(working_preferences.accessibility_preset_enabled);
+            adjusted = true;
+        }
+        else if (selected_item->identifier == "setting:colorblind_palette")
+        {
+            working_preferences.colorblind_palette_enabled
+                = toggle_colorblind_palette(working_preferences.colorblind_palette_enabled);
             adjusted = true;
         }
         else if (selected_item->identifier == "setting:lore_anchor")
@@ -537,10 +803,26 @@ namespace
             working_preferences.effects_volume_percent = increment_volume(working_preferences.effects_volume_percent);
             return true;
         }
+        if (item.identifier == "setting:brightness")
+        {
+            working_preferences.brightness_percent = increment_brightness(working_preferences.brightness_percent);
+            return true;
+        }
+        if (item.identifier == "setting:contrast")
+        {
+            working_preferences.contrast_percent = increment_contrast(working_preferences.contrast_percent);
+            return true;
+        }
         if (item.identifier == "setting:accessibility_preset")
         {
             working_preferences.accessibility_preset_enabled
                 = toggle_accessibility_preset(working_preferences.accessibility_preset_enabled);
+            return true;
+        }
+        if (item.identifier == "setting:colorblind_palette")
+        {
+            working_preferences.colorblind_palette_enabled
+                = toggle_colorblind_palette(working_preferences.colorblind_palette_enabled);
             return true;
         }
         if (item.identifier == "setting:lore_anchor")
@@ -716,7 +998,8 @@ bool run_settings_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *tit
         {
             if (preferences.commander_name.empty())
             {
-                status_message = ft_string("No active commander profile to save.");
+                status_message = menu_localize(
+                    "settings.menu.status.no_profile", "No active commander profile to save.");
                 status_is_error = true;
             }
             else
@@ -725,13 +1008,14 @@ bool run_settings_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *tit
                 {
                     preferences = working;
                     baseline = working;
-                    status_message = ft_string("Settings saved.");
+                    status_message = menu_localize("settings.menu.status.saved", "Settings saved.");
                     status_is_error = false;
                     saved_changes = true;
                 }
                 else
                 {
-                    status_message = ft_string("Failed to save settings.");
+                    status_message
+                        = menu_localize("settings.menu.status.save_failed", "Failed to save settings.");
                     status_is_error = true;
                 }
             }
@@ -742,7 +1026,8 @@ bool run_settings_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *tit
             rebuild_settings_menu(menu, working, allow_save_now, &previous_identifier);
 
         bool has_unsaved_changes = !preferences_equal(working, baseline);
-        render_settings_screen(*renderer, menu, title_font, menu_font, status_message, status_is_error, has_unsaved_changes);
+        render_settings_screen(*renderer, menu, title_font, menu_font, status_message, status_is_error, has_unsaved_changes,
+            working.colorblind_palette_enabled, working.brightness_percent, working.contrast_percent);
 
         if (save_requested && !status_is_error)
         {
@@ -824,6 +1109,36 @@ namespace settings_flow_testing
         return ::decrement_volume(value);
     }
 
+    unsigned int clamp_brightness(unsigned int value) noexcept
+    {
+        return ::clamp_brightness(value);
+    }
+
+    unsigned int increment_brightness(unsigned int value) noexcept
+    {
+        return ::increment_brightness(value);
+    }
+
+    unsigned int decrement_brightness(unsigned int value) noexcept
+    {
+        return ::decrement_brightness(value);
+    }
+
+    unsigned int clamp_contrast(unsigned int value) noexcept
+    {
+        return ::clamp_contrast(value);
+    }
+
+    unsigned int increment_contrast(unsigned int value) noexcept
+    {
+        return ::increment_contrast(value);
+    }
+
+    unsigned int decrement_contrast(unsigned int value) noexcept
+    {
+        return ::decrement_contrast(value);
+    }
+
     unsigned int toggle_lore_anchor(unsigned int anchor) noexcept
     {
         return ::toggle_lore_anchor(anchor);
@@ -849,6 +1164,16 @@ namespace settings_flow_testing
         return ::format_effects_volume_label(value);
     }
 
+    ft_string format_brightness_option(unsigned int value)
+    {
+        return ::format_brightness_label(value);
+    }
+
+    ft_string format_contrast_option(unsigned int value)
+    {
+        return ::format_contrast_label(value);
+    }
+
     ft_string format_lore_anchor_option(unsigned int anchor)
     {
         return ::format_lore_anchor_label(anchor);
@@ -862,5 +1187,15 @@ namespace settings_flow_testing
     ft_string format_accessibility_preset_option(bool enabled)
     {
         return ::format_accessibility_preset_label(enabled);
+    }
+
+    bool toggle_colorblind_palette(bool enabled) noexcept
+    {
+        return ::toggle_colorblind_palette(enabled);
+    }
+
+    ft_string format_colorblind_palette_option(bool enabled)
+    {
+        return ::format_colorblind_palette_label(enabled);
     }
 }

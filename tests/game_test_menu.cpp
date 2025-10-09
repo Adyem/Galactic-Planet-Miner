@@ -8,6 +8,7 @@
 #include "game_test_scenarios.hpp"
 #include "main_menu_system.hpp"
 #include "build_info.hpp"
+#include "menu_localization.hpp"
 
 #include <errno.h>
 
@@ -23,6 +24,53 @@ namespace
         if (ft_errno == ERRNO_OFFSET + EEXIST)
             return true;
         return false;
+    }
+
+    ft_string build_expected_metadata_label(int day, int level, const char *difficulty_key,
+        const char *difficulty_fallback)
+    {
+        ft_vector<StringTableReplacement> value_replacements;
+        value_replacements.reserve(1U);
+        StringTableReplacement value_replacement;
+        value_replacement.key = ft_string("value");
+        value_replacement.value = ft_to_string(day);
+        value_replacements.push_back(value_replacement);
+        ft_string day_label
+            = menu_localize_format("load_menu.metadata.day_known", "Day {{value}}", value_replacements);
+
+        value_replacements[0].value = ft_to_string(level);
+        ft_string level_label
+            = menu_localize_format("load_menu.metadata.level_known", "Level {{value}}", value_replacements);
+
+        ft_string difficulty_name = menu_localize(difficulty_key, difficulty_fallback);
+        ft_vector<StringTableReplacement> difficulty_replacements;
+        difficulty_replacements.reserve(1U);
+        StringTableReplacement difficulty_replacement;
+        difficulty_replacement.key = ft_string("difficulty");
+        difficulty_replacement.value = difficulty_name;
+        difficulty_replacements.push_back(difficulty_replacement);
+        ft_string difficulty_label = menu_localize_format(
+            "load_menu.metadata.difficulty_known", "Difficulty: {{difficulty}}", difficulty_replacements);
+
+        ft_vector<StringTableReplacement> combined_replacements;
+        combined_replacements.reserve(3U);
+        StringTableReplacement day_replacement;
+        day_replacement.key = ft_string("day");
+        day_replacement.value = day_label;
+        combined_replacements.push_back(day_replacement);
+
+        StringTableReplacement level_replacement;
+        level_replacement.key = ft_string("level");
+        level_replacement.value = level_label;
+        combined_replacements.push_back(level_replacement);
+
+        StringTableReplacement combined_difficulty_replacement;
+        combined_difficulty_replacement.key = ft_string("difficulty");
+        combined_difficulty_replacement.value = difficulty_label;
+        combined_replacements.push_back(combined_difficulty_replacement);
+
+        return menu_localize_format(
+            "load_menu.metadata.combined", "{{day}} • {{level}} • {{difficulty}}", combined_replacements);
     }
 }
 
@@ -370,21 +418,43 @@ int verify_settings_flow_helpers()
     FT_ASSERT_EQ(60U, settings_flow_testing::decrement_effects_volume(65U));
     FT_ASSERT_EQ(0U, settings_flow_testing::decrement_effects_volume(1U));
 
+    FT_ASSERT_EQ(50U, settings_flow_testing::clamp_brightness(20U));
+    FT_ASSERT_EQ(150U, settings_flow_testing::clamp_brightness(180U));
+    FT_ASSERT_EQ(105U, settings_flow_testing::increment_brightness(100U));
+    FT_ASSERT_EQ(150U, settings_flow_testing::increment_brightness(148U));
+    FT_ASSERT_EQ(95U, settings_flow_testing::decrement_brightness(100U));
+    FT_ASSERT_EQ(50U, settings_flow_testing::decrement_brightness(54U));
+
+    FT_ASSERT_EQ(50U, settings_flow_testing::clamp_contrast(40U));
+    FT_ASSERT_EQ(150U, settings_flow_testing::clamp_contrast(180U));
+    FT_ASSERT_EQ(135U, settings_flow_testing::increment_contrast(130U));
+    FT_ASSERT_EQ(150U, settings_flow_testing::increment_contrast(148U));
+    FT_ASSERT_EQ(95U, settings_flow_testing::decrement_contrast(100U));
+    FT_ASSERT_EQ(50U, settings_flow_testing::decrement_contrast(48U));
+
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT,
         settings_flow_testing::toggle_lore_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT));
     FT_ASSERT_EQ(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT,
         settings_flow_testing::toggle_lore_anchor(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_LEFT));
     FT_ASSERT(settings_flow_testing::toggle_accessibility_preset(false));
     FT_ASSERT(!settings_flow_testing::toggle_accessibility_preset(true));
+    FT_ASSERT(settings_flow_testing::toggle_colorblind_palette(false));
+    FT_ASSERT(!settings_flow_testing::toggle_colorblind_palette(true));
 
     FT_ASSERT_EQ(ft_string("UI Scale: 110%"), settings_flow_testing::format_ui_scale_option(110U));
     FT_ASSERT_EQ(ft_string("Combat Speed: 95%"), settings_flow_testing::format_combat_speed_option(95U));
     FT_ASSERT_EQ(ft_string("Music Volume: 80%"), settings_flow_testing::format_music_volume_option(80U));
     FT_ASSERT_EQ(ft_string("Effects Volume: 40%"), settings_flow_testing::format_effects_volume_option(40U));
+    FT_ASSERT_EQ(ft_string("Brightness: 120%"), settings_flow_testing::format_brightness_option(120U));
+    FT_ASSERT_EQ(ft_string("Contrast: 90%"), settings_flow_testing::format_contrast_option(90U));
     FT_ASSERT_EQ(ft_string("Lore Panel Anchor: Right"),
         settings_flow_testing::format_lore_anchor_option(PLAYER_PREFERENCE_LORE_PANEL_ANCHOR_RIGHT));
     FT_ASSERT_EQ(ft_string("Accessibility Preset: Off"), settings_flow_testing::format_accessibility_preset_option(false));
     FT_ASSERT_EQ(ft_string("Accessibility Preset: On"), settings_flow_testing::format_accessibility_preset_option(true));
+    FT_ASSERT_EQ(ft_string("Colorblind Palette: Off"),
+        settings_flow_testing::format_colorblind_palette_option(false));
+    FT_ASSERT_EQ(ft_string("Colorblind Palette: On"),
+        settings_flow_testing::format_colorblind_palette_option(true));
 
     return 1;
 }
@@ -512,6 +582,8 @@ int verify_load_flow_save_metadata()
     ft_string commander("LoadFlowMetadata_");
     commander.append(ft_to_string(static_cast<int>(timestamp % 1000000L)));
 
+    menu_localization_reset_for_testing();
+
     PlayerProfilePreferences preferences;
     preferences.commander_name = commander;
     FT_ASSERT(player_profile_save(preferences));
@@ -529,7 +601,7 @@ int verify_load_flow_save_metadata()
     ft_string alpha_contents("{\n");
     alpha_contents.append("  \"metadata\": {\"version\": 1, \"save_type\": \"quicksave\"},\n");
     alpha_contents.append("  \"player\": {\"commander_name\": \"Metadata Tester\", \"starting_planet_id\": 1, \"commander_level\": 12},\n");
-    alpha_contents.append("  \"campaign\": {\"day\": 7}\n");
+    alpha_contents.append("  \"campaign\": {\"day\": 7, \"difficulty\": 3}\n");
     alpha_contents.append("}\n");
     FT_ASSERT(alpha_stream.write(alpha_contents.c_str()) >= 0);
     alpha_stream.close();
@@ -544,8 +616,10 @@ int verify_load_flow_save_metadata()
 
     ft_vector<ft_string> metadata_labels = load_game_flow_testing::collect_save_slot_metadata_labels(commander);
     FT_ASSERT_EQ(2U, metadata_labels.size());
-    FT_ASSERT_EQ(ft_string("Day 7 • Level 12"), metadata_labels[0]);
-    FT_ASSERT_EQ(ft_string("Metadata unavailable"), metadata_labels[1]);
+    ft_string expected_hard = build_expected_metadata_label(
+        7, 12, "load_menu.metadata.difficulty.hard", "Hard");
+    FT_ASSERT_EQ(expected_hard, metadata_labels[0]);
+    FT_ASSERT_EQ(menu_localize("load_menu.metadata.unavailable", "Metadata unavailable"), metadata_labels[1]);
 
     return 1;
 }
@@ -573,7 +647,7 @@ int verify_main_menu_save_alerts()
     ft_string stable_contents("{\n");
     stable_contents.append("  \"metadata\": {\"version\": 1, \"save_type\": \"quicksave\"},\n");
     stable_contents.append("  \"player\": {\"commander_name\": \"Alert Tester\", \"starting_planet_id\": 1, \"commander_level\": 4},\n");
-    stable_contents.append("  \"campaign\": {\"day\": 3}\n");
+    stable_contents.append("  \"campaign\": {\"day\": 3, \"difficulty\": 2}\n");
     stable_contents.append("}\n");
     FT_ASSERT(stable_stream.write(stable_contents.c_str()) >= 0);
     stable_stream.close();
@@ -604,6 +678,8 @@ int verify_resume_latest_save_resolution()
     ft_string commander("ResumeQuickEntry_");
     commander.append(ft_to_string(static_cast<int>(timestamp % 1000000L)));
 
+    menu_localization_reset_for_testing();
+
     PlayerProfilePreferences preferences;
     preferences.commander_name = commander;
     FT_ASSERT(player_profile_save(preferences));
@@ -623,7 +699,7 @@ int verify_resume_latest_save_resolution()
     ft_string beta_contents("{\n");
     beta_contents.append("  \"metadata\": {\"version\": 1, \"save_type\": \"quicksave\"},\n");
     beta_contents.append("  \"player\": {\"commander_name\": \"Resume Tester\", \"starting_planet_id\": 2, \"commander_level\": 9},\n");
-    beta_contents.append("  \"campaign\": {\"day\": 11}\n");
+    beta_contents.append("  \"campaign\": {\"day\": 11, \"difficulty\": 1}\n");
     beta_contents.append("}\n");
     FT_ASSERT(beta_stream.write(beta_contents.c_str()) >= 0);
     beta_stream.close();
@@ -649,7 +725,9 @@ int verify_resume_latest_save_resolution()
     FT_ASSERT_EQ(ft_string("beta"), slot_name);
     FT_ASSERT_EQ(beta_path, save_path);
     FT_ASSERT(metadata_available);
-    FT_ASSERT_EQ(ft_string("Day 11 • Level 9"), metadata_label);
+    ft_string expected_easy = build_expected_metadata_label(
+        11, 9, "load_menu.metadata.difficulty.easy", "Easy");
+    FT_ASSERT_EQ(expected_easy, metadata_label);
 
     ft_vector<ft_string> errors;
     FT_ASSERT(audit_save_directory_for_errors(commander, errors));
