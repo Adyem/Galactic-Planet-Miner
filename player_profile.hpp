@@ -20,6 +20,7 @@ static const unsigned int PLAYER_PROFILE_BRIGHTNESS_MIN_PERCENT = 50U;
 static const unsigned int PLAYER_PROFILE_BRIGHTNESS_MAX_PERCENT = 150U;
 static const unsigned int PLAYER_PROFILE_CONTRAST_MIN_PERCENT = 50U;
 static const unsigned int PLAYER_PROFILE_CONTRAST_MAX_PERCENT = 150U;
+static const unsigned int PLAYER_PROFILE_ACHIEVEMENTS_MAX_COUNT = 1024U;
 
 static const int PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP = 1073741906;    // SDLK_UP
 static const int PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN = 1073741905;  // SDLK_DOWN
@@ -33,6 +34,31 @@ static const int PLAYER_PROFILE_INPUT_DEVICE_NONE = 0;
 static const int PLAYER_PROFILE_INPUT_DEVICE_MOUSE = 1;
 static const int PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD = 2;
 static const int PLAYER_PROFILE_INPUT_DEVICE_GAMEPAD = 3;
+
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_A = 0;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_B = 1;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_X = 2;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_Y = 3;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_BACK = 4;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_GUIDE = 5;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_START = 6;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_LEFTSTICK = 7;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_RIGHTSTICK = 8;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_LEFTSHOULDER = 9;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_RIGHTSHOULDER = 10;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_UP = 11;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_DOWN = 12;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_LEFT = 13;
+static const int PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT = 14;
+
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_UP = PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_UP;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_DOWN = PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_DOWN;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_LEFT = PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_LEFT;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_RIGHT = PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_CONFIRM = PLAYER_PROFILE_CONTROLLER_BUTTON_A;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_CANCEL = PLAYER_PROFILE_CONTROLLER_BUTTON_B;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_DELETE = PLAYER_PROFILE_CONTROLLER_BUTTON_X;
+static const int PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_RENAME = PLAYER_PROFILE_CONTROLLER_BUTTON_Y;
 
 struct PlayerProfilePreferences
 {
@@ -49,6 +75,12 @@ struct PlayerProfilePreferences
     bool         menu_tutorial_seen;
     bool         colorblind_palette_enabled;
     bool         accessibility_preset_enabled;
+    bool         experimental_features_enabled;
+    bool         analytics_opt_in;
+    unsigned int achievements_total_count;
+    unsigned int achievements_completed_count;
+    ft_string    achievements_highlight_label;
+    ft_string    achievements_progress_note;
     int          hotkey_menu_up;
     int          hotkey_menu_down;
     int          hotkey_menu_left;
@@ -57,6 +89,14 @@ struct PlayerProfilePreferences
     int          hotkey_menu_cancel;
     int          hotkey_menu_delete;
     int          hotkey_menu_rename;
+    int          controller_menu_up;
+    int          controller_menu_down;
+    int          controller_menu_left;
+    int          controller_menu_right;
+    int          controller_menu_confirm;
+    int          controller_menu_cancel;
+    int          controller_menu_delete;
+    int          controller_menu_rename;
     int          last_menu_input_device;
 
     PlayerProfilePreferences() noexcept
@@ -73,6 +113,12 @@ struct PlayerProfilePreferences
           menu_tutorial_seen(false),
           colorblind_palette_enabled(false),
           accessibility_preset_enabled(false),
+          experimental_features_enabled(false),
+          analytics_opt_in(false),
+          achievements_total_count(0U),
+          achievements_completed_count(0U),
+          achievements_highlight_label(),
+          achievements_progress_note(),
           hotkey_menu_up(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_UP),
           hotkey_menu_down(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DOWN),
           hotkey_menu_left(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_LEFT),
@@ -81,6 +127,14 @@ struct PlayerProfilePreferences
           hotkey_menu_cancel(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CANCEL),
           hotkey_menu_delete(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DELETE),
           hotkey_menu_rename(PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_RENAME),
+          controller_menu_up(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_UP),
+          controller_menu_down(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_DOWN),
+          controller_menu_left(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_LEFT),
+          controller_menu_right(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_RIGHT),
+          controller_menu_confirm(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_CONFIRM),
+          controller_menu_cancel(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_CANCEL),
+          controller_menu_delete(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_DELETE),
+          controller_menu_rename(PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_RENAME),
           last_menu_input_device(PLAYER_PROFILE_INPUT_DEVICE_KEYBOARD)
     {}
 
@@ -94,6 +148,14 @@ struct PlayerProfilePreferences
         this->hotkey_menu_cancel = PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_CANCEL;
         this->hotkey_menu_delete = PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_DELETE;
         this->hotkey_menu_rename = PLAYER_PROFILE_DEFAULT_HOTKEY_MENU_RENAME;
+        this->controller_menu_up = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_UP;
+        this->controller_menu_down = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_DOWN;
+        this->controller_menu_left = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_LEFT;
+        this->controller_menu_right = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_RIGHT;
+        this->controller_menu_confirm = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_CONFIRM;
+        this->controller_menu_cancel = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_CANCEL;
+        this->controller_menu_delete = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_DELETE;
+        this->controller_menu_rename = PLAYER_PROFILE_DEFAULT_CONTROLLER_MENU_RENAME;
     }
 };
 
@@ -103,5 +165,6 @@ ft_string player_profile_resolve_path(const ft_string &commander_name) noexcept;
 bool player_profile_list(ft_vector<ft_string> &out_profiles) noexcept;
 bool player_profile_delete(const ft_string &commander_name) noexcept;
 ft_string player_profile_resolve_save_directory(const ft_string &commander_name) noexcept;
+ft_string player_profile_resolve_tutorial_save_path(const ft_string &commander_name) noexcept;
 
 #endif

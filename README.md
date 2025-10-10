@@ -27,6 +27,17 @@ make
 The harness boots the lightweight HTTP server that ships with `libft`, drives the backend client,
 and executes the scenario helpers under `tests/`.
 
+## Main Menu Architecture
+
+The main menu is now organized into focused translation units rather than a single monolith.
+Core layout/state helpers live in `main_menu_content.cpp`, rendering logic is isolated in
+`main_menu_render.cpp`, portrait preloading and card construction live in `main_menu_portraits.cpp`,
+and the performance overlay feeds from `main_menu_performance.cpp` so frame-rate sampling stays
+decoupled from UI drawing. Supporting modules such as `main_menu_achievements.cpp`,
+`main_menu_connectivity.cpp`, and `main_menu_crash.cpp` expose wrappers under the
+`main_menu_testing` namespace, making it easy for `tests/game_test_menu_*.cpp` to drive the
+individual systems without reaching through the old aggregate source file.
+
 ### Coverage highlights
 
 The campaign regression in `validate_initial_campaign_flow` plays through early quests, research

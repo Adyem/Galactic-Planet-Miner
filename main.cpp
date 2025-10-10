@@ -2,6 +2,8 @@
 #include "backend_client.hpp"
 #include "menu_localization.hpp"
 #include "main_menu_system.hpp"
+#include "game_bootstrap.hpp"
+#include "save_system_background.hpp"
 #include "player_profile.hpp"
 #include "ui_input.hpp"
 #include "ui_menu.hpp"
@@ -136,9 +138,10 @@ int main()
 
     apply_profile_preferences(window, active_profile_name);
     refresh_fonts();
+    main_menu_audio_apply_preferences(active_preferences);
 
     ft_ui_menu              menu;
-    ft_vector<ft_menu_item> menu_items = build_main_menu_items();
+    ft_vector<ft_menu_item> menu_items = build_main_menu_items(&active_preferences);
     menu.set_viewport_bounds(build_main_menu_viewport());
 
     auto rebuild_menu_items = [&](const ft_string &preferred_selection) {
@@ -178,7 +181,25 @@ int main()
     MainMenuOverlayContext      changelog_context;
     MainMenuOverlayContext      manual_context;
     MainMenuOverlayContext      clear_cloud_context;
+    MainMenuOverlayContext      crash_prompt_context;
     MainMenuAlertBanner         alert_banner;
+    MainMenuAutosaveStatus      autosave_status;
+    MainMenuSyncStatus          sync_status;
+    MainMenuPerformanceStats    performance_stats;
+    MainMenuAchievementsSummary achievements_summary;
+    MainMenuCrashReport         crash_report_status;
+    bool                        crash_prompt_dismissed = false;
+    long                        crash_prompt_last_timestamp = 0L;
+    ft_string                   crash_prompt_last_summary;
+    ft_string                   crash_prompt_last_details;
+    const long                  crash_prompt_poll_interval_ms = 5000L;
+    long                        next_crash_prompt_check_ms = 0L;
+    bool                        crash_prompt_focus_pending = false;
+
+    auto refresh_achievement_summary = [&]() {
+        achievements_summary = main_menu_build_achievements_summary(&active_preferences);
+    };
+    refresh_achievement_summary();
 
     bool      resume_available = false;
     bool      resume_metadata_known = false;
@@ -187,51 +208,9 @@ int main()
     ft_string resume_save_path;
 
     auto update_resume_menu_entry = [&]() {
-        for (size_t index = 0; index < menu_items.size(); ++index)
-        {
-            if (menu_items[index].identifier != "resume")
-                continue;
-
-            if (resume_available && !resume_save_path.empty())
-            {
-                menu_items[index].enabled = true;
-                ft_vector<StringTableReplacement> replacements;
-                replacements.reserve(2U);
-                StringTableReplacement slot_placeholder;
-                slot_placeholder.key = ft_string("slot");
-                slot_placeholder.value = resume_slot_label;
-                replacements.push_back(slot_placeholder);
-                StringTableReplacement metadata_placeholder;
-                metadata_placeholder.key = ft_string("metadata");
-                if (!resume_metadata_label.empty())
-                {
-                    ft_string metadata_value;
-                    metadata_value.append(" (");
-                    metadata_value.append(resume_metadata_label);
-                    metadata_value.append(")");
-                    metadata_placeholder.value = metadata_value;
-                }
-                replacements.push_back(metadata_placeholder);
-                ft_string description = menu_localize_format("main_menu.resume.active_description",
-                    "Jump back into \"{{slot}}\"{{metadata}} without opening the load menu.", replacements);
-                if (!resume_metadata_known && resume_metadata_label.empty())
-                {
-                    ft_string metadata_hint = menu_localize(
-                        "main_menu.resume.metadata_unavailable", " Metadata details unavailable.");
-                    description.append(metadata_hint);
-                }
-                menu_items[index].description = description;
-            }
-            else
-            {
-                menu_items[index].enabled = false;
-                menu_items[index].description = menu_localize(
-                    "main_menu.resume.empty_description",
-                    "No healthy campaign saves found yet. Create or load a game to enable quick resume.");
-            }
-            break;
-        }
-
+        const bool resume_enabled = resume_available && !resume_save_path.empty();
+        main_menu_apply_resume_state(
+            menu_items, resume_enabled, resume_slot_label, resume_metadata_label, resume_metadata_known);
         refresh_menu_selection();
     };
 
@@ -239,6 +218,8 @@ int main()
     const ft_string backend_path("/");
     const ft_string backend_patch_notes_path("/patch-notes/latest");
     const ft_string backend_clear_cloud_path("/cloud-data/clear");
+    const ft_string backend_crash_report_path("/crash-report");
+    const ft_string crash_report_log_path("crash_reports/pending_report.log");
     MainMenuConnectivityStatus connectivity_status;
     const long connectivity_interval_ms = 7000;
     long       next_connectivity_check_ms = 0;
@@ -327,21 +308,172 @@ int main()
         update_resume_menu_entry();
     };
 
+    auto clear_crash_prompt_overlay = [&]() {
+        crash_prompt_context.visible = false;
+        crash_prompt_context.heading.clear();
+        crash_prompt_context.lines.clear();
+        crash_prompt_context.footer.clear();
+    };
+
+    auto refresh_crash_prompt = [&](bool force_reload) {
+        long current_ms = ft_time_ms();
+        if (!force_reload && current_ms < next_crash_prompt_check_ms)
+        {
+            if (crash_report_status.available && !crash_prompt_dismissed)
+                main_menu_build_crash_prompt_overlay(crash_report_status, connectivity_status, crash_prompt_context);
+            return;
+        }
+
+        next_crash_prompt_check_ms = current_ms + crash_prompt_poll_interval_ms;
+
+        MainMenuCrashReport loaded_report;
+        bool                loaded = main_menu_load_crash_report(crash_report_log_path, loaded_report);
+        bool                previously_visible = crash_report_status.available && !crash_prompt_dismissed;
+
+        if (!loaded)
+        {
+            crash_report_status = MainMenuCrashReport();
+            crash_prompt_last_timestamp = 0L;
+            crash_prompt_last_summary.clear();
+            crash_prompt_last_details.clear();
+            crash_prompt_dismissed = false;
+            clear_crash_prompt_overlay();
+            crash_prompt_focus_pending = false;
+            return;
+        }
+
+        bool is_new_entry = !crash_report_status.available
+            || loaded_report.timestamp_ms != crash_prompt_last_timestamp
+            || loaded_report.summary != crash_prompt_last_summary
+            || loaded_report.details_path != crash_prompt_last_details;
+
+        crash_report_status = loaded_report;
+        crash_prompt_last_timestamp = loaded_report.timestamp_ms;
+        crash_prompt_last_summary = loaded_report.summary;
+        crash_prompt_last_details = loaded_report.details_path;
+
+        if (is_new_entry)
+            crash_prompt_dismissed = false;
+
+        if (crash_prompt_dismissed)
+        {
+            clear_crash_prompt_overlay();
+            crash_prompt_focus_pending = false;
+            return;
+        }
+
+        main_menu_build_crash_prompt_overlay(crash_report_status, connectivity_status, crash_prompt_context);
+        bool currently_visible = crash_prompt_context.visible;
+        if (!currently_visible)
+            return;
+        if (is_new_entry && !previously_visible)
+            crash_prompt_focus_pending = true;
+    };
+
+    auto dismiss_crash_prompt = [&]() -> bool {
+        if (!crash_prompt_context.visible)
+            return false;
+        clear_crash_prompt_overlay();
+        crash_prompt_dismissed = true;
+        crash_prompt_focus_pending = false;
+        return true;
+    };
+
+    auto submit_crash_report = [&]() -> bool {
+        if (!crash_prompt_context.visible)
+            return false;
+
+        if (!crash_report_status.available)
+        {
+            clear_crash_prompt_overlay();
+            crash_prompt_dismissed = false;
+            crash_prompt_focus_pending = false;
+            alert_banner.visible = true;
+            alert_banner.is_error = true;
+            alert_banner.message
+                = menu_localize("main_menu.crash.log_missing", "Crash report details were unavailable.");
+            return true;
+        }
+
+        if (connectivity_status.state != MAIN_MENU_CONNECTIVITY_ONLINE)
+        {
+            alert_banner.visible = true;
+            alert_banner.is_error = true;
+            alert_banner.message = menu_localize("main_menu.crash.requires_online",
+                "Crash reports require an online connection. Reconnect and try again.");
+            return true;
+        }
+
+        ft_string payload = main_menu_format_crash_submission_payload(crash_report_status);
+        ft_string response_body;
+        int       status_code = 0;
+        bool      success = backend_client_submit_crash_report(
+            backend_host, backend_crash_report_path, payload, response_body, status_code);
+
+        alert_banner.visible = true;
+        if (success)
+        {
+            alert_banner.is_error = false;
+            if (!response_body.empty())
+                alert_banner.message = response_body;
+            else
+                alert_banner.message = menu_localize(
+                    "main_menu.crash.submit_success", "Crash report submitted successfully. Thank you!");
+            main_menu_clear_crash_report(crash_report_log_path);
+            crash_report_status = MainMenuCrashReport();
+            crash_prompt_last_timestamp = 0L;
+            crash_prompt_last_summary.clear();
+            crash_prompt_last_details.clear();
+            crash_prompt_dismissed = false;
+            clear_crash_prompt_overlay();
+            crash_prompt_focus_pending = false;
+        }
+        else
+        {
+            alert_banner.is_error = true;
+            alert_banner.message
+                = menu_localize("main_menu.crash.submit_failure", "Failed to submit crash report.");
+            if (status_code != 0)
+            {
+                ft_vector<StringTableReplacement> replacements;
+                replacements.reserve(1U);
+                StringTableReplacement code_placeholder;
+                code_placeholder.key = ft_string("code");
+                code_placeholder.value = ft_to_string(status_code);
+                replacements.push_back(code_placeholder);
+                ft_string suffix
+                    = menu_localize_format("main_menu.crash.error_code", " (HTTP {{code}})", replacements);
+                alert_banner.message.append(suffix);
+            }
+            if (!response_body.empty())
+            {
+                alert_banner.message.append(" ");
+                alert_banner.message.append(response_body);
+            }
+        }
+
+        next_crash_prompt_check_ms = 0L;
+        return true;
+    };
+
     auto perform_connectivity_check = [&](long now_ms) {
         main_menu_mark_connectivity_checking(connectivity_status, now_ms);
+        main_menu_sync_begin(sync_status, MAIN_MENU_SYNC_CHANNEL_CONVOYS, now_ms);
+        main_menu_sync_begin(sync_status, MAIN_MENU_SYNC_CHANNEL_LEADERBOARDS, now_ms);
+        main_menu_performance_begin_latency_sample(performance_stats, now_ms);
         int  status_code = 0;
         bool success = backend_client_ping(backend_host, backend_path, status_code);
         long result_ms = ft_time_ms();
         main_menu_apply_connectivity_result(connectivity_status, success, status_code, result_ms);
+        main_menu_sync_apply(sync_status, MAIN_MENU_SYNC_CHANNEL_CONVOYS, success, status_code, result_ms);
+        main_menu_sync_apply(sync_status, MAIN_MENU_SYNC_CHANNEL_LEADERBOARDS, success, status_code, result_ms);
+        long latency_ms = result_ms - now_ms;
+        main_menu_performance_complete_latency_sample(performance_stats, success, latency_ms, result_ms);
         if (!success)
             main_menu_append_connectivity_failure_log(backend_host, status_code, result_ms);
+        refresh_crash_prompt(true);
         next_connectivity_check_ms = result_ms + connectivity_interval_ms;
     };
-
-    refresh_save_alert();
-    perform_connectivity_check(ft_time_ms());
-
-    bool running = true;
 
     auto attempt_campaign_launch = [&](const ft_string &save_path) -> bool {
         if (!main_menu_can_launch_campaign(save_path))
@@ -482,6 +614,22 @@ int main()
         return true;
     };
 
+    auto handle_crash_prompt_focus = [&]() {
+        if (!crash_prompt_focus_pending)
+            return;
+        dismiss_tutorial_overlay();
+        dismiss_changelog_overlay();
+        dismiss_manual_overlay();
+        close_clear_cloud_prompt();
+        crash_prompt_focus_pending = false;
+    };
+
+    refresh_save_alert();
+    perform_connectivity_check(ft_time_ms());
+    handle_crash_prompt_focus();
+
+    bool running = true;
+
     auto open_changelog_overlay = [&]() {
         dismiss_tutorial_overlay();
         dismiss_manual_overlay();
@@ -581,13 +729,35 @@ int main()
 
     while (running)
     {
+        long frame_start_ms = ft_time_ms();
         ft_mouse_state    mouse_state;
         ft_keyboard_state keyboard_state;
+        ft_gamepad_state  gamepad_state;
         bool              activate_requested = false;
         bool              tutorial_click_in_progress = false;
         bool              changelog_click_in_progress = false;
         bool              manual_click_in_progress = false;
         bool              clear_cloud_click_in_progress = false;
+        bool              crash_click_in_progress = false;
+
+        SaveSystemBackgroundEvent autosave_event;
+        while (save_system_background_poll_event(autosave_event))
+        {
+            if (autosave_event.type == SaveSystemBackgroundEvent::SAVE_SYSTEM_BACKGROUND_EVENT_STARTED)
+            {
+                main_menu_mark_autosave_in_progress(autosave_status, autosave_event.slot_name,
+                    autosave_event.timestamp_ms);
+            }
+            else if (autosave_event.type == SaveSystemBackgroundEvent::SAVE_SYSTEM_BACKGROUND_EVENT_COMPLETED)
+            {
+                main_menu_mark_autosave_result(autosave_status, autosave_event.success, autosave_event.slot_name,
+                    autosave_event.error_message, autosave_event.timestamp_ms);
+            }
+        }
+
+        main_menu_autosave_tick(autosave_status, ft_time_ms());
+        refresh_crash_prompt(false);
+        handle_crash_prompt_focus();
 
         SDL_Event event;
         while (SDL_PollEvent(&event) == 1)
@@ -616,6 +786,8 @@ int main()
                         manual_click_in_progress = true;
                     else if (changelog_context.visible)
                         changelog_click_in_progress = true;
+                    else if (crash_prompt_context.visible)
+                        crash_click_in_progress = true;
                     else
                         mouse_state.left_pressed = true;
                 }
@@ -646,6 +818,12 @@ int main()
                         close_clear_cloud_prompt();
                         clear_cloud_click_in_progress = false;
                     }
+                    else if (crash_click_in_progress || crash_prompt_context.visible)
+                    {
+                        submit_crash_report();
+                        crash_click_in_progress = false;
+                        handle_crash_prompt_focus();
+                    }
                     else
                         mouse_state.left_released = true;
                 }
@@ -670,6 +848,12 @@ int main()
                         confirm_clear_cloud_prompt();
                         clear_cloud_click_in_progress = false;
                     }
+                    else if (crash_prompt_context.visible)
+                    {
+                        submit_crash_report();
+                        crash_click_in_progress = false;
+                        handle_crash_prompt_focus();
+                    }
                     else if (manual_context.visible)
                     {
                         dismiss_manual_overlay();
@@ -688,6 +872,61 @@ int main()
                 {
                     if (clear_cloud_context.visible)
                         close_clear_cloud_prompt();
+                    else if (crash_prompt_context.visible)
+                        dismiss_crash_prompt();
+                    else if (!dismiss_manual_overlay() && !dismiss_changelog_overlay())
+                        running = false;
+                }
+            }
+            else if (event.type == SDL_CONTROLLERBUTTONDOWN)
+            {
+                auto matches_button = [&](int button, int mapping) {
+                    if (mapping < PLAYER_PROFILE_CONTROLLER_BUTTON_A
+                        || mapping > PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT)
+                        return false;
+                    return button == mapping;
+                };
+
+                const int button = static_cast<int>(event.cbutton.button);
+                if (matches_button(button, active_preferences.controller_menu_up))
+                    gamepad_state.pressed_up = true;
+                else if (matches_button(button, active_preferences.controller_menu_down))
+                    gamepad_state.pressed_down = true;
+                else if (matches_button(button, active_preferences.controller_menu_confirm))
+                {
+                    gamepad_state.pressed_confirm = true;
+                    if (clear_cloud_context.visible)
+                    {
+                        confirm_clear_cloud_prompt();
+                        clear_cloud_click_in_progress = false;
+                    }
+                    else if (crash_prompt_context.visible)
+                    {
+                        submit_crash_report();
+                        crash_click_in_progress = false;
+                        handle_crash_prompt_focus();
+                    }
+                    else if (manual_context.visible)
+                    {
+                        dismiss_manual_overlay();
+                        manual_click_in_progress = false;
+                    }
+                    else if (changelog_context.visible)
+                    {
+                        dismiss_changelog_overlay();
+                        changelog_click_in_progress = false;
+                    }
+                    else if (!dismiss_tutorial_overlay())
+                        activate_requested = true;
+                    tutorial_click_in_progress = false;
+                }
+                else if (matches_button(button, active_preferences.controller_menu_cancel))
+                {
+                    gamepad_state.pressed_cancel = true;
+                    if (clear_cloud_context.visible)
+                        close_clear_cloud_prompt();
+                    else if (crash_prompt_context.visible)
+                        dismiss_crash_prompt();
                     else if (!dismiss_manual_overlay() && !dismiss_changelog_overlay())
                         running = false;
                 }
@@ -705,6 +944,7 @@ int main()
 
         menu.handle_mouse_input(mouse_state);
         menu.handle_keyboard_input(keyboard_state);
+        menu.handle_gamepad_input(gamepad_state);
 
         e_ft_input_device active_device = menu.get_active_device();
         if (active_device != FT_INPUT_DEVICE_NONE
@@ -781,6 +1021,36 @@ int main()
                 return;
             }
 
+            if (item.identifier == "tutorial")
+            {
+                ft_string tutorial_path = player_profile_resolve_tutorial_save_path(active_profile_name);
+                if (tutorial_path.empty())
+                {
+                    alert_banner.visible = true;
+                    alert_banner.is_error = true;
+                    alert_banner.message = menu_localize("main_menu.tutorial.replay.resolve_failure",
+                        "Unable to prepare a tutorial mission for this commander.");
+                    return;
+                }
+
+                if (!game_bootstrap_create_tutorial_quicksave(tutorial_path.c_str(), active_profile_name))
+                {
+                    alert_banner.visible = true;
+                    alert_banner.is_error = true;
+                    alert_banner.message = menu_localize("main_menu.tutorial.replay.create_failure",
+                        "Unable to prepare the tutorial mission. Try again later.");
+                    return;
+                }
+
+                if (attempt_campaign_launch(tutorial_path))
+                {
+                    running = false;
+                    return;
+                }
+
+                return;
+            }
+
             if (item.identifier == "exit")
             {
                 running = false;
@@ -808,7 +1078,9 @@ int main()
                         active_preferences = PlayerProfilePreferences();
                         active_preferences.commander_name = active_profile_name;
                     }
+                    main_menu_audio_apply_preferences(active_preferences);
                     tutorial_context.visible = !active_preferences.menu_tutorial_seen;
+                    refresh_achievement_summary();
                     perform_connectivity_check(ft_time_ms());
                 }
 
@@ -827,9 +1099,14 @@ int main()
                 }
 
                 if (saved)
+                {
                     apply_profile_preferences(window, active_profile_name);
-                if (saved)
                     refresh_fonts();
+                    main_menu_audio_apply_preferences(active_preferences);
+                    refresh_achievement_summary();
+                    menu_items = build_main_menu_items(&active_preferences);
+                    refresh_save_alert();
+                }
                 return;
             }
 
@@ -888,11 +1165,18 @@ int main()
         SDL_GetWindowSize(window, &window_width, &window_height);
         long current_time_ms = ft_time_ms();
         if (current_time_ms >= next_connectivity_check_ms)
+        {
             perform_connectivity_check(current_time_ms);
+            handle_crash_prompt_focus();
+        }
 
         render_main_menu(*renderer, menu, title_font, menu_font, window_width, window_height, active_profile_name,
             &active_preferences, &tutorial_context, &manual_context, &changelog_context, &clear_cloud_context,
-            &connectivity_status, &alert_banner);
+            &crash_prompt_context,
+            &connectivity_status, &sync_status, &achievements_summary, &autosave_status, &performance_stats, &alert_banner);
+
+        long frame_end_ms = ft_time_ms();
+        main_menu_performance_record_frame(performance_stats, frame_start_ms, frame_end_ms);
     }
 
     if (window != ft_nullptr && !active_profile_name.empty())
