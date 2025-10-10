@@ -7,8 +7,9 @@
 #    include <SDL2/SDL_ttf.h>
 #endif
 
-#if GALACTIC_HAVE_SDL2
-
+#if !defined(GALACTIC_HAVE_SDL2) || !GALACTIC_HAVE_SDL2
+#    error "main_menu_helpers.cpp requires GALACTIC_HAVE_SDL2"
+#endif
 namespace
 {
     const ft_menu_item *menu_item_from_index(const ft_ui_menu &menu, int index)
