@@ -13,16 +13,23 @@ SRC_COMMON  = \
     build_info.cpp \
     backend_client.cpp \
     achievements.cpp \
+    achievements_definitions.cpp \
     planets.cpp \
     fleets.cpp \
     buildings.cpp \
     buildings_catalog.cpp \
     combat.cpp \
-    combat_support.cpp \
+    combat_encounter_control.cpp \
+    combat_encounter_launch.cpp \
+    combat_encounter_state.cpp \
+    combat_support_allies.cpp \
+    combat_support_power.cpp \
+    combat_support_raiders.cpp \
     combat_tracks.cpp \
     combat_formations.cpp \
     combat_tick.cpp \
     game_bootstrap.cpp \
+    game_bootstrap_serialization.cpp \
     player_profile.cpp \
     font_util.cpp \
     menu_localization.cpp \
@@ -30,10 +37,18 @@ SRC_COMMON  = \
     main_menu_autosave.cpp \
     main_menu_achievements.cpp \
     main_menu_connectivity.cpp \
+    main_menu_sync.cpp \
     main_menu_crash.cpp \
     main_menu_content.cpp \
+    main_menu_guides.cpp \
     main_menu_performance.cpp \
     main_menu_portraits.cpp \
+    main_menu_palette.cpp \
+    main_menu_render_navigation.cpp \
+    main_menu_render_overlay.cpp \
+    main_menu_render_tutorial.cpp \
+    main_menu_render_achievements.cpp \
+    main_menu_render_autosave.cpp \
     main_menu_render.cpp \
     menu_audio.cpp \
     quests.cpp \
@@ -49,9 +64,13 @@ SRC_COMMON  = \
     save_system_background.cpp \
     ui_input.cpp \
     ui_menu.cpp \
+    ui_menu_interaction.cpp \
+    ui_menu_layout.cpp \
+    new_game_flow_helpers.cpp \
     new_game_flow.cpp \
     load_game_flow.cpp \
     settings_flow.cpp \
+    profile_entry_flow_helpers.cpp \
     profile_entry_flow.cpp \
     profile_management_flow.cpp \
     profile_preferences.cpp \
