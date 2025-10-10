@@ -111,12 +111,33 @@ int main()
         return 0;
     if (!verify_main_menu_connectivity_failure_logging())
         return 0;
+    if (!verify_main_menu_crash_prompt())
+        return 0;
+    if (!verify_main_menu_sync_panel())
+        return 0;
+    if (!verify_main_menu_autosave_indicator())
+        return 0;
+    if (!verify_main_menu_achievement_summary())
+        return 0;
+    if (!verify_main_menu_performance_overlay())
+        return 0;
+    if (!verify_save_system_background_queue())
+        return 0;
     if (!verify_main_menu_build_label())
         return 0;
     if (!verify_main_menu_save_alerts())
         return 0;
 
     if (!verify_resume_latest_save_resolution())
+        return 0;
+
+    if (!verify_main_menu_resume_entry_integration())
+        return 0;
+
+    if (!verify_load_resume_menu_flow_integration())
+        return 0;
+
+    if (!verify_accessibility_toggle_persistence())
         return 0;
 
     if (!verify_main_menu_commander_portrait_preload())
@@ -129,6 +150,9 @@ int main()
         return 0;
 
     if (!verify_settings_flow_helpers())
+        return 0;
+
+    if (!verify_main_menu_audio_respects_settings())
         return 0;
 
     if (!verify_load_flow_save_listing())
@@ -287,6 +311,10 @@ int main()
         return 0;
     if (!verify_save_system_sparse_entries())
         return 0;
+    if (!verify_save_system_recovers_corrupt_planet_snapshot())
+        return 0;
+    if (!verify_save_system_sanitizes_corrupt_ship_stats())
+        return 0;
     if (!verify_planet_inventory_save_round_trip())
         return 0;
     if (!verify_planet_inventory_resets_unsaved_items())
@@ -310,6 +338,8 @@ int main()
     if (!verify_new_game_save_creation())
         return 0;
     if (!verify_new_game_save_launch_readiness())
+        return 0;
+    if (!verify_tutorial_replay_save_creation())
         return 0;
     if (!verify_player_profile_save())
         return 0;

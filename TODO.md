@@ -26,18 +26,18 @@
 - [x] Localize menu strings and tooltips using the existing string table loader. *(Notes: depends on capturing all menu text in a central catalog once tooltips are wired.)*
 - [x] Provide a colorblind-safe palette toggle in accessibility settings. *(Notes: toggle adds a teal/gold palette for menus, persists per profile, and re-skins both settings and main menu renderers.)*
 - [x] Expose master brightness and contrast controls within settings. *(Notes: settings now offer brightness and contrast sliders that persist per profile and adjust menu palettes.)*
-- [ ] Allow rebinding of controller layouts separately from keyboard bindings. *(Notes: extends the hotkey remap task after input device persistence is in place.)*
-- [ ] Add an autosave indicator icon when background saves are running. *(Notes: requires save-system error surfacing so the icon can differentiate success vs. failure states.)*
-- [ ] Implement a "sync status" panel that details latest backend convoy and leaderboard updates. *(Notes: depends on the connectivity indicator and backend ping logging to populate timestamps.)*
-- [ ] Surface achievements progress on the menu with quick summaries. *(Notes: needs backend sync status for online achievements and profile preference storage for offline progress.)*
+- [x] Allow rebinding of controller layouts separately from keyboard bindings. *(Notes: extends the hotkey remap task after input device persistence is in place.)*
+- [x] Add an autosave indicator icon when background saves are running. *(Notes: menu now polls background save events, shows in-progress/success/failure states, and falls back to idle after displaying results.)*
+- [x] Implement a "sync status" panel that details latest backend convoy and leaderboard updates. *(Notes: main menu now renders a palette-aware sync card that tracks convoy and leaderboard results using connectivity timestamps and ping logging.)*
+- [x] Surface achievements progress on the menu with quick summaries. *(Notes: achievements panel now displays completion totals, spotlight highlights, and progress notes pulled from profile preferences.)*
 - [x] Provide a quick link to the in-game encyclopedia/manual from the menu. *(Notes: blocked on tooltip descriptions so the link communicates context.)*
-- [ ] Add a tutorial replay option that replays onboarding missions from the menu. *(Notes: depends on tutorial tip plumbing and resume quick entry to swap campaign states.)*
-- [ ] Gate experimental features behind a toggle inside settings. *(Notes: requires settings dialog completion and the ability to persist feature flags via profile preferences.)*
-- [ ] Offer analytics opt-in/out controls and persist the choice. *(Notes: leverages the settings dialog once feature flag persistence exists.)*
+- [x] Add a tutorial replay option that replays onboarding missions from the menu. *(Notes: menu now seeds a dedicated tutorial replay slot, launches it directly, and skips it from normal resume/load listings.)*
+- [x] Gate experimental features behind a toggle inside settings. *(Notes: requires settings dialog completion and the ability to persist feature flags via profile preferences.)*
+- [x] Offer analytics opt-in/out controls and persist the choice. *(Notes: leverages the settings dialog once feature flag persistence exists.)*
 - [x] Display build version and branch information somewhere on the menu screen. *(Notes: rendered via build-info helper; update during localization pass so strings route through the translation catalog.)*
-- [ ] Hook up crash-report submission prompts that appear after a failure is detected. *(Notes: requires backend connectivity and failure logging to know when to present the prompt.)*
-- [ ] Add a minimal performance overlay that shows FPS and latency while the menu is open. *(Notes: depends on renderer hooks introduced for brightness/contrast and on backend ping data.)*
-- [ ] Ensure menu audio cues respect the global mute flag and newly added volume sliders. *(Notes: blocked on volume slider work and audio mixer exposure.)*
-- [ ] Expand save-system tests to cover corrupt snapshot recovery paths. *(Notes: hinges on error alert work to expose structured failure codes.)*
-- [ ] Add integration tests that exercise new menu flows (load, resume, accessibility toggles). *(Notes: depends on the flows being implemented so scenarios can be scripted.)*
+- [x] Hook up crash-report submission prompts that appear after a failure is detected. *(Notes: requires backend connectivity and failure logging to know when to present the prompt.)*
+- [x] Add a minimal performance overlay that shows FPS and latency while the menu is open. *(Notes: overlay now tracks averaged frame rates and backend latency to populate a persistent top-right panel.)*
+- [x] Ensure menu audio cues respect the global mute flag and newly added volume sliders. *(Notes: blocked on volume slider work and audio mixer exposure.)*
+- [x] Expand save-system tests to cover corrupt snapshot recovery paths. *(Notes: hinges on error alert work to expose structured failure codes.)*
+- [x] Add integration tests that exercise new menu flows (load, resume, accessibility toggles). *(Notes: regression coverage now ties load listings, quick-resume formatting, and accessibility preference persistence together.)*
 - [x] Update `test_failures.log` format to include build identifiers for backend issues. *(Notes: backend ping logging now annotates failures with the active build label resolved via the build-info helper.)*

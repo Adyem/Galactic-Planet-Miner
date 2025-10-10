@@ -13,6 +13,9 @@ strings:
       resume:
         label: "Resume"
         description: "Jump back into your latest campaign save once one is available."
+      tutorial:
+        label: "Replay Tutorial"
+        description: "Revisit onboarding missions and practice fleet controls."
       load:
         label: "Load"
         description: "Review existing saves and prepare to resume a prior campaign."
@@ -31,6 +34,7 @@ strings:
       clear_cloud:
         label: "Clear Cloud Data"
         description: "Remove backend-linked progress for this commander after confirming the action."
+        gated: "Enable experimental features in Settings to manage cloud data."
       exit:
         label: "Exit"
         description: "Close Galactic Planet Miner."
@@ -40,6 +44,9 @@ strings:
         1: "Use Arrow Keys / D-Pad or the mouse to highlight menu entries."
         2: "Choose New Game to start a fresh campaign for this commander."
         3: "Swap Profile lets you switch between saved commanders."
+      replay:
+        resolve_failure: "Unable to prepare a tutorial mission for this commander."
+        create_failure: "Unable to prepare the tutorial mission. Try again later."
     manual:
       lines:
         0: "Browse ship loadouts, building efficiencies, and resource yields."
@@ -53,15 +60,63 @@ strings:
       online: "Backend Online"
       offline: "Backend Offline"
       code_suffix: " (HTTP {{code}})"
+    sync:
+      heading: "Sync Status"
+      channel:
+        convoys: "Convoys"
+        leaderboards: "Leaderboards"
+      entry:
+        never: "{{channel}}: Awaiting first sync."
+        checking: "{{channel}}: Sync in progress..."
+        updated: "{{channel}}: Updated at {{timestamp}}{{code}}"
+        failed: "{{channel}}: Failed at {{timestamp}}{{code}}"
+        failed_with_previous: "{{channel}}: Failed at {{timestamp}}{{code}} (last success {{previous}})"
+      timestamp:
+        never: "Never"
+      code_suffix: " (HTTP {{code}})"
+    achievements:
+      heading: "Achievements"
+      completed: "Achievements: {{completed}} / {{total}} Completed"
+      completed_unknown_total: "Achievements: {{completed}} Completed"
+      highlight: "Spotlight: {{highlight}}"
+      progress: "Next Goal: {{progress}}"
+      none: "Complete a campaign to start unlocking achievements."
+    autosave:
+      in_progress: "Autosaving{{slot}}..."
+      success: "Autosave complete{{slot}}."
+      failure: "Autosave failed{{slot}}."
+      slot_suffix: " ({{slot}})"
+    performance:
+      heading: "Performance"
+      fps_value: "FPS: {{fps}}"
+      fps_unknown: "FPS: --"
+      latency_pending: "Latency: Measuring..."
+      latency_value: "Latency: {{ms}} ms"
+      latency_offline: "Latency: Offline"
+      latency_unknown: "Latency: --"
     hotkeys:
       enter: "Enter"
       escape: "Esc"
       backspace: "Backspace"
       arrows: "Arrow Keys"
     navigation:
-      general: "Use Arrow Keys / D-Pad to choose an option. Enter / A confirms. Esc / B exits."
-      disabled: "{{item}} is not available yet. Esc / B: Back"
-      active: "{{confirm}} / A: Select {{item}}  |  {{navigate}} / D-Pad: Navigate  |  {{cancel}} / B: Back"
+      general: "Use {{navigate}} / {{controller_navigate}} to choose an option. {{confirm}} / {{controller_confirm}} confirms. {{cancel}} / {{controller_cancel}} exits."
+      disabled: "{{item}} is not available yet. {{cancel}} / {{controller_cancel}}: Back"
+      active: "{{confirm}} / {{controller_confirm}}: Select {{item}}  |  {{navigate}} / {{controller_navigate}}: Navigate  |  {{cancel}} / {{controller_cancel}}: Back"
+    controller:
+      a: "A"
+      b: "B"
+      x: "X"
+      y: "Y"
+      start: "Start"
+      back: "Back"
+      lb: "LB"
+      rb: "RB"
+      dpad_up: "D-Pad Up"
+      dpad_down: "D-Pad Down"
+      dpad_left: "D-Pad Left"
+      dpad_right: "D-Pad Right"
+      unknown: "Button ?"
     alerts:
       audit_failure: "Unable to inspect saves for this commander."
       audit_additional: " ({{count}} more issue{{suffix}})"
@@ -79,6 +134,23 @@ strings:
       cleared_named: "Cleared cloud data for \"{{commander}}\"."
       cleared_generic: "Cleared cloud data for this commander."
       failure: "Failed to clear cloud data."
+      error_code: " (HTTP {{code}})"
+    crash:
+      heading: "Crash Report Ready"
+      offline_heading: "Crash Report Pending"
+      timestamp_line: "Crash detected at {{timestamp}}."
+      timestamp_unknown: "Unknown time"
+      summary_line: "Summary: {{summary}}"
+      summary_missing: "Summary details unavailable."
+      details_line: "Details stored at {{path}}."
+      help_line: "Submitting crash reports helps us improve stability."
+      offline_help: "Reconnect to submit this report."
+      instructions_online: "Press Enter / Space, click, or press A to submit. Press Esc / B to dismiss."
+      instructions_offline: "Reconnect to submit this report. Press Esc / B to dismiss."
+      submit_success: "Crash report submitted successfully. Thank you!"
+      submit_failure: "Failed to submit crash report."
+      requires_online: "Crash reports require an online connection. Reconnect and try again."
+      log_missing: "Crash report details were unavailable."
       error_code: " (HTTP {{code}})"
     changelog:
       offline_heading: "Patch Notes Unavailable"
@@ -108,6 +180,33 @@ strings:
       brightness: "Brightness: {{value}}%"
       contrast: "Contrast: {{value}}%"
       lore_anchor: "Lore Panel Anchor: {{value}}"
+      experimental:
+        label: "Experimental Features: "
+      analytics:
+        label: "Analytics Sharing: "
+      controller:
+        up: "Controller Up: {{value}}"
+        down: "Controller Down: {{value}}"
+        left: "Controller Left: {{value}}"
+        right: "Controller Right: {{value}}"
+        confirm: "Controller Confirm: {{value}}"
+        cancel: "Controller Cancel: {{value}}"
+        delete: "Controller Delete: {{value}}"
+        rename: "Controller Rename: {{value}}"
+        label:
+          a: "A"
+          b: "B"
+          x: "X"
+          y: "Y"
+          start: "Start"
+          back: "Back"
+          lb: "LB"
+          rb: "RB"
+          dpad_up: "D-Pad Up"
+          dpad_down: "D-Pad Down"
+          dpad_left: "D-Pad Left"
+          dpad_right: "D-Pad Right"
+          unknown: "Button ?"
       anchor:
         left: "Left"
         right: "Right"

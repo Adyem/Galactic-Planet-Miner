@@ -210,6 +210,38 @@ namespace
         return prefix;
     }
 
+    bool toggle_experimental_features(bool enabled) noexcept
+    {
+        return !enabled;
+    }
+
+    ft_string format_experimental_features_label(bool enabled)
+    {
+        ft_string prefix
+            = menu_localize("settings.menu.experimental.label", "Experimental Features: ");
+        const char *state_key = enabled ? "settings.menu.toggle.on" : "settings.menu.toggle.off";
+        const char *fallback = enabled ? "On" : "Off";
+        ft_string state = menu_localize(state_key, fallback);
+        prefix.append(state);
+        return prefix;
+    }
+
+    bool toggle_analytics_opt_in(bool enabled) noexcept
+    {
+        return !enabled;
+    }
+
+    ft_string format_analytics_opt_in_label(bool enabled)
+    {
+        ft_string prefix
+            = menu_localize("settings.menu.analytics.label", "Analytics Sharing: ");
+        const char *state_key = enabled ? "settings.menu.toggle.on" : "settings.menu.toggle.off";
+        const char *fallback = enabled ? "On" : "Off";
+        ft_string state = menu_localize(state_key, fallback);
+        prefix.append(state);
+        return prefix;
+    }
+
 #if GALACTIC_HAVE_SDL2
     unsigned char apply_component_levels(unsigned char component, unsigned int brightness_percent,
         unsigned int contrast_percent) noexcept
@@ -412,6 +444,104 @@ namespace
             "settings.menu.lore_anchor", "Lore Panel Anchor: {{value}}", replacements);
     }
 
+    int sanitize_controller_button(int button) noexcept
+    {
+        if (button < PLAYER_PROFILE_CONTROLLER_BUTTON_A || button > PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT)
+            return PLAYER_PROFILE_CONTROLLER_BUTTON_A;
+        return button;
+    }
+
+    int increment_controller_button(int button) noexcept
+    {
+        button = sanitize_controller_button(button);
+        if (button >= PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT)
+            return PLAYER_PROFILE_CONTROLLER_BUTTON_A;
+        return button + 1;
+    }
+
+    int decrement_controller_button(int button) noexcept
+    {
+        button = sanitize_controller_button(button);
+        if (button <= PLAYER_PROFILE_CONTROLLER_BUTTON_A)
+            return PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT;
+        return button - 1;
+    }
+
+    ft_string resolve_controller_button_label(int button)
+    {
+        button = sanitize_controller_button(button);
+
+        const char *label_key = "settings.menu.controller.label.unknown";
+        const char *fallback = "Button ?";
+
+        switch (button)
+        {
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_A:
+                label_key = "settings.menu.controller.label.a";
+                fallback = "A";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_B:
+                label_key = "settings.menu.controller.label.b";
+                fallback = "B";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_X:
+                label_key = "settings.menu.controller.label.x";
+                fallback = "X";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_Y:
+                label_key = "settings.menu.controller.label.y";
+                fallback = "Y";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_START:
+                label_key = "settings.menu.controller.label.start";
+                fallback = "Start";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_BACK:
+                label_key = "settings.menu.controller.label.back";
+                fallback = "Back";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_LEFTSHOULDER:
+                label_key = "settings.menu.controller.label.lb";
+                fallback = "LB";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                label_key = "settings.menu.controller.label.rb";
+                fallback = "RB";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_UP:
+                label_key = "settings.menu.controller.label.dpad_up";
+                fallback = "D-Pad Up";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_DOWN:
+                label_key = "settings.menu.controller.label.dpad_down";
+                fallback = "D-Pad Down";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_LEFT:
+                label_key = "settings.menu.controller.label.dpad_left";
+                fallback = "D-Pad Left";
+                break;
+            case PLAYER_PROFILE_CONTROLLER_BUTTON_DPAD_RIGHT:
+                label_key = "settings.menu.controller.label.dpad_right";
+                fallback = "D-Pad Right";
+                break;
+            default:
+                break;
+        }
+
+        return menu_localize(label_key, fallback);
+    }
+
+    ft_string format_controller_option_label(const char *key, const char *fallback, int button)
+    {
+        ft_vector<StringTableReplacement> replacements;
+        replacements.reserve(1U);
+        StringTableReplacement value_placeholder;
+        value_placeholder.key = ft_string("value");
+        value_placeholder.value = resolve_controller_button_label(button);
+        replacements.push_back(value_placeholder);
+        return menu_localize_format(key, fallback, replacements);
+    }
+
 #if GALACTIC_HAVE_SDL2
     bool preferences_equal(const PlayerProfilePreferences &lhs, const PlayerProfilePreferences &rhs) noexcept
     {
@@ -441,6 +571,10 @@ namespace
             return false;
         if (lhs.accessibility_preset_enabled != rhs.accessibility_preset_enabled)
             return false;
+        if (lhs.experimental_features_enabled != rhs.experimental_features_enabled)
+            return false;
+        if (lhs.analytics_opt_in != rhs.analytics_opt_in)
+            return false;
         if (lhs.last_menu_input_device != rhs.last_menu_input_device)
             return false;
         return true;
@@ -453,7 +587,7 @@ namespace
         const int      spacing = 18;
 
         ft_vector<ft_menu_item> items;
-        items.reserve(11U);
+        items.reserve(13U);
 
         ft_menu_item ui_scale_item(ft_string("setting:ui_scale"), format_ui_scale_label(preferences.ui_scale_percent), base_rect);
         items.push_back(ui_scale_item);
@@ -488,34 +622,46 @@ namespace
             format_colorblind_palette_label(preferences.colorblind_palette_enabled), colorblind_rect);
         items.push_back(colorblind_item);
 
+        ft_rect experiments_rect = base_rect;
+        experiments_rect.top += 6 * (base_rect.height + spacing);
+        ft_menu_item experiments_item(ft_string("setting:experimental_features"),
+            format_experimental_features_label(preferences.experimental_features_enabled), experiments_rect);
+        items.push_back(experiments_item);
+
+        ft_rect analytics_rect = base_rect;
+        analytics_rect.top += 7 * (base_rect.height + spacing);
+        ft_menu_item analytics_item(ft_string("setting:analytics_opt_in"),
+            format_analytics_opt_in_label(preferences.analytics_opt_in), analytics_rect);
+        items.push_back(analytics_item);
+
         ft_rect brightness_rect = base_rect;
-        brightness_rect.top += 6 * (base_rect.height + spacing);
+        brightness_rect.top += 8 * (base_rect.height + spacing);
         ft_menu_item brightness_item(ft_string("setting:brightness"),
             format_brightness_label(preferences.brightness_percent), brightness_rect);
         items.push_back(brightness_item);
 
         ft_rect contrast_rect = base_rect;
-        contrast_rect.top += 7 * (base_rect.height + spacing);
+        contrast_rect.top += 9 * (base_rect.height + spacing);
         ft_menu_item contrast_item(ft_string("setting:contrast"),
             format_contrast_label(preferences.contrast_percent), contrast_rect);
         items.push_back(contrast_item);
 
         ft_rect anchor_rect = base_rect;
-        anchor_rect.top += 8 * (base_rect.height + spacing);
+        anchor_rect.top += 10 * (base_rect.height + spacing);
 
         ft_menu_item anchor_item(ft_string("setting:lore_anchor"), format_lore_anchor_label(preferences.lore_panel_anchor),
             anchor_rect);
         items.push_back(anchor_item);
 
         ft_rect save_rect = base_rect;
-        save_rect.top += 9 * (base_rect.height + spacing);
+        save_rect.top += 11 * (base_rect.height + spacing);
         ft_menu_item save_item(
             ft_string("action:save"), menu_localize("settings.menu.actions.save", "Save Changes"), save_rect);
         save_item.enabled = allow_save;
         items.push_back(save_item);
 
         ft_rect cancel_rect = base_rect;
-        cancel_rect.top += 10 * (base_rect.height + spacing);
+        cancel_rect.top += 12 * (base_rect.height + spacing);
         ft_menu_item cancel_item(
             ft_string("action:cancel"), menu_localize("settings.menu.actions.cancel", "Cancel"), cancel_rect);
         items.push_back(cancel_item);
@@ -772,6 +918,18 @@ namespace
                 = toggle_colorblind_palette(working_preferences.colorblind_palette_enabled);
             adjusted = true;
         }
+        else if (selected_item->identifier == "setting:experimental_features")
+        {
+            working_preferences.experimental_features_enabled
+                = toggle_experimental_features(working_preferences.experimental_features_enabled);
+            adjusted = true;
+        }
+        else if (selected_item->identifier == "setting:analytics_opt_in")
+        {
+            working_preferences.analytics_opt_in
+                = toggle_analytics_opt_in(working_preferences.analytics_opt_in);
+            adjusted = true;
+        }
         else if (selected_item->identifier == "setting:lore_anchor")
         {
             working_preferences.lore_panel_anchor = toggle_lore_anchor(working_preferences.lore_panel_anchor);
@@ -823,6 +981,18 @@ namespace
         {
             working_preferences.colorblind_palette_enabled
                 = toggle_colorblind_palette(working_preferences.colorblind_palette_enabled);
+            return true;
+        }
+        if (item.identifier == "setting:experimental_features")
+        {
+            working_preferences.experimental_features_enabled
+                = toggle_experimental_features(working_preferences.experimental_features_enabled);
+            return true;
+        }
+        if (item.identifier == "setting:analytics_opt_in")
+        {
+            working_preferences.analytics_opt_in
+                = toggle_analytics_opt_in(working_preferences.analytics_opt_in);
             return true;
         }
         if (item.identifier == "setting:lore_anchor")
@@ -1197,5 +1367,83 @@ namespace settings_flow_testing
     ft_string format_colorblind_palette_option(bool enabled)
     {
         return ::format_colorblind_palette_label(enabled);
+    }
+
+    bool toggle_experimental_features(bool enabled) noexcept
+    {
+        return ::toggle_experimental_features(enabled);
+    }
+
+    ft_string format_experimental_features_option(bool enabled)
+    {
+        return ::format_experimental_features_label(enabled);
+    }
+
+    bool toggle_analytics_opt_in(bool enabled) noexcept
+    {
+        return ::toggle_analytics_opt_in(enabled);
+    }
+
+    ft_string format_analytics_opt_in_option(bool enabled)
+    {
+        return ::format_analytics_opt_in_label(enabled);
+    }
+
+    ft_string format_controller_up_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.up", "Controller Up: {{value}}", button);
+    }
+
+    ft_string format_controller_down_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.down", "Controller Down: {{value}}", button);
+    }
+
+    ft_string format_controller_left_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.left", "Controller Left: {{value}}", button);
+    }
+
+    ft_string format_controller_right_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.right", "Controller Right: {{value}}", button);
+    }
+
+    ft_string format_controller_confirm_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.confirm", "Controller Confirm: {{value}}", button);
+    }
+
+    ft_string format_controller_cancel_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.cancel", "Controller Cancel: {{value}}", button);
+    }
+
+    ft_string format_controller_delete_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.delete", "Controller Delete: {{value}}", button);
+    }
+
+    ft_string format_controller_rename_option(int button)
+    {
+        return ::format_controller_option_label(
+            "settings.menu.controller.rename", "Controller Rename: {{value}}", button);
+    }
+
+    int increment_controller_button_option(int button) noexcept
+    {
+        return ::increment_controller_button(button);
+    }
+
+    int decrement_controller_button_option(int button) noexcept
+    {
+        return ::decrement_controller_button(button);
     }
 }

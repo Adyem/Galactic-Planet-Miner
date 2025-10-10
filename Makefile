@@ -27,6 +27,15 @@ SRC_COMMON  = \
     font_util.cpp \
     menu_localization.cpp \
     main_menu.cpp \
+    main_menu_autosave.cpp \
+    main_menu_achievements.cpp \
+    main_menu_connectivity.cpp \
+    main_menu_crash.cpp \
+    main_menu_content.cpp \
+    main_menu_performance.cpp \
+    main_menu_portraits.cpp \
+    main_menu_render.cpp \
+    menu_audio.cpp \
     quests.cpp \
     research.cpp \
     game_research.cpp \
@@ -37,6 +46,7 @@ SRC_COMMON  = \
     game_combat_interface.cpp \
     game.cpp \
     save_system.cpp \
+    save_system_background.cpp \
     ui_input.cpp \
     ui_menu.cpp \
     new_game_flow.cpp \
@@ -50,7 +60,11 @@ SRC_MAIN    = main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
 SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_main.cpp \
-    $(TEST_DIR)/game_test_menu.cpp \
+    $(TEST_DIR)/game_test_menu_basics.cpp \
+    $(TEST_DIR)/game_test_menu_preferences.cpp \
+    $(TEST_DIR)/game_test_menu_connectivity.cpp \
+    $(TEST_DIR)/game_test_menu_saves.cpp \
+    $(TEST_DIR)/game_test_menu_assets.cpp \
     $(TEST_DIR)/game_test_achievements.cpp \
     $(TEST_DIR)/game_test_backend.cpp \
     $(TEST_DIR)/game_test_campaign.cpp \

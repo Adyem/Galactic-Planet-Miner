@@ -188,6 +188,7 @@ bool game_bootstrap_initialize_with_commander(GameBootstrapData &out_data, const
     out_data.campaign_day = 1;
     out_data.commander_level = 1;
     out_data.difficulty_setting = GAME_DIFFICULTY_STANDARD;
+    out_data.save_type = ft_string("quicksave");
     bootstrap_populate_planet_defaults(out_data);
     bootstrap_populate_player_inventory(out_data);
     return true;
@@ -208,7 +209,9 @@ ft_string game_bootstrap_serialize(const GameBootstrapData &data) noexcept
         return bootstrap_abort(document);
     if (!bootstrap_add_item(document, metadata_group, "version", 1))
         return bootstrap_abort(document);
-    const ft_string save_type("quicksave");
+    ft_string save_type = data.save_type;
+    if (save_type.empty())
+        save_type = ft_string("quicksave");
     if (!bootstrap_add_item(document, metadata_group, "save_type", save_type))
         return bootstrap_abort(document);
 
@@ -312,6 +315,28 @@ bool game_bootstrap_create_quicksave_with_commander(const char *file_path, const
     GameBootstrapData data;
     if (!game_bootstrap_initialize_with_commander(data, commander_name))
         return false;
+    return game_bootstrap_write_quicksave(data, file_path);
+}
+
+bool game_bootstrap_create_tutorial_quicksave(const char *file_path, const ft_string &commander_name) noexcept
+{
+    GameBootstrapData data;
+    if (!game_bootstrap_initialize_with_commander(data, commander_name))
+        return false;
+
+    data.save_type = ft_string("tutorial");
+    data.campaign_day = 1;
+    data.commander_level = 1;
+    data.difficulty_setting = GAME_DIFFICULTY_EASY;
+    data.player_resources.clear();
+
+    GameBootstrapResource iron(ORE_IRON, 25);
+    GameBootstrapResource copper(ORE_COPPER, 12);
+    GameBootstrapResource coal(ORE_COAL, 6);
+    data.player_resources.push_back(iron);
+    data.player_resources.push_back(copper);
+    data.player_resources.push_back(coal);
+
     return game_bootstrap_write_quicksave(data, file_path);
 }
 

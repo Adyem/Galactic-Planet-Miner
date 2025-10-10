@@ -42,6 +42,7 @@ struct GameBootstrapData
     int                          campaign_day;
     int                          commander_level;
     int                          difficulty_setting;
+    ft_string                    save_type;
 
     GameBootstrapData() noexcept
         : commander_name()
@@ -50,6 +51,7 @@ struct GameBootstrapData
         , campaign_day(1)
         , commander_level(1)
         , difficulty_setting(2)
+        , save_type("quicksave")
     {}
 };
 
@@ -59,5 +61,6 @@ ft_string game_bootstrap_serialize(const GameBootstrapData &data) noexcept;
 bool      game_bootstrap_write_quicksave(const GameBootstrapData &data, const char *file_path) noexcept;
 bool      game_bootstrap_create_default_quicksave(const char *file_path) noexcept;
 bool      game_bootstrap_create_quicksave_with_commander(const char *file_path, const ft_string &commander_name) noexcept;
+bool      game_bootstrap_create_tutorial_quicksave(const char *file_path, const ft_string &commander_name) noexcept;
 
 #endif

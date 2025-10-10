@@ -49,8 +49,12 @@ SDL_Texture *create_text_texture(SDL_Renderer &renderer, TTF_Font &font, const f
     const SDL_Color &color, SDL_Rect &out_rect);
 
 // Main menu rendering
-ft_vector<ft_menu_item> build_main_menu_items();
-ft_rect                 build_main_menu_viewport();
+ft_vector<ft_menu_item> build_main_menu_items(const PlayerProfilePreferences *preferences = ft_nullptr);
+void main_menu_apply_resume_state(ft_vector<ft_menu_item> &items, bool resume_enabled,
+    const ft_string &slot_label, const ft_string &metadata_label, bool metadata_known);
+ft_string main_menu_format_resume_description(const ft_string &slot_label,
+    const ft_string &metadata_label, bool metadata_known);
+ft_rect   build_main_menu_viewport();
 struct MainMenuTutorialContext
 {
     const ft_vector<ft_string> *tips;
@@ -69,6 +73,16 @@ struct MainMenuOverlayContext
     MainMenuOverlayContext() noexcept : visible(false), heading(), lines(), footer() {}
 };
 
+struct MainMenuCrashReport
+{
+    bool      available;
+    long      timestamp_ms;
+    ft_string summary;
+    ft_string details_path;
+
+    MainMenuCrashReport() noexcept : available(false), timestamp_ms(0L), summary(), details_path() {}
+};
+
 struct MainMenuAlertBanner
 {
     bool      visible;
@@ -76,6 +90,111 @@ struct MainMenuAlertBanner
     ft_string message;
 
     MainMenuAlertBanner() noexcept : visible(false), is_error(false), message() {}
+};
+
+enum e_main_menu_sync_state
+{
+    MAIN_MENU_SYNC_IDLE = 0,
+    MAIN_MENU_SYNC_CHECKING = 1,
+    MAIN_MENU_SYNC_SUCCESS = 2,
+    MAIN_MENU_SYNC_FAILURE = 3
+};
+
+enum e_main_menu_sync_channel
+{
+    MAIN_MENU_SYNC_CHANNEL_CONVOYS = 0,
+    MAIN_MENU_SYNC_CHANNEL_LEADERBOARDS = 1
+};
+
+struct MainMenuSyncEntry
+{
+    e_main_menu_sync_state state;
+    long                   last_attempt_ms;
+    long                   last_success_ms;
+    long                   last_failure_ms;
+    int                    last_status_code;
+
+    MainMenuSyncEntry() noexcept
+        : state(MAIN_MENU_SYNC_IDLE)
+        , last_attempt_ms(0)
+        , last_success_ms(0)
+        , last_failure_ms(0)
+        , last_status_code(0)
+    {}
+};
+
+struct MainMenuSyncStatus
+{
+    MainMenuSyncEntry convoys;
+    MainMenuSyncEntry leaderboards;
+
+    MainMenuSyncStatus() noexcept : convoys(), leaderboards() {}
+};
+
+enum e_main_menu_autosave_state
+{
+    MAIN_MENU_AUTOSAVE_IDLE = 0,
+    MAIN_MENU_AUTOSAVE_IN_PROGRESS = 1,
+    MAIN_MENU_AUTOSAVE_SUCCEEDED = 2,
+    MAIN_MENU_AUTOSAVE_FAILED = 3
+};
+
+struct MainMenuAutosaveStatus
+{
+    e_main_menu_autosave_state state;
+    ft_string                  active_slot;
+    ft_string                  last_error;
+    long                       last_change_ms;
+
+    MainMenuAutosaveStatus() noexcept
+        : state(MAIN_MENU_AUTOSAVE_IDLE)
+        , active_slot()
+        , last_error()
+        , last_change_ms(0)
+    {}
+};
+
+enum e_main_menu_audio_cue
+{
+    MAIN_MENU_AUDIO_CUE_NAVIGATE = 0,
+    MAIN_MENU_AUDIO_CUE_CONFIRM = 1,
+    MAIN_MENU_AUDIO_CUE_ERROR = 2
+};
+
+struct MainMenuAudioEvent
+{
+    e_main_menu_audio_cue cue;
+    unsigned int          volume_percent;
+
+    MainMenuAudioEvent() noexcept : cue(MAIN_MENU_AUDIO_CUE_NAVIGATE), volume_percent(0U) {}
+};
+
+struct MainMenuPerformanceStats
+{
+    bool has_fps;
+    unsigned int fps_value;
+    long fps_last_update_ms;
+    unsigned int fps_frame_count;
+    long fps_accumulated_ms;
+
+    bool latency_sampled;
+    bool latency_successful;
+    bool latency_pending;
+    long latency_ms;
+    long latency_last_update_ms;
+
+    MainMenuPerformanceStats() noexcept
+        : has_fps(false)
+        , fps_value(0U)
+        , fps_last_update_ms(0L)
+        , fps_frame_count(0U)
+        , fps_accumulated_ms(0L)
+        , latency_sampled(false)
+        , latency_successful(false)
+        , latency_pending(false)
+        , latency_ms(0L)
+        , latency_last_update_ms(0L)
+    {}
 };
 
 enum e_main_menu_connectivity_state
@@ -100,6 +219,25 @@ struct MainMenuConnectivityStatus
     {}
 };
 
+struct MainMenuAchievementsSummary
+{
+    unsigned int total_count;
+    unsigned int completed_count;
+    ft_string    highlight_label;
+    ft_string    progress_note;
+    bool         has_highlight;
+    bool         has_progress_note;
+
+    MainMenuAchievementsSummary() noexcept
+        : total_count(0U)
+        , completed_count(0U)
+        , highlight_label()
+        , progress_note()
+        , has_highlight(false)
+        , has_progress_note(false)
+    {}
+};
+
 void main_menu_mark_connectivity_checking(MainMenuConnectivityStatus &status, long timestamp_ms) noexcept;
 void main_menu_apply_connectivity_result(MainMenuConnectivityStatus &status, bool success, int status_code,
     long timestamp_ms) noexcept;
@@ -107,14 +245,53 @@ ft_string main_menu_resolve_connectivity_label(const MainMenuConnectivityStatus 
 SDL_Color main_menu_resolve_connectivity_color(const MainMenuConnectivityStatus &status);
 bool main_menu_append_connectivity_failure_log(const ft_string &host, int status_code, long timestamp_ms) noexcept;
 ft_string main_menu_resolve_build_label();
+void main_menu_performance_record_frame(
+    MainMenuPerformanceStats &stats, long frame_start_ms, long frame_end_ms) noexcept;
+void main_menu_performance_begin_latency_sample(MainMenuPerformanceStats &stats, long timestamp_ms) noexcept;
+void main_menu_performance_complete_latency_sample(MainMenuPerformanceStats &stats, bool success, long duration_ms,
+    long timestamp_ms) noexcept;
+ft_string main_menu_format_performance_fps_label(const MainMenuPerformanceStats &stats);
+ft_string main_menu_format_performance_latency_label(const MainMenuPerformanceStats &stats);
+void      main_menu_audio_set_global_mute(bool muted) noexcept;
+bool      main_menu_audio_is_globally_muted() noexcept;
+void      main_menu_audio_apply_preferences(const PlayerProfilePreferences &preferences) noexcept;
+void      main_menu_audio_set_effects_volume(unsigned int value) noexcept;
+unsigned int main_menu_audio_get_effects_volume() noexcept;
+unsigned int main_menu_audio_get_music_volume() noexcept;
+void      main_menu_audio_queue_event(e_main_menu_audio_cue cue) noexcept;
+bool      main_menu_audio_poll_event(MainMenuAudioEvent &out_event) noexcept;
+void      main_menu_audio_reset() noexcept;
 bool      main_menu_can_launch_campaign(const ft_string &save_path) noexcept;
 bool      main_menu_preload_commander_portrait(const ft_string &commander_name) noexcept;
+unsigned int main_menu_resolve_total_achievements() noexcept;
+MainMenuAchievementsSummary main_menu_build_achievements_summary(const PlayerProfilePreferences *preferences) noexcept;
+ft_string main_menu_format_achievements_completion_label(const MainMenuAchievementsSummary &summary);
+ft_vector<ft_string> main_menu_collect_achievement_lines(const MainMenuAchievementsSummary &summary);
+void      main_menu_mark_autosave_in_progress(MainMenuAutosaveStatus &status, const ft_string &slot_name,
+         long timestamp_ms) noexcept;
+void      main_menu_mark_autosave_result(MainMenuAutosaveStatus &status, bool success, const ft_string &slot_name,
+         const ft_string &error_message, long timestamp_ms) noexcept;
+void      main_menu_autosave_tick(MainMenuAutosaveStatus &status, long timestamp_ms) noexcept;
+bool      main_menu_autosave_is_visible(const MainMenuAutosaveStatus &status, long timestamp_ms) noexcept;
+ft_string main_menu_resolve_autosave_label(const MainMenuAutosaveStatus &status);
+void      main_menu_sync_begin(MainMenuSyncStatus &status, e_main_menu_sync_channel channel, long timestamp_ms) noexcept;
+void      main_menu_sync_apply(MainMenuSyncStatus &status, e_main_menu_sync_channel channel, bool success,
+         int status_code, long timestamp_ms) noexcept;
+ft_string main_menu_resolve_sync_entry_label(const MainMenuSyncStatus &status, e_main_menu_sync_channel channel) noexcept;
+bool      main_menu_load_crash_report(const ft_string &log_path, MainMenuCrashReport &out_report) noexcept;
+bool      main_menu_clear_crash_report(const ft_string &log_path) noexcept;
+ft_string main_menu_format_crash_submission_payload(const MainMenuCrashReport &report) noexcept;
+void      main_menu_build_crash_prompt_overlay(const MainMenuCrashReport &report,
+         const MainMenuConnectivityStatus &connectivity, MainMenuOverlayContext &out_overlay) noexcept;
 
 void render_main_menu(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font, TTF_Font *menu_font,
     int window_width, int window_height, const ft_string &active_profile_name, const PlayerProfilePreferences *preferences,
     const MainMenuTutorialContext *tutorial,
     const MainMenuOverlayContext *manual, const MainMenuOverlayContext *changelog,
-    const MainMenuOverlayContext *cloud_confirmation, const MainMenuConnectivityStatus *connectivity,
+    const MainMenuOverlayContext *cloud_confirmation, const MainMenuOverlayContext *crash_prompt,
+    const MainMenuConnectivityStatus *connectivity,
+    const MainMenuSyncStatus *sync_status, const MainMenuAchievementsSummary *achievements,
+    const MainMenuAutosaveStatus *autosave, const MainMenuPerformanceStats *performance,
     const MainMenuAlertBanner *alert);
 
 const ft_vector<ft_string> &get_main_menu_tutorial_tips();
@@ -181,6 +358,23 @@ namespace main_menu_testing
     size_t    commander_portrait_cached_size(const ft_string &commander_name);
     ft_string resolve_cached_portrait_path(const ft_string &commander_name);
     ft_string resolve_commander_portrait_filename(const ft_string &commander_name);
+    bool      autosave_is_visible(const MainMenuAutosaveStatus &status, long timestamp_ms) noexcept;
+    ft_string resolve_sync_entry_label(const MainMenuSyncStatus &status, e_main_menu_sync_channel channel);
+    void      begin_sync(MainMenuSyncStatus &status, e_main_menu_sync_channel channel, long timestamp_ms);
+    void      apply_sync(MainMenuSyncStatus &status, e_main_menu_sync_channel channel, bool success, int status_code,
+             long timestamp_ms);
+    MainMenuAchievementsSummary build_achievements_summary(const PlayerProfilePreferences &preferences) noexcept;
+    ft_string                   format_achievements_completion(const MainMenuAchievementsSummary &summary);
+    ft_vector<ft_string>        collect_achievement_lines(const MainMenuAchievementsSummary &summary);
+    ft_string                   format_crash_submission_payload(const MainMenuCrashReport &report);
+    void                        build_crash_prompt_overlay(
+        const MainMenuCrashReport &report, const MainMenuConnectivityStatus &connectivity, MainMenuOverlayContext &out_overlay);
+    void                        performance_record_frame(MainMenuPerformanceStats &stats, long frame_start_ms, long frame_end_ms);
+    void                        performance_begin_latency(MainMenuPerformanceStats &stats, long timestamp_ms);
+    void                        performance_complete_latency(
+        MainMenuPerformanceStats &stats, bool success, long duration_ms, long timestamp_ms);
+    ft_string                   format_performance_fps(const MainMenuPerformanceStats &stats);
+    ft_string                   format_performance_latency(const MainMenuPerformanceStats &stats);
 }
 
 namespace settings_flow_testing
@@ -215,6 +409,20 @@ namespace settings_flow_testing
     ft_string    format_accessibility_preset_option(bool enabled);
     bool         toggle_colorblind_palette(bool enabled) noexcept;
     ft_string    format_colorblind_palette_option(bool enabled);
+    bool         toggle_experimental_features(bool enabled) noexcept;
+    ft_string    format_experimental_features_option(bool enabled);
+    bool         toggle_analytics_opt_in(bool enabled) noexcept;
+    ft_string    format_analytics_opt_in_option(bool enabled);
+    ft_string    format_controller_up_option(int button);
+    ft_string    format_controller_down_option(int button);
+    ft_string    format_controller_left_option(int button);
+    ft_string    format_controller_right_option(int button);
+    ft_string    format_controller_confirm_option(int button);
+    ft_string    format_controller_cancel_option(int button);
+    ft_string    format_controller_delete_option(int button);
+    ft_string    format_controller_rename_option(int button);
+    int          increment_controller_button_option(int button) noexcept;
+    int          decrement_controller_button_option(int button) noexcept;
 }
 
 namespace load_game_flow_testing
