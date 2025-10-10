@@ -104,6 +104,7 @@ private:
     ft_map<int, ft_vector<int> >                          _event_index;
 
     void register_achievement(const ft_sharedptr<ft_achievement_definition> &definition);
+    void bootstrap_definitions();
     ft_achievement_progress &ensure_progress(int achievement_id);
     const ft_achievement_progress *find_progress(int achievement_id) const;
 

@@ -1,6 +1,11 @@
 #include "achievements.hpp"
 #include "libft/Template/move.hpp"
 
+AchievementManager::AchievementManager()
+{
+    this->bootstrap_definitions();
+}
+
 void AchievementManager::register_achievement(const ft_sharedptr<ft_achievement_definition> &definition)
 {
     if (!definition)

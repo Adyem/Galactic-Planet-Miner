@@ -199,6 +199,7 @@ public:
     void set_player_weapon_multiplier(double value);
     void set_player_shield_multiplier(double value);
     void set_player_hull_multiplier(double value);
+    void clear_branch_assault_state() noexcept;
 
     bool start_raider_assault(int planet_id, double difficulty,
         double energy_pressure, double narrative_pressure, int control_mode);

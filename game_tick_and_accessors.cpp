@@ -224,11 +224,11 @@ void Game::clear_pending_resource_update(int planet_id, int ore_id)
 
 bool Game::dispatch_resource_update(int planet_id, int ore_id, int amount)
 {
-    ft_string body("{"planet":");
+    ft_string body("{\"planet\":");
     body.append(ft_to_string(planet_id));
-    body.append(","ore":");
+    body.append(",\"ore\":");
     body.append(ft_to_string(ore_id));
-    body.append(","amount":");
+    body.append(",\"amount\":");
     body.append(ft_to_string(amount));
     body.append("}");
     ft_string response;

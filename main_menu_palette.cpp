@@ -69,8 +69,6 @@ namespace
 }
 #endif
 
-#include "main_menu_palette_struct.cpp"
-
 MainMenuPalette resolve_main_menu_palette(
     bool colorblind_enabled, unsigned int brightness_percent, unsigned int contrast_percent)
 {
