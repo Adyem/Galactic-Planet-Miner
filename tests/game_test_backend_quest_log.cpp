@@ -1,4 +1,4 @@
-static void verify_initial_story_state(const Game::ft_quest_log_snapshot &snapshot)
+static int verify_initial_story_state(const Game::ft_quest_log_snapshot &snapshot)
 {
     FT_ASSERT_EQ(Game::STORY_ACT_RISING_THREAT, snapshot.current_act_id);
     FT_ASSERT(snapshot.story_acts.size() == 3);
@@ -50,9 +50,10 @@ static void verify_initial_story_state(const Game::ft_quest_log_snapshot &snapsh
         }
     }
     FT_ASSERT(found_iron_requirement);
+    return (1);
 }
 
-static void verify_post_verdict_snapshot(const Game::ft_quest_log_snapshot &snapshot)
+static int verify_post_verdict_snapshot(const Game::ft_quest_log_snapshot &snapshot)
 {
     const Game::ft_story_act_snapshot *act_one
         = find_story_act(snapshot, Game::STORY_ACT_RISING_THREAT);
@@ -82,17 +83,18 @@ static void verify_post_verdict_snapshot(const Game::ft_quest_log_snapshot &snap
     FT_ASSERT(blackthorne_choice != ft_nullptr);
     FT_ASSERT(verdict_choice != ft_nullptr);
 
-    verify_blackthorne_choice(*blackthorne_choice);
-    verify_verdict_choice(*verdict_choice);
-    verify_branch_progress(*act_three);
-    verify_epilogue_overview(snapshot);
-    verify_main_quest_progress(snapshot);
-    verify_recent_logs(snapshot);
+    FT_ASSERT(verify_blackthorne_choice(*blackthorne_choice));
+    FT_ASSERT(verify_verdict_choice(*verdict_choice));
+    FT_ASSERT(verify_branch_progress(*act_three));
+    FT_ASSERT(verify_epilogue_overview(snapshot));
+    FT_ASSERT(verify_main_quest_progress(snapshot));
+    FT_ASSERT(verify_recent_logs(snapshot));
+    return (1);
 }
 
-static void verify_trial_resolution_snapshot(const Game::ft_quest_log_snapshot &snapshot)
+static int verify_trial_resolution_snapshot(const Game::ft_quest_log_snapshot &snapshot)
 {
-    verify_epilogue_overview(snapshot);
+    FT_ASSERT(verify_epilogue_overview(snapshot));
     FT_ASSERT(contains_entry_with_text(snapshot.epilogue.paragraphs, "reform", "trials"));
 
     const Game::ft_story_choice_snapshot *final_verdict_record
@@ -110,6 +112,7 @@ static void verify_trial_resolution_snapshot(const Game::ft_quest_log_snapshot &
             trial_selected = option.is_selected;
     }
     FT_ASSERT(trial_selected);
+    return (1);
 }
 
 int verify_quest_log_snapshot()
@@ -119,18 +122,18 @@ int verify_quest_log_snapshot()
     Game::ft_quest_log_snapshot snapshot;
     game.get_quest_log_snapshot(snapshot);
 
-    verify_initial_story_state(snapshot);
+    FT_ASSERT(verify_initial_story_state(snapshot));
 
     FT_ASSERT(advance_to_order_final_verdict(game));
 
     game.get_quest_log_snapshot(snapshot);
-    verify_post_verdict_snapshot(snapshot);
+    FT_ASSERT(verify_post_verdict_snapshot(snapshot));
 
     FT_ASSERT(game.resolve_quest_choice(QUEST_ORDER_FINAL_VERDICT, QUEST_CHOICE_ORDER_TRIAL_REBELS));
     game.tick(0.0);
 
     game.get_quest_log_snapshot(snapshot);
-    verify_trial_resolution_snapshot(snapshot);
+    FT_ASSERT(verify_trial_resolution_snapshot(snapshot));
 
     return 1;
 }

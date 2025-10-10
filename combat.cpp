@@ -28,3 +28,9 @@ void CombatManager::set_player_hull_multiplier(double value)
         value = 1.0;
     this->_player_hull_multiplier = value;
 }
+
+void CombatManager::clear_branch_assault_state() noexcept
+{
+    // Branch assaults do not maintain additional combat-manager state yet, so this
+    // routine simply provides a stable call site for higher-level game logic.
+}

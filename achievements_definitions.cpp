@@ -1,8 +1,9 @@
 #include "achievements.hpp"
+#include "libft/Template/function.hpp"
 
-namespace
+void AchievementManager::bootstrap_definitions()
 {
-    void register_achievement(AchievementManager &manager,
+    const ft_function<void (int, const char *, const char *, int, int, e_achievement_progress_mode)> add_definition = [this](
         int id,
         const char *name,
         const char *description,
@@ -17,13 +18,10 @@ namespace
         definition->event_id = event_id;
         definition->target_value = target;
         definition->progress_mode = mode;
-        manager.register_achievement(definition);
-    }
-}
+        this->register_achievement(definition);
+    };
 
-AchievementManager::AchievementManager()
-{
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_SECOND_HOME,
         "Second Home",
         "Unlock an additional colony world.",
@@ -31,7 +29,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_RESEARCH_PIONEER,
         "Research Pioneer",
         "Complete three major research projects.",
@@ -39,7 +37,7 @@ AchievementManager::AchievementManager()
         3,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_LOGISTICS_PILOT,
         "Logistics Pilot",
         "Deliver three convoys successfully.",
@@ -47,7 +45,7 @@ AchievementManager::AchievementManager()
         3,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_CONVOY_STREAK_GUARDIAN,
         "Streak Guardian",
         "Maintain a five convoy success streak.",
@@ -55,7 +53,7 @@ AchievementManager::AchievementManager()
         5,
         ACHIEVEMENT_PROGRESS_BEST_VALUE);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_INITIAL_SKIRMISHES,
         "Perimeter Guardian",
         "Complete the Initial Raider Skirmishes quest.",
@@ -63,7 +61,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_DEFENSE_OF_TERRA,
         "Terra's Shield",
         "Complete the Defense of Terra quest.",
@@ -71,7 +69,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_INVESTIGATE_RAIDERS,
         "Cipher Breaker",
         "Complete the Investigate Raider Motives quest.",
@@ -79,7 +77,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_SECURE_SUPPLY_LINES,
         "Supply Line Sentinel",
         "Complete the Secure Supply Lines quest.",
@@ -87,7 +85,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_STEADY_SUPPLY_STREAK,
         "Streak Specialist",
         "Complete the Steady Supply Streak quest.",
@@ -95,7 +93,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_HIGH_VALUE_ESCORT,
         "Escort Commander",
         "Complete the High-Value Escort quest.",
@@ -103,7 +101,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_CLIMACTIC_BATTLE,
         "Climactic Victor",
         "Complete the Climactic Battle quest.",
@@ -111,7 +109,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_CRITICAL_DECISION,
         "Decisive Arbiter",
         "Resolve The Critical Decision quest.",
@@ -119,7 +117,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_ORDER_UPRISING,
         "Order's Hammer",
         "Complete the Order's Last Stand quest.",
@@ -127,7 +125,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_REBELLION_FLEET,
         "Rebellion's Hope",
         "Complete the Rebellion Rising quest.",
@@ -135,7 +133,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_ORDER_SUPPRESS_RAIDS,
         "Sensor Web Architect",
         "Complete the Suppress the Raider Cells quest.",
@@ -143,7 +141,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_ORDER_DOMINION,
         "Dominion Enforcer",
         "Complete the Order Dominion quest.",
@@ -151,7 +149,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_ORDER_FINAL_VERDICT,
         "Order Tribunal Arbiter",
         "Resolve the Final Order Mandate quest.",
@@ -159,7 +157,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_REBELLION_NETWORK,
         "Shadow Network Weaver",
         "Complete the Shadow Network quest.",
@@ -167,7 +165,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_REBELLION_LIBERATION,
         "Liberation Vanguard",
         "Complete the Liberation of the Frontier quest.",
@@ -175,7 +173,7 @@ AchievementManager::AchievementManager()
         1,
         ACHIEVEMENT_PROGRESS_INCREMENTAL);
 
-    register_achievement(*this,
+    add_definition(
         ACHIEVEMENT_QUEST_REBELLION_FINAL_PUSH,
         "Freedom's Edge",
         "Complete the Battle for Freedom quest.",

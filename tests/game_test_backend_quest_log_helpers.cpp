@@ -69,7 +69,7 @@ static bool array_contains_choice_id(const ft_vector<int> &ids, int target) noex
     return false;
 }
 
-static void verify_blackthorne_choice(const Game::ft_story_choice_snapshot &choice)
+static int verify_blackthorne_choice(const Game::ft_story_choice_snapshot &choice)
 {
     FT_ASSERT(choice.has_been_made);
     FT_ASSERT(!choice.awaiting_selection);
@@ -104,9 +104,10 @@ static void verify_blackthorne_choice(const Game::ft_story_choice_snapshot &choi
     FT_ASSERT(!spare_selected);
     FT_ASSERT(saw_execute_summary);
     FT_ASSERT(saw_spare_summary);
+    return (1);
 }
 
-static void verify_verdict_choice(const Game::ft_story_choice_snapshot &choice)
+static int verify_verdict_choice(const Game::ft_story_choice_snapshot &choice)
 {
     FT_ASSERT(choice.awaiting_selection);
     FT_ASSERT(!choice.has_been_made);
@@ -134,9 +135,10 @@ static void verify_verdict_choice(const Game::ft_story_choice_snapshot &choice)
 
     FT_ASSERT(saw_fear_summary);
     FT_ASSERT(saw_reform_summary);
+    return (1);
 }
 
-static void verify_branch_progress(const Game::ft_story_act_snapshot &act_three)
+static int verify_branch_progress(const Game::ft_story_act_snapshot &act_three)
 {
     const Game::ft_story_branch_snapshot *order_branch
         = find_story_branch(act_three, Game::STORY_BRANCH_ORDER_DOMINION);
@@ -154,9 +156,10 @@ static void verify_branch_progress(const Game::ft_story_act_snapshot &act_three)
 
     FT_ASSERT(!rebellion_branch->is_available);
     FT_ASSERT(!rebellion_branch->is_active);
+    return (1);
 }
 
-static void verify_main_quest_progress(const Game::ft_quest_log_snapshot &snapshot)
+static int verify_main_quest_progress(const Game::ft_quest_log_snapshot &snapshot)
 {
     const Game::ft_quest_log_entry *verdict_entry
         = find_main_quest(snapshot.main_quests, QUEST_ORDER_FINAL_VERDICT);
@@ -195,9 +198,10 @@ static void verify_main_quest_progress(const Game::ft_quest_log_snapshot &snapsh
     FT_ASSERT(rebellion_entry != ft_nullptr);
     FT_ASSERT_EQ(QUEST_STATUS_LOCKED, rebellion_entry->status);
     FT_ASSERT(!rebellion_entry->branch_requirement_met);
+    return (1);
 }
 
-static void verify_recent_logs(const Game::ft_quest_log_snapshot &snapshot)
+static int verify_recent_logs(const Game::ft_quest_log_snapshot &snapshot)
 {
     FT_ASSERT(snapshot.recent_journal_entries.size() >= 1);
     FT_ASSERT(snapshot.recent_journal_entries.size() <= 5);
@@ -224,13 +228,19 @@ static void verify_recent_logs(const Game::ft_quest_log_snapshot &snapshot)
 
     FT_ASSERT(snapshot.recent_lore_entries.size() <= 5);
     if (!snapshot.recent_lore_entries.empty())
-        FT_ASSERT(snapshot.recent_lore_entries.back().size() > 0);
+    {
+        const ft_string &latest_entry
+            = snapshot.recent_lore_entries[snapshot.recent_lore_entries.size() - 1];
+        FT_ASSERT(latest_entry.size() > 0);
+    }
+    return (1);
 }
 
-static void verify_epilogue_overview(const Game::ft_quest_log_snapshot &snapshot)
+static int verify_epilogue_overview(const Game::ft_quest_log_snapshot &snapshot)
 {
     FT_ASSERT(snapshot.epilogue.is_available);
     FT_ASSERT(ft_strstr(snapshot.epilogue.title.c_str(), "Dominion") != ft_nullptr);
     FT_ASSERT(snapshot.epilogue.paragraphs.size() >= 1);
     FT_ASSERT(contains_entry_with_text(snapshot.epilogue.paragraphs, "verdict", "rebels"));
+    return (1);
 }

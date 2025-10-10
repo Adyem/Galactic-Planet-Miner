@@ -104,8 +104,9 @@ Basic components are also enumerated for future crafting systems:
 - `ITEM_ENGINE_PART` (1004)
 - `ITEM_TITANIUM_BAR` (1005)
 - `ITEM_ADVANCED_ENGINE_PART` (1006)
-- `ITEM_FUSION_REACTOR` (1007)
-- `ITEM_ACCUMULATOR` (1008)
+- `ITEM_SHIP_MODULE` (1007)
+- `ITEM_FUSION_REACTOR` (1008)
+- `ITEM_ACCUMULATOR` (1009)
 
 Use the helper methods in `Game` to add, subtract, set, transfer, and query ore amounts
 by planet ID (`PLANET_TERRA` etc.) and ore ID, and to read mining rates with
