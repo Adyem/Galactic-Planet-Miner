@@ -59,7 +59,15 @@ SRC_COMMON  = \
     quests.cpp \
     research.cpp \
     game_research.cpp \
-    game_quests.cpp \
+    game_backend_status.cpp \
+    game_quests_accessors.cpp \
+    game_quests_choices.cpp \
+    game_quests_completion.cpp \
+    game_quests_context.cpp \
+    game_quests_failure.cpp \
+    game_quests_internal.cpp \
+    game_quests_lore.cpp \
+    game_quests_snapshot.cpp \
     game_buildings.cpp \
     game_convoys.cpp \
     game_fleets.cpp \

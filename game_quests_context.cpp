@@ -1,3 +1,6 @@
+#include "game.hpp"
+#include "ft_map_snapshot.hpp"
+
 void Game::build_quest_context(ft_quest_context &context) const
 {
     ft_vector<Pair<int, ft_sharedptr<ft_planet> > > planet_entries;

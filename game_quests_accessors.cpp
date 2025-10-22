@@ -1,3 +1,5 @@
+#include "game.hpp"
+
 int Game::get_active_quest() const
 {
     return this->_quests.get_active_quest_id();

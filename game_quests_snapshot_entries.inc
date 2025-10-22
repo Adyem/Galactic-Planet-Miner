@@ -57,8 +57,8 @@
             snapshot.type = objective.type;
             snapshot.target_id = objective.target_id;
             snapshot.required_amount = objective.amount;
-            snapshot.current_amount = get_objective_current_amount(objective, context);
-            snapshot.is_met = is_objective_met_for_snapshot(objective, context);
+            snapshot.current_amount = game_quests_internal_get_objective_current_amount(objective, context);
+            snapshot.is_met = game_quests_internal_is_objective_met_for_snapshot(objective, context);
             if (!snapshot.is_met)
                 entry.objectives_completed = false;
             entry.objectives.push_back(snapshot);

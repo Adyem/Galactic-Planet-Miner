@@ -1,3 +1,5 @@
+#include "game.hpp"
+
 bool Game::is_backend_online() const
 {
     return this->_backend_online;

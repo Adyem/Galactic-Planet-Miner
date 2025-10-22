@@ -1,3 +1,5 @@
+#include "game.hpp"
+
 void Game::handle_quest_choice_prompt(int quest_id)
 {
     if (quest_id == QUEST_CRITICAL_DECISION)

@@ -1,3 +1,5 @@
+#include "game.hpp"
+
 void Game::handle_quest_completion(int quest_id)
 {
     ft_string entry;
