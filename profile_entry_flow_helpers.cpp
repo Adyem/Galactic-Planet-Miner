@@ -1,22 +1,8 @@
-#include "main_menu_system.hpp"
-
-#include "app_constants.hpp"
-
-#include "libft/CPP_class/class_nullptr.hpp"
-#include "libft/Libft/libft.hpp"
+#include "profile_entry_flow_helpers.hpp"
 
 namespace profile_entry_flow
 {
 #if GALACTIC_HAVE_SDL2
-    inline constexpr unsigned int kMaxProfileNameLength = 24U;
-
-    enum e_profile_append_result
-    {
-        PROFILE_APPEND_REJECTED = 0,
-        PROFILE_APPEND_ACCEPTED = 1,
-        PROFILE_APPEND_MAX_LENGTH = 2
-    };
-
     bool is_profile_character_allowed(char character) noexcept
     {
         const bool is_lower = (character >= 'a' && character <= 'z');
