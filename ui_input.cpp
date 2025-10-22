@@ -18,6 +18,23 @@ bool ft_keyboard_state::has_activity() const noexcept
     return this->pressed_up || this->pressed_down || this->pressed_confirm || this->pressed_delete;
 }
 
+ft_gamepad_state::ft_gamepad_state() noexcept
+    : pressed_up(false)
+    , pressed_down(false)
+    , pressed_left(false)
+    , pressed_right(false)
+    , pressed_confirm(false)
+    , pressed_cancel(false)
+    , pressed_delete(false)
+    , pressed_rename(false)
+{}
+
+bool ft_gamepad_state::has_activity() const noexcept
+{
+    return this->pressed_up || this->pressed_down || this->pressed_left || this->pressed_right
+        || this->pressed_confirm || this->pressed_cancel || this->pressed_delete || this->pressed_rename;
+}
+
 ft_input_device_tracker::ft_input_device_tracker() noexcept
     : _last_device(FT_INPUT_DEVICE_NONE), _event_counter(0ULL)
 {}

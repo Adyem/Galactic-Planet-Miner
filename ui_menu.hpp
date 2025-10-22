@@ -71,6 +71,7 @@ public:
 
     void handle_mouse_input(const ft_mouse_state &mouse);
     void handle_keyboard_input(const ft_keyboard_state &keyboard);
+    void handle_gamepad_input(const ft_gamepad_state &gamepad);
 };
 
 #endif

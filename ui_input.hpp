@@ -32,6 +32,21 @@ struct ft_keyboard_state
     bool has_activity() const noexcept;
 };
 
+struct ft_gamepad_state
+{
+    bool pressed_up;
+    bool pressed_down;
+    bool pressed_left;
+    bool pressed_right;
+    bool pressed_confirm;
+    bool pressed_cancel;
+    bool pressed_delete;
+    bool pressed_rename;
+
+    ft_gamepad_state() noexcept;
+    bool has_activity() const noexcept;
+};
+
 class ft_input_device_tracker
 {
 private:

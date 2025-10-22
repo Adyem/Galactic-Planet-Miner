@@ -47,6 +47,8 @@ typedef _TTF_Font TTF_Font;
 TTF_Font *resolve_font(int point_size);
 SDL_Texture *create_text_texture(SDL_Renderer &renderer, TTF_Font &font, const ft_string &text,
     const SDL_Color &color, SDL_Rect &out_rect);
+int main_menu_resolve_title_font_points() noexcept;
+int main_menu_resolve_menu_font_points() noexcept;
 
 // Main menu rendering
 struct MainMenuPalette
