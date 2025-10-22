@@ -3,23 +3,6 @@
 #include "menu_localization.hpp"
 #include "ui_input.hpp"
 
-namespace new_game_flow
-{
-    bool append_save_character(ft_string &save_name, char character) noexcept;
-    void remove_last_save_character(ft_string &save_name) noexcept;
-    bool save_name_is_valid(const ft_string &save_name) noexcept;
-    bool create_new_game_save(
-        const ft_string &commander_name,
-        const ft_string &save_name,
-        ft_string &out_error,
-        ft_string &out_save_path) noexcept;
-
-#if GALACTIC_HAVE_SDL2
-    void render_new_game_screen(SDL_Renderer &renderer, TTF_Font *title_font, TTF_Font *menu_font,
-        const ft_string &save_name, const ft_string &status_message, bool status_is_error);
-#endif
-}
-
 bool run_new_game_creation_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_string &commander_name, ft_string &out_created_save_path, bool &out_quit_requested)
 {

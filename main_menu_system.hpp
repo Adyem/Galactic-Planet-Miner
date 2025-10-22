@@ -442,6 +442,10 @@ namespace new_game_flow
         const ft_string &save_name,
         ft_string &out_error,
         ft_string &out_save_path) noexcept;
+#if GALACTIC_HAVE_SDL2
+    void render_new_game_screen(SDL_Renderer &renderer, TTF_Font *title_font, TTF_Font *menu_font,
+        const ft_string &save_name, const ft_string &status_message, bool status_is_error);
+#endif
 }
 
 // Profile creation and selection flows
