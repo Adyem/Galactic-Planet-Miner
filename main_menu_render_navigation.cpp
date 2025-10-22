@@ -209,7 +209,7 @@ ft_string main_menu_resolve_navigation_hint(const ft_ui_menu &menu, const Player
     controller_cancel_placeholder.value = controller_cancel;
     replacements.push_back(controller_cancel_placeholder);
 
-    if (reference->confirm_handler != ft_nullptr)
+    if (reference->enabled)
     {
         return menu_localize_format("main_menu.navigation.action",
             "{{confirm}} / {{controller_confirm}}: {{action}}  |  {{navigate}} / {{controller_navigate}}: Navigate  |  {{cancel}} / {{controller_cancel}}: Back",
