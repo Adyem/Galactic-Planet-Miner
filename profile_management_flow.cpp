@@ -11,6 +11,11 @@ namespace profile_management_flow_detail
 #if GALACTIC_HAVE_SDL2
     ft_string run_profile_management_flow_impl(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font,
         TTF_Font *menu_font, const ft_string &current_profile, bool &out_quit_requested);
+    size_t find_profile_index(const ft_vector<ft_string> &profiles, const ft_string &profile_name) noexcept;
+    void   rebuild_profile_menu(ft_ui_menu &menu, const ft_vector<ft_string> &profiles, const ft_string &current_profile,
+          size_t preferred_profile_index, bool select_create_item);
+    void   render_profile_management_screen(SDL_Renderer &renderer, const ft_ui_menu &menu, TTF_Font *title_font,
+          TTF_Font *menu_font, const ft_string &status_message, bool status_is_error);
 #endif
 }
 
