@@ -211,8 +211,13 @@ check_libft_initialized:
 	if [ "$$status" = "__missing__" ] || \
 	   printf "%s" "$$status" | grep -Eq '^[+-U]' || \
 	   [ ! -f "$(LIBFT_DIR)/Makefile" ]; then \
-		printf "Error: libft submodule is not initialized. Run 'make initialize' first.\n" >&2; \
-		exit 1; \
+		printf '$(STYLE_MAGENTA)[GALACTIC SETUP] Initializing libft submodule$(STYLE_RESET)\n'; \
+		if git submodule update --init --recursive libft >/dev/null 2>&1; then \
+			printf '$(STYLE_MAGENTA)[GALACTIC SETUP] libft ready$(STYLE_RESET)\n'; \
+		else \
+			printf "Error: failed to initialize libft submodule. Please run 'git submodule update --init --recursive libft'.\n" >&2; \
+			exit 1; \
+		fi; \
 	fi
 
 build: check_sdl check_libft_initialized dirs $(TARGET)
