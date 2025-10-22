@@ -1,7 +1,9 @@
-namespace
-{
-static double get_objective_current_amount(const ft_quest_objective &objective,
-                                           const ft_quest_context &context)
+#include "game_quests_internal.hpp"
+#include "libft/Libft/libft.hpp"
+
+double game_quests_internal_get_objective_current_amount(
+    const ft_quest_objective &objective,
+    const ft_quest_context &context)
 {
     if (objective.type == QUEST_OBJECTIVE_RESOURCE_TOTAL)
     {
@@ -46,32 +48,33 @@ static double get_objective_current_amount(const ft_quest_objective &objective,
     return 0.0;
 }
 
-static bool is_objective_met_for_snapshot(const ft_quest_objective &objective,
-                                          const ft_quest_context &context)
+bool game_quests_internal_is_objective_met_for_snapshot(
+    const ft_quest_objective &objective,
+    const ft_quest_context &context)
 {
     if (objective.type == QUEST_OBJECTIVE_RESOURCE_TOTAL)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_RESEARCH_COMPLETED)
-        return get_objective_current_amount(objective, context) >= 1.0;
+        return game_quests_internal_get_objective_current_amount(objective, context) >= 1.0;
     if (objective.type == QUEST_OBJECTIVE_FLEET_COUNT)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_TOTAL_SHIP_HP)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_CONVOYS_DELIVERED)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_CONVOY_STREAK)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_CONVOY_RAID_LOSSES_AT_MOST)
-        return get_objective_current_amount(objective, context) <= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) <= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_MAX_CONVOY_THREAT_AT_MOST)
     {
         double threshold = static_cast<double>(objective.amount) / 100.0;
         return context.maximum_convoy_threat <= threshold;
     }
     if (objective.type == QUEST_OBJECTIVE_BUILDING_COUNT)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     if (objective.type == QUEST_OBJECTIVE_ASSAULT_VICTORIES)
-        return get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
+        return game_quests_internal_get_objective_current_amount(objective, context) >= static_cast<double>(objective.amount);
     return false;
 }
 
@@ -103,7 +106,8 @@ static const int kRebellionBranchQuestIds[] = {
     QUEST_REBELLION_FINAL_PUSH
 };
 
-static void populate_branch_snapshot(const QuestManager &manager,
+void game_quests_internal_populate_branch_snapshot(
+    const QuestManager &manager,
     Game::ft_story_branch_snapshot &out, int branch_id,
     const char *name, const char *summary,
     const int *quest_ids, size_t quest_count,
@@ -128,4 +132,43 @@ static void populate_branch_snapshot(const QuestManager &manager,
     out.is_available = any_unlocked || choice_selected;
     out.is_active = choice_selected && out.is_available;
 }
-} // namespace
+
+const int *game_quests_internal_get_act_one_quest_ids()
+{
+    return kActOneQuestIds;
+}
+
+size_t game_quests_internal_get_act_one_quest_count()
+{
+    return sizeof(kActOneQuestIds) / sizeof(kActOneQuestIds[0]);
+}
+
+const int *game_quests_internal_get_act_two_quest_ids()
+{
+    return kActTwoQuestIds;
+}
+
+size_t game_quests_internal_get_act_two_quest_count()
+{
+    return sizeof(kActTwoQuestIds) / sizeof(kActTwoQuestIds[0]);
+}
+
+const int *game_quests_internal_get_order_branch_quest_ids()
+{
+    return kOrderBranchQuestIds;
+}
+
+size_t game_quests_internal_get_order_branch_quest_count()
+{
+    return sizeof(kOrderBranchQuestIds) / sizeof(kOrderBranchQuestIds[0]);
+}
+
+const int *game_quests_internal_get_rebellion_branch_quest_ids()
+{
+    return kRebellionBranchQuestIds;
+}
+
+size_t game_quests_internal_get_rebellion_branch_quest_count()
+{
+    return sizeof(kRebellionBranchQuestIds) / sizeof(kRebellionBranchQuestIds[0]);
+}

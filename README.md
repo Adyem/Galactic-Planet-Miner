@@ -164,7 +164,7 @@ and extreme values fall back to sensible ranges when the profile is reloaded.【
 `Game::configure_from_preferences` consumes these values at runtime, updating
 quest snapshots and combat pacing so front-end layers can scale HUD elements,
 pin the lore feed to a preferred edge, and accelerate or slow real-time
-assaults without desynchronizing simulations.【F:game.cpp†L900-L950】【F:game_quests.cpp†L606-L618】
+assaults without desynchronizing simulations.【F:game.cpp†L900-L950】
 
 ## Base Building
 

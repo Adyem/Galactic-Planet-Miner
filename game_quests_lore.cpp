@@ -1,3 +1,5 @@
+#include "game.hpp"
+
 const ft_vector<ft_string> &Game::get_lore_log() const
 {
     if (!this->_lore_log_cache_dirty)

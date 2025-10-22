@@ -1,27 +1,33 @@
+    const int *act_one_ids = game_quests_internal_get_act_one_quest_ids();
+    size_t act_one_count = game_quests_internal_get_act_one_quest_count();
+
     Game::ft_story_act_snapshot act_one;
     act_one.act_id = STORY_ACT_RISING_THREAT;
     act_one.name = ft_string("Act I: The Rising Threat");
     act_one.theme = ft_string("Raiders strike the colonies while Terra rallies escorts and convoys to shield the core worlds.");
-    act_one.total_main_quests = static_cast<int>(sizeof(kActOneQuestIds) / sizeof(kActOneQuestIds[0]));
+    act_one.total_main_quests = static_cast<int>(act_one_count);
     act_one.is_completed = (act_one.total_main_quests > 0);
-    for (size_t i = 0; i < sizeof(kActOneQuestIds) / sizeof(kActOneQuestIds[0]); ++i)
+    for (size_t i = 0; i < act_one_count; ++i)
     {
-        int status = this->_quests.get_status(kActOneQuestIds[i]);
+        int status = this->_quests.get_status(act_one_ids[i]);
         if (status == QUEST_STATUS_COMPLETED)
             act_one.completed_main_quests += 1;
         else
             act_one.is_completed = false;
     }
 
+    const int *act_two_ids = game_quests_internal_get_act_two_quest_ids();
+    size_t act_two_count = game_quests_internal_get_act_two_quest_count();
+
     Game::ft_story_act_snapshot act_two;
     act_two.act_id = STORY_ACT_UNRAVELING_TRUTH;
     act_two.name = ft_string("Act II: The Unraveling Truth");
     act_two.theme = ft_string("Investigations expose the raiders' motives and force a pivotal judgment on Blackthorne's fate.");
-    act_two.total_main_quests = static_cast<int>(sizeof(kActTwoQuestIds) / sizeof(kActTwoQuestIds[0]));
+    act_two.total_main_quests = static_cast<int>(act_two_count);
     act_two.is_completed = (act_two.total_main_quests > 0);
-    for (size_t i = 0; i < sizeof(kActTwoQuestIds) / sizeof(kActTwoQuestIds[0]); ++i)
+    for (size_t i = 0; i < act_two_count; ++i)
     {
-        int status = this->_quests.get_status(kActTwoQuestIds[i]);
+        int status = this->_quests.get_status(act_two_ids[i]);
         if (status == QUEST_STATUS_COMPLETED)
             act_two.completed_main_quests += 1;
         else
@@ -37,19 +43,23 @@
     act_three.theme = ft_string("With the system in turmoil, commanders either enforce Dominion rule or join the uprising to reshape the frontier.");
 
     Game::ft_story_branch_snapshot order_branch;
-    populate_branch_snapshot(this->_quests, order_branch,
+    const int *order_ids = game_quests_internal_get_order_branch_quest_ids();
+    size_t order_count = game_quests_internal_get_order_branch_quest_count();
+    game_quests_internal_populate_branch_snapshot(this->_quests, order_branch,
         STORY_BRANCH_ORDER_DOMINION,
         "Branch A: Dominion Crackdown",
         "Crush uprisings sparked by Blackthorne's execution and cement Order control.",
-        kOrderBranchQuestIds, sizeof(kOrderBranchQuestIds) / sizeof(kOrderBranchQuestIds[0]),
+        order_ids, order_count,
         QUEST_CHOICE_EXECUTE_BLACKTHORNE, active_choice);
 
     Game::ft_story_branch_snapshot rebellion_branch;
-    populate_branch_snapshot(this->_quests, rebellion_branch,
+    const int *rebellion_ids = game_quests_internal_get_rebellion_branch_quest_ids();
+    size_t rebellion_count = game_quests_internal_get_rebellion_branch_quest_count();
+    game_quests_internal_populate_branch_snapshot(this->_quests, rebellion_branch,
         STORY_BRANCH_REBELLION_LIBERATION,
         "Branch B: Liberation Offensive",
         "Rally hidden allies after sparing Blackthorne and liberate the frontier worlds.",
-        kRebellionBranchQuestIds, sizeof(kRebellionBranchQuestIds) / sizeof(kRebellionBranchQuestIds[0]),
+        rebellion_ids, rebellion_count,
         QUEST_CHOICE_SPARE_BLACKTHORNE, active_choice);
 
     bool branch_selected = false;
@@ -77,7 +87,7 @@
     }
     else
     {
-        act_three.total_main_quests = static_cast<int>(sizeof(kOrderBranchQuestIds) / sizeof(kOrderBranchQuestIds[0]));
+        act_three.total_main_quests = static_cast<int>(order_count);
         act_three.completed_main_quests = 0;
     }
     if (act_three.total_main_quests > 0 && act_three.completed_main_quests >= act_three.total_main_quests)
