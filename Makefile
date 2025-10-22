@@ -254,30 +254,36 @@ test: check_libft_initialized $(LIBFT) $(TEST_OBJS)
 
 $(LIBFT): check_libft_initialized
 	@need_build=0; \
-        if $(MAKE) -C $(LIBFT_DIR) -q $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"; then \
-                :; \
-        else \
-                status=$$?; \
-                if [ $$status -eq 1 ]; then \
-                        need_build=1; \
-                else \
-                        exit $$status; \
-                fi; \
-        fi; \
-        if [ $$need_build -eq 1 ] || [ ! -f "$@" ]; then \
-                printf '$(STYLE_MAGENTA)[GALACTIC LIBFT] Updating %s$(STYLE_RESET)\n' '$(notdir $(LIBFT))'; \
-                $(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"; \
-        else \
-                printf '$(STYLE_MAGENTA)[GALACTIC LIBFT] %s is up to date$(STYLE_RESET)\n' '$(notdir $(LIBFT))'; \
-        fi
+	if $(MAKE) -C $(LIBFT_DIR) -q COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)" $(notdir $(LIBFT)); then \
+		:; \
+	else \
+		status=$$?; \
+		if [ $$status -eq 1 ]; then \
+			need_build=1; \
+		else \
+			exit $$status; \
+		fi; \
+	fi; \
+	if [ $$need_build -eq 1 ] || [ ! -f "$@" ]; then \
+		printf '$(STYLE_MAGENTA)[GALACTIC LIBFT] Updating %s$(STYLE_RESET)\n' '$(notdir $(LIBFT))'; \
+		$(MAKE) -C $(LIBFT_DIR) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)" $(notdir $(LIBFT)); \
+	else \
+		printf '$(STYLE_MAGENTA)[GALACTIC LIBFT] %s is up to date$(STYLE_RESET)\n' '$(notdir $(LIBFT))'; \
+	fi
 
 clean:
 	@printf '$(STYLE_MAGENTA)[GALACTIC CLEAN] Removing build directories$(STYLE_RESET)\n'
 	@$(RMDIR) $(OBJ_DIR) $(OBJ_DIR_DEBUG)
+	@if [ -f "$(LIBFT_DIR)/Makefile" ]; then \
+		$(MAKE) -C $(LIBFT_DIR) clean; \
+	fi
 
 fclean: clean
 	@printf '$(STYLE_MAGENTA)[GALACTIC CLEAN] Removing binaries$(STYLE_RESET)\n'
 	@$(RM) $(NAME) $(NAME_DEBUG) test
+	@if [ -f "$(LIBFT_DIR)/Makefile" ]; then \
+		$(MAKE) -C $(LIBFT_DIR) fclean; \
+	fi
 
 re: fclean all
 
