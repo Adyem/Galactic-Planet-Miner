@@ -1,25 +1,4 @@
-#include "main_menu_system.hpp"
-
-namespace profile_entry_flow
-{
-#if GALACTIC_HAVE_SDL2
-    enum e_profile_append_result
-    {
-        PROFILE_APPEND_REJECTED = 0,
-        PROFILE_APPEND_ACCEPTED = 1,
-        PROFILE_APPEND_MAX_LENGTH = 2
-    };
-
-    bool is_profile_character_allowed(char character) noexcept;
-    e_profile_append_result append_profile_character(ft_string &profile_name, char character) noexcept;
-    void remove_last_profile_character(ft_string &profile_name) noexcept;
-    bool profile_name_is_valid(const ft_string &profile_name) noexcept;
-    bool profile_name_exists(const ft_vector<ft_string> &profiles, const ft_string &candidate) noexcept;
-    bool save_profile_preferences(SDL_Window *window, const ft_string &profile_name) noexcept;
-    void render_profile_entry_screen(SDL_Renderer &renderer, TTF_Font *title_font, TTF_Font *menu_font,
-        const ft_string &profile_name, const ft_string &status_message, bool status_is_error);
-#endif
-}
+#include "profile_entry_flow_helpers.hpp"
 
 ft_string run_profile_entry_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *title_font, TTF_Font *menu_font,
     const ft_vector<ft_string> *existing_profiles, bool &out_quit_requested)
@@ -66,7 +45,7 @@ ft_string run_profile_entry_flow(SDL_Window *window, SDL_Renderer *renderer, TTF
                         status_message = ft_string("A profile with that name already exists.");
                         status_is_error = true;
                     }
-                    else if (save_profile_preferences(window, profile_name))
+                    else if (::save_profile_preferences(window, profile_name))
                     {
                         accepted = true;
                     }
