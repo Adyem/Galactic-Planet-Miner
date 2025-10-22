@@ -275,15 +275,13 @@ clean:
 	@printf '$(STYLE_MAGENTA)[GALACTIC CLEAN] Removing build directories$(STYLE_RESET)\n'
 	@$(RMDIR) $(OBJ_DIR) $(OBJ_DIR_DEBUG)
 	@if [ -f "$(LIBFT_DIR)/Makefile" ]; then \
-		$(MAKE) -C $(LIBFT_DIR) clean; \
+		$(MAKE) -C $(LIBFT_DIR) fclean; \
 	fi
 
 fclean: clean
 	@printf '$(STYLE_MAGENTA)[GALACTIC CLEAN] Removing binaries$(STYLE_RESET)\n'
 	@$(RM) $(NAME) $(NAME_DEBUG) test
-	@if [ -f "$(LIBFT_DIR)/Makefile" ]; then \
-		$(MAKE) -C $(LIBFT_DIR) fclean; \
-	fi
+	@if [ -f "$(LIBFT_DIR)/Makefile" ];
 
 re: fclean all
 
