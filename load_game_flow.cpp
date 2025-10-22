@@ -1215,7 +1215,8 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
             selected_identifier = current_selected_item->identifier;
 
         const save_slot_entry *selected_slot = ft_nullptr;
-        if (!selected_identifier.empty() && selected_identifier.compare(0, 5, "save:") == 0)
+        if (!selected_identifier.empty()
+            && ft_strncmp(selected_identifier.c_str(), "save:", 5) == 0)
         {
             for (size_t index = 0; index < slots.size(); ++index)
             {
@@ -1401,7 +1402,7 @@ bool run_load_game_flow(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *ti
                 running = false;
                 return;
             }
-            if (item.identifier.compare(0, 5, "save:") == 0)
+            if (ft_strncmp(item.identifier.c_str(), "save:", 5) == 0)
             {
                 for (size_t index = 0; index < slots.size(); ++index)
                 {
