@@ -10,6 +10,16 @@
 #if !defined(GALACTIC_HAVE_SDL2) || !GALACTIC_HAVE_SDL2
 #    error "main_menu_helpers.cpp requires GALACTIC_HAVE_SDL2"
 #endif
+int main_menu_resolve_title_font_points() noexcept
+{
+    return 48;
+}
+
+int main_menu_resolve_menu_font_points() noexcept
+{
+    return 28;
+}
+
 namespace
 {
     const ft_menu_item *menu_item_from_index(const ft_ui_menu &menu, int index)

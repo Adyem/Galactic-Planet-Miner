@@ -38,6 +38,23 @@ void ft_ui_menu::handle_keyboard_input(const ft_keyboard_state &keyboard)
     this->scroll_to_index(this->_selected_index);
 }
 
+void ft_ui_menu::handle_gamepad_input(const ft_gamepad_state &gamepad)
+{
+    if (!gamepad.has_activity())
+        return;
+
+    this->_device_tracker.notify_gamepad_activity();
+
+    if (gamepad.pressed_up)
+        this->move_selection(-1);
+
+    if (gamepad.pressed_down)
+        this->move_selection(1);
+
+    this->synchronize_hover_with_selection();
+    this->scroll_to_index(this->_selected_index);
+}
+
 int ft_ui_menu::find_first_enabled_index() const
 {
     for (size_t index = 0; index < this->_items.size(); ++index)
