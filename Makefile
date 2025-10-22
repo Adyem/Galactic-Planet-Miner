@@ -4,6 +4,11 @@ else
     EXE_EXT :=
 endif
 
+MAKEFLAGS   += --no-print-directory
+
+STYLE_MAGENTA := \033[1;35m
+STYLE_RESET   := \033[0m
+
 NAME        = galactic_miner$(EXE_EXT)
 NAME_DEBUG  = galactic_miner_debug$(EXE_EXT)
 
@@ -77,6 +82,7 @@ SRC_COMMON  = \
     string_table.cpp
 SRC_MAIN    = main.cpp
 SRC         = $(SRC_COMMON) $(SRC_MAIN)
+TOTAL_SRC   := $(words $(SRC))
 SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_main.cpp \
     $(TEST_DIR)/game_test_menu_basics.cpp \
@@ -94,6 +100,8 @@ SRC_TEST    = $(SRC_COMMON) \
     $(TEST_DIR)/game_test_research.cpp \
     $(TEST_DIR)/game_test_difficulty.cpp \
     $(TEST_DIR)/game_test_save.cpp
+SRC_TEST_ONLY = $(filter-out $(SRC), $(SRC_TEST))
+TOTAL_TEST_SRC := $(words $(SRC_TEST_ONLY))
 
 CC          = g++
 
@@ -187,7 +195,8 @@ TEST_OBJS   = $(SRC_TEST:%.cpp=$(OBJ_DIR)/%.o)
 all: build test
 
 initialize:
-	git submodule update --init --recursive libft
+	@printf '$(STYLE_MAGENTA)[GALACTIC SETUP] Initializing libft submodule$(STYLE_RESET)\n'
+	@git submodule update --init --recursive libft
 
 check_libft_initialized:
 	@status=$$(git submodule status --recursive libft 2>/dev/null || echo "__missing__"); \
@@ -201,39 +210,70 @@ check_libft_initialized:
 build: check_sdl check_libft_initialized dirs $(TARGET)
 
 dirs:
-	-$(MKDIR) $(OBJ_DIR)
-	-$(MKDIR) $(OBJ_DIR_DEBUG)
+	@-$(MKDIR) $(OBJ_DIR)
+	@-$(MKDIR) $(OBJ_DIR_DEBUG)
 
 debug:
-	$(MAKE) build DEBUG=1
+	@$(MAKE) build DEBUG=1
 
 $(OBJ_DIR)/%.o: %.cpp
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) $(SDL_CFLAGS) -c $< -o $@
+	@progress_index_main=$$(printf '%s\n' "$(SRC)" | tr ' ' '\n' | nl -ba | awk -v target="$<" '$$2==target {print $$1}'); \
+	progress_index_test=$$(printf '%s\n' "$(SRC_TEST_ONLY)" | tr ' ' '\n' | nl -ba | awk -v target="$<" '$$2==target {print $$1}'); \
+	if [ -n "$$progress_index_main" ]; then \
+		printf '$(STYLE_MAGENTA)[GALACTIC BUILD] (%d/%d) Compiling %s$(STYLE_RESET)\n' "$$progress_index_main" "$(TOTAL_SRC)" "$<"; \
+	elif [ -n "$$progress_index_test" ]; then \
+		printf '$(STYLE_MAGENTA)[GALACTIC BUILD] (%d/%d) Compiling %s$(STYLE_RESET)\n' "$$progress_index_test" "$(TOTAL_TEST_SRC)" "$<"; \
+	else \
+		printf '$(STYLE_MAGENTA)[GALACTIC BUILD] Compiling %s$(STYLE_RESET)\n' "$<"; \
+	fi
+	@$(CC) $(CFLAGS) $(SDL_CFLAGS) -c $< -o $@
 
 $(TARGET): $(LIBFT) $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
+	@printf '$(STYLE_MAGENTA)[GALACTIC BUILD] Linking %s$(STYLE_RESET)\n' $@
+	@$(CC) $(CFLAGS) $(OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
+	@printf '$(STYLE_MAGENTA)[GALACTIC BUILD] Output -> %s$(STYLE_RESET)\n' $@
 
 test: check_libft_initialized $(LIBFT) $(TEST_OBJS)
-	$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
+	@printf '$(STYLE_MAGENTA)[GALACTIC BUILD] Linking %s$(STYLE_RESET)\n' $@
+	@$(CC) $(CFLAGS) $(TEST_OBJS) -o $@ $(SDL_LIBS) $(LDFLAGS)
+	@printf '$(STYLE_MAGENTA)[GALACTIC BUILD] Output -> %s$(STYLE_RESET)\n' $@
 
 $(LIBFT): check_libft_initialized
-	$(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"
+	@need_build=0; \
+        if $(MAKE) -C $(LIBFT_DIR) -q $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"; then \
+                :; \
+        else \
+                status=$$?; \
+                if [ $$status -eq 1 ]; then \
+                        need_build=1; \
+                else \
+                        exit $$status; \
+                fi; \
+        fi; \
+        if [ $$need_build -eq 1 ] || [ ! -f "$@" ]; then \
+                printf '$(STYLE_MAGENTA)[GALACTIC LIBFT] Updating %s$(STYLE_RESET)\n' '$(notdir $(LIBFT))'; \
+                $(MAKE) -C $(LIBFT_DIR) $(notdir $(LIBFT)) COMPILE_FLAGS="$(LIBFT_COMPILE_FLAGS)"; \
+        else \
+                printf '$(STYLE_MAGENTA)[GALACTIC LIBFT] %s is up to date$(STYLE_RESET)\n' '$(notdir $(LIBFT))'; \
+        fi
 
 clean:
-	$(RMDIR) $(OBJ_DIR) $(OBJ_DIR_DEBUG)
+	@printf '$(STYLE_MAGENTA)[GALACTIC CLEAN] Removing build directories$(STYLE_RESET)\n'
+	@$(RMDIR) $(OBJ_DIR) $(OBJ_DIR_DEBUG)
 
 fclean: clean
-	$(RM) $(NAME) $(NAME_DEBUG) test
+	@printf '$(STYLE_MAGENTA)[GALACTIC CLEAN] Removing binaries$(STYLE_RESET)\n'
+	@$(RM) $(NAME) $(NAME_DEBUG) test
 
 re: fclean all
 
 
 check_sdl:
 	@if pkg-config --exists sdl2 SDL2_ttf; then \
-		printf "Info: SDL2 development libraries detected.\n"; \
-	else \
-		printf "Warning: SDL2 development libraries (SDL2 and SDL2_ttf) not found.\n" >&2; \
-		printf "         Continuing without SDL2 UI support.\n" >&2; \
-	fi
+                printf '$(STYLE_MAGENTA)[GALACTIC CHECK] SDL2 development libraries detected$(STYLE_RESET)\n'; \
+        else \
+                printf '$(STYLE_MAGENTA)[GALACTIC CHECK] Warning: SDL2 development libraries (SDL2 and SDL2_ttf) not found$(STYLE_RESET)\n' >&2; \
+                printf '$(STYLE_MAGENTA)[GALACTIC CHECK] Continuing without SDL2 UI support$(STYLE_RESET)\n' >&2; \
+        fi
 .PHONY: all build clean fclean re debug dirs test check_sdl initialize check_libft_initialized

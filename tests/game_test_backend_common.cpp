@@ -1,3 +1,5 @@
+#include "../libft/Networking/networking.hpp"
+
 struct MalformedResponseServerConfig
 {
     uint16_t port;
@@ -36,7 +38,7 @@ static void run_malformed_response_server(MalformedResponseServerConfig *config)
     {
         ssize_t sent = nw_send(client_fd, config->payload.c_str(), config->payload.size(), 0);
         (void)sent;
-        FT_CLOSE_SOCKET(client_fd);
+        nw_close(client_fd);
     }
     server_socket.close_socket();
 }

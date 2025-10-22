@@ -192,7 +192,7 @@ namespace
     {
         if (path.empty())
         {
-            ft_errno = FT_EINVAL;
+            ft_errno = FT_ERR_INVALID_ARGUMENT;
             PROFILE_DEBUG_PRINT("[Profile] Cannot ensure directory for an empty path.\n");
             return false;
         }
@@ -221,7 +221,7 @@ namespace
         ft_string commander_directory = resolve_commander_directory(commander_name);
         if (commander_directory.empty())
         {
-            ft_errno = FT_EINVAL;
+            ft_errno = FT_ERR_INVALID_ARGUMENT;
             PROFILE_DEBUG_PRINT("[Profile] Could not resolve commander directory for \"%s\".\n", commander_name.c_str());
             return false;
         }
@@ -309,7 +309,7 @@ namespace
         out_name.clear();
         if (path.empty())
         {
-            ft_errno = FT_EINVAL;
+            ft_errno = FT_ERR_INVALID_ARGUMENT;
             PROFILE_DEBUG_PRINT("[Profile] Cannot read profile name from an empty path.\n");
             return false;
         }
@@ -414,7 +414,7 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
 {
     if (preferences.commander_name.empty())
     {
-        ft_errno = FT_EINVAL;
+        ft_errno = FT_ERR_INVALID_ARGUMENT;
         PROFILE_DEBUG_PRINT("[Profile] Cannot save preferences without a commander name.\n");
         return false;
     }
@@ -432,7 +432,7 @@ bool player_profile_save(const PlayerProfilePreferences &preferences) noexcept
     ft_string path = player_profile_resolve_path(preferences.commander_name);
     if (path.empty())
     {
-        ft_errno = FT_EINVAL;
+        ft_errno = FT_ERR_INVALID_ARGUMENT;
         PROFILE_DEBUG_PRINT("[Profile] Could not resolve profile path for \"%s\".\n", preferences.commander_name.c_str());
         return false;
     }
@@ -714,7 +714,7 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
 
     if (commander_name.empty())
     {
-        ft_errno = FT_EINVAL;
+        ft_errno = FT_ERR_INVALID_ARGUMENT;
         PROFILE_DEBUG_PRINT("[Profile] Cannot load preferences for an empty commander name.\n");
         return false;
     }
@@ -727,7 +727,7 @@ bool player_profile_load_or_create(PlayerProfilePreferences &out_preferences, co
     ft_string path = player_profile_resolve_path(commander_name);
     if (path.empty())
     {
-        ft_errno = FT_EINVAL;
+        ft_errno = FT_ERR_INVALID_ARGUMENT;
         PROFILE_DEBUG_PRINT("[Profile] Could not resolve profile path for \"%s\".\n", commander_name.c_str());
         return false;
     }
@@ -1052,7 +1052,7 @@ bool player_profile_delete(const ft_string &commander_name) noexcept
 {
     if (commander_name.empty())
     {
-        ft_errno = FT_EINVAL;
+        ft_errno = FT_ERR_INVALID_ARGUMENT;
         PROFILE_DEBUG_PRINT("[Profile] Cannot delete profile without a commander name.\n");
         return false;
     }

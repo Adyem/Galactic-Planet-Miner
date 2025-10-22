@@ -29,7 +29,7 @@ namespace
     {
         if (node == ft_nullptr)
         {
-            ft_errno = FT_EINVAL;
+            ft_errno = FT_ERR_INVALID_ARGUMENT;
             return false;
         }
 
@@ -88,7 +88,7 @@ namespace
             return true;
         }
 
-        ft_errno = FT_EINVAL;
+        ft_errno = FT_ERR_INVALID_ARGUMENT;
         return false;
     }
 }
