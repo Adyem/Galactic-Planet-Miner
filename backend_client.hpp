@@ -29,5 +29,7 @@ bool backend_client_clear_cloud_data(const ft_string &host, const ft_string &pat
     int &out_status_code) noexcept;
 bool backend_client_submit_crash_report(
     const ft_string &host, const ft_string &path, const ft_string &payload, ft_string &out_body, int &out_status_code) noexcept;
+bool backend_client_submit_crash_metric(
+    const ft_string &host, const ft_string &path, const ft_string &payload, int &out_status_code) noexcept;
 
 #endif

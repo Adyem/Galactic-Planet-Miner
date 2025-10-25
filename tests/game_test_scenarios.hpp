@@ -86,6 +86,7 @@ int verify_main_menu_manual_sections();
 int verify_main_menu_connectivity_indicator();
 int verify_main_menu_connectivity_failure_logging();
 int verify_main_menu_crash_prompt();
+int verify_main_menu_crash_metric_queue();
 int verify_main_menu_sync_panel();
 int verify_main_menu_autosave_indicator();
 int verify_main_menu_achievement_summary();

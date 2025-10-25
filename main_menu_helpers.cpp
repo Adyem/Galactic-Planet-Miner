@@ -196,6 +196,17 @@ int main()
     const long                  crash_prompt_poll_interval_ms = 5000L;
     long                        next_crash_prompt_check_ms = 0L;
     bool                        crash_prompt_focus_pending = false;
+    bool                        crash_cleanup_retry_available = false;
+    ft_vector<ft_string>        crash_metric_queue;
+
+    if (!active_profile_name.empty())
+        main_menu_load_crash_metric_queue(active_profile_name, crash_metric_queue);
+
+    auto persist_crash_metric_queue = [&]() {
+        if (active_profile_name.empty())
+            return;
+        main_menu_save_crash_metric_queue(active_profile_name, crash_metric_queue);
+    };
 
     auto refresh_achievement_summary = [&]() {
         achievements_summary = main_menu_build_achievements_summary(&active_preferences);
@@ -220,6 +231,7 @@ int main()
     const ft_string backend_patch_notes_path("/patch-notes/latest");
     const ft_string backend_clear_cloud_path("/cloud-data/clear");
     const ft_string backend_crash_report_path("/crash-report");
+    const ft_string backend_crash_metrics_path("/analytics/crash-metrics");
     const ft_string crash_report_log_path("crash_reports/pending_report.log");
     MainMenuConnectivityStatus connectivity_status;
     const long connectivity_interval_ms = 7000;

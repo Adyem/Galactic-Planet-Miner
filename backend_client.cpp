@@ -286,3 +286,19 @@ bool backend_client_submit_crash_report(const ft_string &host, const ft_string &
         return true;
     return false;
 }
+
+bool backend_client_submit_crash_metric(
+    const ft_string &host, const ft_string &path, const ft_string &payload, int &out_status_code) noexcept
+{
+    BackendClient client(host, path);
+    ft_string     response;
+    ft_string     request_payload("analytics:crash_metric:");
+    request_payload.append(payload);
+
+    int status = client.send_state(request_payload, response);
+    out_status_code = status;
+
+    if (status >= 200 && status < 300)
+        return true;
+    return false;
+}
