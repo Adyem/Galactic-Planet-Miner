@@ -53,6 +53,7 @@
         crash_prompt_context.heading.clear();
         crash_prompt_context.lines.clear();
         crash_prompt_context.footer.clear();
+        crash_cleanup_retry_available = false;
     };
 
     auto refresh_crash_prompt = [&](bool force_reload) {
@@ -60,7 +61,8 @@
         if (!force_reload && current_ms < next_crash_prompt_check_ms)
         {
             if (crash_report_status.available && !crash_prompt_dismissed)
-                main_menu_build_crash_prompt_overlay(crash_report_status, connectivity_status, crash_prompt_context);
+                main_menu_build_crash_prompt_overlay(
+                    crash_report_status, connectivity_status, crash_cleanup_retry_available, crash_prompt_context);
             return;
         }
 
@@ -93,7 +95,10 @@
         crash_prompt_last_details = loaded_report.details_path;
 
         if (is_new_entry)
+        {
             crash_prompt_dismissed = false;
+            crash_cleanup_retry_available = false;
+        }
 
         if (crash_prompt_dismissed)
         {
@@ -102,7 +107,8 @@
             return;
         }
 
-        main_menu_build_crash_prompt_overlay(crash_report_status, connectivity_status, crash_prompt_context);
+        main_menu_build_crash_prompt_overlay(
+            crash_report_status, connectivity_status, crash_cleanup_retry_available, crash_prompt_context);
         bool currently_visible = crash_prompt_context.visible;
         if (!currently_visible)
             return;
@@ -119,9 +125,61 @@
         return true;
     };
 
+    auto retry_crash_cleanup = [&]() -> bool {
+        if (!crash_prompt_context.visible)
+            return false;
+
+        alert_banner.visible = true;
+        if (!main_menu_clear_crash_report(crash_report_log_path))
+        {
+            alert_banner.is_error = true;
+            alert_banner.message = menu_localize("main_menu.crash.clear_failure",
+                "Crash report submitted, but the local log could not be cleared. Please try again.");
+            main_menu_append_crash_cleanup_failure_log(crash_report_log_path, ft_time_ms());
+            crash_prompt_dismissed = false;
+            crash_cleanup_retry_available = true;
+            crash_prompt_focus_pending = true;
+            main_menu_build_crash_prompt_overlay(
+                crash_report_status, connectivity_status, crash_cleanup_retry_available, crash_prompt_context);
+        }
+        else
+        {
+            alert_banner.is_error = false;
+            alert_banner.message
+                = menu_localize("main_menu.crash.clear_success", "Crash report log cleared. Thank you!");
+            crash_report_status = MainMenuCrashReport();
+            crash_prompt_last_timestamp = 0L;
+            crash_prompt_last_summary.clear();
+            crash_prompt_last_details.clear();
+            crash_prompt_dismissed = false;
+            crash_cleanup_retry_available = false;
+            clear_crash_prompt_overlay();
+            crash_prompt_focus_pending = false;
+        }
+
+        next_crash_prompt_check_ms = 0L;
+        return true;
+    };
+
+    auto flush_crash_metric_queue = [&]() {
+        if (!active_preferences.analytics_opt_in)
+            return;
+        if (crash_metric_queue.empty())
+            return;
+        if (connectivity_status.state != MAIN_MENU_CONNECTIVITY_ONLINE)
+            return;
+
+        main_menu_crash_metrics_flush(
+            crash_metric_queue, backend_host, backend_crash_metrics_path, backend_client_submit_crash_metric);
+        persist_crash_metric_queue();
+    };
+
     auto submit_crash_report = [&]() -> bool {
         if (!crash_prompt_context.visible)
             return false;
+
+        if (crash_cleanup_retry_available)
+            return retry_crash_cleanup();
 
         if (!crash_report_status.available)
         {
@@ -132,6 +190,7 @@
             alert_banner.is_error = true;
             alert_banner.message
                 = menu_localize("main_menu.crash.log_missing", "Crash report details were unavailable.");
+            crash_cleanup_retry_available = false;
             return true;
         }
 
@@ -141,6 +200,7 @@
             alert_banner.is_error = true;
             alert_banner.message = menu_localize("main_menu.crash.requires_online",
                 "Crash reports require an online connection. Reconnect and try again.");
+            crash_cleanup_retry_available = false;
             return true;
         }
 
@@ -150,23 +210,54 @@
         bool      success = backend_client_submit_crash_report(
             backend_host, backend_crash_report_path, payload, response_body, status_code);
 
+        if (active_preferences.analytics_opt_in)
+        {
+            flush_crash_metric_queue();
+            ft_string metric_payload = main_menu_format_crash_metric_payload(
+                crash_report_status, success, status_code, response_body);
+            int metric_status_code = 0;
+            bool metric_success = backend_client_submit_crash_metric(
+                backend_host, backend_crash_metrics_path, metric_payload, metric_status_code);
+            if (!metric_success)
+            {
+                main_menu_crash_metrics_enqueue(crash_metric_queue, metric_payload);
+                persist_crash_metric_queue();
+            }
+            (void)metric_status_code;
+        }
+
         alert_banner.visible = true;
         if (success)
         {
-            alert_banner.is_error = false;
-            if (!response_body.empty())
-                alert_banner.message = response_body;
+            if (!main_menu_clear_crash_report(crash_report_log_path))
+            {
+                alert_banner.is_error = true;
+                alert_banner.message = menu_localize("main_menu.crash.clear_failure",
+                    "Crash report submitted, but the local log could not be cleared. Please try again.");
+                main_menu_append_crash_cleanup_failure_log(crash_report_log_path, ft_time_ms());
+                crash_prompt_dismissed = false;
+                crash_cleanup_retry_available = true;
+                crash_prompt_focus_pending = true;
+                main_menu_build_crash_prompt_overlay(
+                    crash_report_status, connectivity_status, crash_cleanup_retry_available, crash_prompt_context);
+            }
             else
-                alert_banner.message = menu_localize(
-                    "main_menu.crash.submit_success", "Crash report submitted successfully. Thank you!");
-            main_menu_clear_crash_report(crash_report_log_path);
-            crash_report_status = MainMenuCrashReport();
-            crash_prompt_last_timestamp = 0L;
-            crash_prompt_last_summary.clear();
-            crash_prompt_last_details.clear();
-            crash_prompt_dismissed = false;
-            clear_crash_prompt_overlay();
-            crash_prompt_focus_pending = false;
+            {
+                alert_banner.is_error = false;
+                if (!response_body.empty())
+                    alert_banner.message = response_body;
+                else
+                    alert_banner.message = menu_localize(
+                        "main_menu.crash.submit_success", "Crash report submitted successfully. Thank you!");
+                crash_report_status = MainMenuCrashReport();
+                crash_prompt_last_timestamp = 0L;
+                crash_prompt_last_summary.clear();
+                crash_prompt_last_details.clear();
+                crash_prompt_dismissed = false;
+                crash_cleanup_retry_available = false;
+                clear_crash_prompt_overlay();
+                crash_prompt_focus_pending = false;
+            }
         }
         else
         {
@@ -190,6 +281,7 @@
                 alert_banner.message.append(" ");
                 alert_banner.message.append(response_body);
             }
+            crash_cleanup_retry_available = false;
         }
 
         next_crash_prompt_check_ms = 0L;
@@ -211,6 +303,8 @@
         main_menu_performance_complete_latency_sample(performance_stats, success, latency_ms, result_ms);
         if (!success)
             main_menu_append_connectivity_failure_log(backend_host, status_code, result_ms);
+        else
+            flush_crash_metric_queue();
         refresh_crash_prompt(true);
         next_connectivity_check_ms = result_ms + connectivity_interval_ms;
     };

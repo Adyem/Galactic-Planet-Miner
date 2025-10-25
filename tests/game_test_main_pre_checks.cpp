@@ -93,6 +93,8 @@ static bool run_main_prelaunch_verifications()
         return false;
     if (!verify_main_menu_crash_prompt())
         return false;
+    if (!verify_main_menu_crash_metric_queue())
+        return false;
     if (!verify_main_menu_sync_panel())
         return false;
     if (!verify_main_menu_autosave_indicator())

@@ -404,9 +404,21 @@ void      main_menu_sync_apply(MainMenuSyncStatus &status, e_main_menu_sync_chan
 ft_string main_menu_resolve_sync_entry_label(const MainMenuSyncStatus &status, e_main_menu_sync_channel channel) noexcept;
 bool      main_menu_load_crash_report(const ft_string &log_path, MainMenuCrashReport &out_report) noexcept;
 bool      main_menu_clear_crash_report(const ft_string &log_path) noexcept;
+bool      main_menu_append_crash_cleanup_failure_log(const ft_string &log_path, long timestamp_ms) noexcept;
 ft_string main_menu_format_crash_submission_payload(const MainMenuCrashReport &report) noexcept;
+ft_string main_menu_format_crash_metric_payload(const MainMenuCrashReport &report, bool submission_success,
+    int status_code, const ft_string &response_body) noexcept;
+typedef bool (*MainMenuCrashMetricSubmitter)(
+    const ft_string &host, const ft_string &path, const ft_string &payload, int &out_status_code);
+void main_menu_crash_metrics_enqueue(ft_vector<ft_string> &queue, const ft_string &payload);
+bool main_menu_crash_metrics_flush(ft_vector<ft_string> &queue, const ft_string &host, const ft_string &path,
+    MainMenuCrashMetricSubmitter submitter) noexcept;
+bool main_menu_load_crash_metric_queue(const ft_string &commander_name, ft_vector<ft_string> &out_queue) noexcept;
+bool main_menu_save_crash_metric_queue(
+    const ft_string &commander_name, const ft_vector<ft_string> &queue) noexcept;
 void      main_menu_build_crash_prompt_overlay(const MainMenuCrashReport &report,
-         const MainMenuConnectivityStatus &connectivity, MainMenuOverlayContext &out_overlay) noexcept;
+         const MainMenuConnectivityStatus &connectivity, bool cleanup_retry_available,
+         MainMenuOverlayContext &out_overlay) noexcept;
 
 void main_menu_render_overlay(SDL_Renderer &renderer, TTF_Font *menu_font, int output_width, int output_height,
     const MainMenuOverlayContext *overlay, const MainMenuPalette &palette);
@@ -519,8 +531,11 @@ namespace main_menu_testing
     ft_string                   format_achievements_completion(const MainMenuAchievementsSummary &summary);
     ft_vector<ft_string>        collect_achievement_lines(const MainMenuAchievementsSummary &summary);
     ft_string                   format_crash_submission_payload(const MainMenuCrashReport &report);
-    void                        build_crash_prompt_overlay(
-        const MainMenuCrashReport &report, const MainMenuConnectivityStatus &connectivity, MainMenuOverlayContext &out_overlay);
+    ft_string                   format_crash_metric_payload(
+        const MainMenuCrashReport &report, bool submission_success, int status_code, const ft_string &response_body);
+    void                        build_crash_prompt_overlay(const MainMenuCrashReport &report,
+                               const MainMenuConnectivityStatus &connectivity, bool cleanup_retry_available,
+                               MainMenuOverlayContext &out_overlay);
     void                        performance_record_frame(MainMenuPerformanceStats &stats, long frame_start_ms, long frame_end_ms);
     void                        performance_begin_latency(MainMenuPerformanceStats &stats, long timestamp_ms);
     void                        performance_complete_latency(
